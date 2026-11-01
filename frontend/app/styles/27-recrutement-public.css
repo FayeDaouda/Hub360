@@ -1,0 +1,436 @@
+/* =============================================================================
+   Recrutement — pages publiques (appel à candidatures, page Carrières,
+   01/11/2026). Pages de MARQUE, comme le lien public du devis : bannière
+   sombre dégradée vers societe.couleurMarque (posée en inline style), corps
+   clair sur cartes, aucun habillage du HUB. Préfixe rp- (recrutement public).
+   ============================================================================= */
+
+.rp-page {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+}
+.rp-page--centre {
+  display: grid;
+  place-items: center;
+  padding: 3rem 1rem;
+}
+
+.rp-banniere {
+  padding: 2.25rem 1rem 3.75rem;
+  color: #fff;
+}
+.rp-banniere--squelette {
+  height: 320px;
+}
+.rp-banniere-interieur {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.rp-marque {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: fit-content;
+  margin-bottom: 1.25rem;
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+.rp-surtitre {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.rp-titre {
+  margin: 0;
+  max-width: 22ch;
+  font-size: clamp(1.9rem, 4.5vw, 3rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+.rp-sous-titre {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1.05rem;
+}
+.rp-reperes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-reperes li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.88rem;
+}
+.rp-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  margin-top: 0.75rem;
+  padding: 0.8rem 1.4rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #14141a;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+.rp-cta:hover {
+  transform: translateY(-1px);
+}
+
+.rp-grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: start;
+  gap: 1.25rem;
+  /* Même largeur utile que la bannière (1080 px + ses marges). */
+  max-width: calc(1080px + 2rem);
+  margin: -2.25rem auto 0;
+  padding: 0 1rem;
+}
+.rp-carte {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(20, 20, 18, 0.1);
+  padding: 1.75rem;
+}
+.rp-carte h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+}
+.rp-presentation {
+  position: sticky;
+  top: 1.25rem;
+}
+.rp-texte {
+  margin: 0;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+.rp-meta {
+  display: block;
+  margin: 1.25rem 0 0;
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+}
+.rp-aide {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.rp-requis {
+  color: var(--pill-risque);
+}
+.rp-facultatif {
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.rp-groupe {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  border: none;
+}
+.rp-groupe legend {
+  margin-bottom: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.rp-ligne {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+.rp-champ {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.rp-champ input,
+.rp-champ textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.rp-champ textarea {
+  resize: vertical;
+}
+.rp-champ input:focus,
+.rp-champ textarea:focus {
+  border-color: var(--action);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--action) 22%, transparent);
+}
+.rp-piege {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.rp-piece {
+  display: grid;
+  gap: 0.4rem;
+}
+.rp-piece-libelle {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.rp-depot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1.5px dashed var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.rp-depot strong {
+  color: var(--action);
+}
+.rp-depot:hover,
+.rp-depot.is-survol {
+  border-color: var(--action);
+  background: color-mix(in oklch, var(--action) 6%, var(--bg));
+}
+.rp-entree-fichier {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.rp-entree-fichier:focus-visible + *,
+.rp-piece:focus-within .rp-depot {
+  border-color: var(--action);
+}
+.rp-fichier {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in oklch, var(--pill-succes) 40%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in oklch, var(--pill-succes) 7%, var(--bg));
+}
+.rp-fichier svg {
+  flex: none;
+  color: var(--pill-succes);
+}
+.rp-fichier-nom {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.rp-fichier-nom strong {
+  overflow: hidden;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rp-fichier-nom span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.rp-lien,
+.rp-icone {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.rp-lien:hover,
+.rp-icone:hover {
+  color: var(--text);
+}
+.rp-icone svg {
+  color: inherit;
+}
+
+.rp-consentement {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.rp-consentement input {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+}
+.rp-envoyer {
+  justify-content: center;
+  width: 100%;
+  padding-block: 0.85rem;
+  font-size: 1rem;
+}
+
+.rp-confirmation,
+.rp-clos {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  text-align: center;
+}
+.rp-confirmation > svg {
+  color: var(--pill-succes);
+}
+.rp-confirmation p,
+.rp-clos p {
+  margin: 0;
+  max-width: 42ch;
+}
+.rp-reference {
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.9rem;
+}
+
+.rp-offres {
+  display: grid;
+  gap: 0.9rem;
+  max-width: calc(1080px + 2rem);
+  margin: -2.25rem auto 0;
+  padding: 0 1rem;
+}
+.rp-offre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+.rp-offre:hover {
+  border-color: var(--action);
+  transform: translateY(-2px);
+}
+.rp-offre h2 {
+  margin: 0 0 0.6rem;
+}
+.rp-offre .rp-reperes li {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.rp-offre .rp-meta {
+  margin-top: 0.75rem;
+}
+.rp-offre-action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--action);
+  font-weight: 600;
+}
+.rp-vide,
+.rp-introuvable {
+  text-align: center;
+}
+.rp-introuvable {
+  max-width: 460px;
+}
+.rp-introuvable h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+}
+.rp-vide p,
+.rp-introuvable p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.rp-pied {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.5rem 1rem 2rem;
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+}
+.rp-pied a {
+  color: var(--text-muted);
+}
+
+@media (max-width: 860px) {
+  .rp-grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-presentation {
+    position: static;
+  }
+}
+@media (max-width: 560px) {
+  .rp-banniere {
+    padding-top: 1.5rem;
+  }
+  .rp-carte {
+    padding: 1.25rem;
+    border-radius: 16px;
+  }
+  .rp-ligne {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-offre {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

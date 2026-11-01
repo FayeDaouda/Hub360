@@ -865,6 +865,128 @@
   grid-column: 2;
   grid-row: 1 / span 2;
 }
+/* Appel à candidatures (01/11/2026) : bloc du poste, fiche candidat. */
+.recrutement-appel {
+  display: grid;
+  gap: var(--e-8);
+  padding: var(--e-12);
+  border: 1px solid color-mix(in oklch, var(--action) 30%, var(--border));
+  border-radius: var(--r-10);
+  background: color-mix(in oklch, var(--action) 5%, transparent);
+}
+.recrutement-appel-tete {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+}
+.recrutement-appel a.btn-ghost {
+  text-decoration: none;
+}
+.recrutement-appel-tete svg {
+  color: var(--action);
+}
+.recrutement-appel-tete .pill {
+  margin-left: auto;
+}
+.recrutement-appel-publier {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-8);
+  padding: var(--e-8) var(--e-12);
+  border: 1px dashed color-mix(in oklch, var(--action) 50%, var(--border));
+  border-radius: var(--r-10);
+  background: none;
+  color: var(--action);
+  font: inherit;
+  font-size: var(--t-13);
+  font-weight: 600;
+  cursor: pointer;
+}
+.recrutement-appel-publier:hover {
+  background: color-mix(in oklch, var(--action) 7%, transparent);
+}
+.recrutement-via-lien {
+  color: var(--action);
+}
+.recrutement-case {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-8);
+  font-size: var(--t-14);
+}
+.recrutement-appel-groupe {
+  display: grid;
+  gap: var(--e-8);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.recrutement-appel-piece,
+.recrutement-appel-question {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-8) var(--e-12);
+}
+.recrutement-appel-question {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+.recrutement-fiche-corps {
+  display: grid;
+  gap: var(--e-16);
+}
+.recrutement-fiche-corps section {
+  display: grid;
+  gap: var(--e-8);
+}
+.recrutement-fiche-corps h3 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.recrutement-fiche-corps p {
+  margin: 0;
+}
+.recrutement-reponses {
+  display: grid;
+  gap: var(--e-12);
+  margin: 0;
+}
+.recrutement-reponses dt {
+  font-weight: 600;
+}
+.recrutement-reponses dd {
+  margin: var(--e-4) 0 0;
+  color: var(--text-muted);
+  white-space: pre-line;
+}
+.recrutement-pieces {
+  display: grid;
+  gap: var(--e-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.recrutement-pieces li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-12);
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+}
+.recrutement-pieces li > span {
+  display: grid;
+  min-width: 0;
+}
+.recrutement-pieces li .annonce-meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 @media (max-width: 1100px) {
   .recrutement-colonnes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -873,7 +995,9 @@
 @media (max-width: 720px) {
   .recrutement-colonnes,
   .recrutement-ligne,
-  .recrutement-choix {
+  .recrutement-choix,
+  .recrutement-appel-piece,
+  .recrutement-appel-question {
     grid-template-columns: minmax(0, 1fr);
   }
 }

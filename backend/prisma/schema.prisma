@@ -88,6 +88,7 @@ model Societe {
   annonces Annonce[]
 
   postesRecrutement PosteRecrutement[]
+  appelsCandidature AppelCandidature[]
 
   @@map("societes")
 }
@@ -311,6 +312,7 @@ enum NotificationType {
   poste_ouvert // Recrutement : un poste vient d'ouvrir, candidats à trouver (RH)
   entretien_planifie // Recrutement : entretien fixé (au demandeur du poste)
   candidat_decide // Recrutement : candidat embauché ou refusé (au demandeur du poste)
+  candidature_recue // Recrutement : candidature déposée par le lien externe (RH, demandeur du poste)
 }
 
 model Notification {
@@ -3067,33 +3069,81 @@ model PosteRecrutement {
   direct        Boolean     @default(false) // embauche directe : pourvu d'emblée
   createdAt     DateTime    @default(now()) @map("created_at")
 
-  societe      Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  societe      Societe           @relation(fields: [societeId], references: [id], onDelete: Cascade)
   candidatures Candidature[]
+  appel        AppelCandidature?
 
   @@index([societeId, statut])
   @@map("postes_recrutement")
 }
 
 model Candidature {
-  id           String           @id @default(uuid())
-  posteId      String           @map("poste_id")
-  prenom       String
-  nom          String
-  email        String?
-  telephone    String?
-  notes        String           @default("")
-  etape        EtapeCandidature @default(candidature)
-  decideParId  String?          @map("decide_par_id")
-  decideLe     DateTime?        @map("decide_le")
-  motif        String?
-  dossierId    String?          @map("dossier_id") // dossier du personnel ouvert à l'embauche
-  rendezVousId String?          @map("rendez_vous_id") // entretien : rendez-vous de l'Agenda
-  creeParId    String           @map("cree_par_id")
-  createdAt    DateTime         @default(now()) @map("created_at")
+  id             String           @id @default(uuid())
+  posteId        String           @map("poste_id")
+  prenom         String
+  nom            String
+  email          String?
+  telephone      String?
+  notes          String           @default("")
+  etape          EtapeCandidature @default(candidature)
+  decideParId    String?          @map("decide_par_id")
+  decideLe       DateTime?        @map("decide_le")
+  motif          String?
+  dossierId      String?          @map("dossier_id") // dossier du personnel ouvert à l'embauche
+  rendezVousId   String?          @map("rendez_vous_id") // entretien : rendez-vous de l'Agenda
+  source         String           @default("saisie") // saisie (RH) | lien (appel à candidatures)
+  reponses       Json? // réponses aux questions de l'appel : { [questionId]: texte }
+  consentementLe DateTime?        @map("consentement_le")
+  creeParId      String           @map("cree_par_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
 
-  poste PosteRecrutement @relation(fields: [posteId], references: [id], onDelete: Cascade)
+  poste  PosteRecrutement   @relation(fields: [posteId], references: [id], onDelete: Cascade)
+  pieces PieceCandidature[]
 
   @@index([posteId, etape])
   @@index([etape, decideLe])
   @@map("candidatures")
+}
+
+// Appel à candidatures (01/11/2026) : la page publique d'un poste ouvert.
+// `slug` est l'adresse publique (faite pour être partagée, pas un secret).
+model AppelCandidature {
+  id           String   @id @default(uuid())
+  societeId    String   @map("societe_id")
+  posteId      String   @unique @map("poste_id")
+  slug         String   @unique
+  presentation String // missions, profil recherché : texte public
+  lieu         String?
+  typeContrat  String?  @map("type_contrat")
+  dateLimite   String?  @map("date_limite") // AAAA-MM-JJ, incluse
+  pieces       Json     @default("[]") // [{ cle, libelle, obligatoire }] — le CV toujours
+  questions    Json     @default("[]") // [{ id, libelle, obligatoire }]
+  ouvert       Boolean  @default(true)
+  creeParId    String   @map("cree_par_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  societe Societe          @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  poste   PosteRecrutement @relation(fields: [posteId], references: [id], onDelete: Cascade)
+
+  @@index([societeId, ouvert])
+  @@map("appels_candidature")
+}
+
+// Pièce déposée par un candidat (CV, lettre…) : data URI tant que le stockage
+// objet n'est pas branché, comme les autres fichiers joints.
+model PieceCandidature {
+  id            String   @id @default(uuid())
+  candidatureId String   @map("candidature_id")
+  cle           String // cv, lettre, diplomes, portfolio, references, autre
+  libelle       String
+  nom           String
+  url           String
+  taille        Int
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  candidature Candidature @relation(fields: [candidatureId], references: [id], onDelete: Cascade)
+
+  @@index([candidatureId])
+  @@map("pieces_candidature")
 }

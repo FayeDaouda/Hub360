@@ -91,6 +91,21 @@ export type ContratEmail = {
   lien: string;
 };
 
+// Candidat d'un appel à candidatures (01/11/2026) — destinataire EXTERNE,
+// au nom de la société : accusé de réception, convocation à l'entretien,
+// réponse finale (jamais le motif interne d'un refus).
+export type CandidatEmail = {
+  email: string;
+  prenom: string;
+  societeNom: string;
+  poste: string;
+  reference: string;
+} & (
+  | { type: 'accuse' }
+  | { type: 'convocation'; debut: string; fin: string; lieu: string | null }
+  | { type: 'reponse'; retenu: boolean }
+);
+
 export abstract class EmailService {
   // Ne lève jamais : un échec de transport renvoie `{ envoye: false }` pour que
   // l'appelant garde son repli (afficher le lien à recopier) et que la réponse
@@ -102,4 +117,5 @@ export abstract class EmailService {
   abstract envoyerContrat(c: ContratEmail): Promise<{ envoye: boolean }>;
   abstract envoyerAlerte(a: AlerteEmail): Promise<{ envoye: boolean }>;
   abstract envoyerAvisSecurite(a: AvisSecurite): Promise<{ envoye: boolean }>;
+  abstract envoyerCandidat(c: CandidatEmail): Promise<{ envoye: boolean }>;
 }

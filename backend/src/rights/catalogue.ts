@@ -530,4 +530,14 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
     ordre: 4,
     libelles: { lecture: 'Voit les recrutements de toutes les sociétés du groupe (postes, candidats, étapes)' },
   },
+  // Appels à candidatures (01/11/2026, migration 20261102110000_appels_candidature).
+  {
+    module: 'recrutement',
+    cle: ETAPE.recrutementAppels,
+    nom: 'Appels à candidatures',
+    ordre: 5,
+    libelles: {
+      ecriture: 'Publie un appel à candidatures (lien externe, page Carrières), le modifie, le clôt ou le rouvre',
+    },
+  },
 ];

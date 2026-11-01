@@ -1,4 +1,5 @@
 import { apiSociete } from './client-api';
+import type { PieceDemandee, QuestionAppel } from './candidature-publique';
 
 // Recrutement (lot 13, 01/11/2026 ; côté RH le même jour) — API NestJS sous
 // …/recrutement.
@@ -11,7 +12,28 @@ export type Poste = {
   demandePar: string;
   motifRefus: string | null;
   direct: boolean; // embauche directe : pourvu d'emblée
+  appel: AppelPoste | null; // appel à candidatures (lien externe)
   candidats: { candidature: number; entretien: number; embauche: number; refusee: number };
+};
+export type AppelPoste = {
+  slug: string;
+  presentation: string;
+  lieu: string | null;
+  typeContrat: string | null;
+  dateLimite: string | null;
+  pieces: PieceDemandee[];
+  questions: QuestionAppel[];
+  ouvert: boolean;
+  enLigne: boolean; // ouvert, poste ouvert, date limite pas dépassée
+  recues: number;
+};
+export type ReglagesAppel = {
+  presentation: string;
+  lieu?: string;
+  typeContrat?: string;
+  dateLimite?: string;
+  pieces: { cle: PieceDemandee['cle']; libelle?: string; obligatoire: boolean }[];
+  questions: { id?: string; libelle: string; obligatoire: boolean }[];
 };
 export type VueRecrutement = {
   postes: Poste[];
@@ -27,6 +49,7 @@ export type VueRecrutement = {
     decider: boolean;
     embaucheDirecte: boolean;
     voirGroupe: boolean;
+    gererAppels: boolean;
   };
 };
 export type Candidat = {
@@ -41,6 +64,26 @@ export type Candidat = {
   decideLe: string | null;
   dossierId: string | null;
   entretien: { debut: string; fin: string; lieu: string | null } | null; // rendez-vous de l'Agenda
+  source: 'saisie' | 'lien';
+  pieces: number;
+  creeLe: string;
+};
+export type FicheCandidat = {
+  id: string;
+  reference: string;
+  prenom: string;
+  nom: string;
+  email: string | null;
+  telephone: string | null;
+  poste: string;
+  source: 'saisie' | 'lien';
+  etape: Candidat['etape'];
+  creeLe: string;
+  consentementLe: string | null;
+  notes: string;
+  motif: string | null;
+  reponses: { question: string; reponse: string }[];
+  pieces: { id: string; cle: string; libelle: string; nom: string; taille: number }[];
 };
 export type RecrutementSociete = {
   societe: { id: string; nom: string; slug: string };
@@ -56,7 +99,13 @@ export type EmbaucheDirecte = {
   email?: string;
   telephone?: string;
 };
-export type Entretien = { debut: string; fin: string; lieu?: string; inviteIds?: string[] };
+export type Entretien = {
+  debut: string;
+  fin: string;
+  lieu?: string;
+  inviteIds?: string[];
+  prevenirCandidat?: boolean;
+};
 
 const base = '/recrutement';
 const post = <T>(slug: string, chemin: string, body: object) =>
@@ -80,7 +129,7 @@ export const noterCandidat = (slug: string, id: string, note: string, entretien 
 export const deciderEmbauche = (
   slug: string,
   id: string,
-  d: { embaucher: boolean; dateEntree?: string; motif?: string },
+  d: { embaucher: boolean; dateEntree?: string; motif?: string; prevenirCandidat?: boolean },
 ) => post<{ ok: true }>(slug, `/candidats/${id}/decision`, d);
 export const retirerCandidat = (slug: string, id: string) =>
   apiSociete<{ ok: true }>(slug, `${base}/candidats/${id}`, { method: 'DELETE' });
@@ -89,3 +138,11 @@ export const embaucheDirecte = (slug: string, e: EmbaucheDirecte) =>
   post<{ ok: true; dossierId: string }>(slug, '/embauche-directe', e);
 export const planifierEntretien = (slug: string, id: string, e: Entretien) =>
   post<{ ok: true }>(slug, `/candidats/${id}/entretien`, e);
+export const enregistrerAppel = (slug: string, posteId: string, r: ReglagesAppel) =>
+  post<{ slug: string }>(slug, `/postes/${posteId}/appel`, r);
+export const changerEtatAppel = (slug: string, posteId: string, ouvert: boolean) =>
+  post<{ ok: true }>(slug, `/postes/${posteId}/appel/etat`, { ouvert });
+export const getFicheCandidat = (slug: string, id: string) =>
+  apiSociete<FicheCandidat>(slug, `${base}/candidats/${id}`);
+export const getPieceCandidat = (slug: string, id: string, pieceId: string) =>
+  apiSociete<{ nom: string; url: string }>(slug, `${base}/candidats/${id}/pieces/${pieceId}`);

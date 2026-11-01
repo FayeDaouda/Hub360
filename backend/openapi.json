@@ -8355,6 +8355,187 @@
         ]
       }
     },
+    "/api/societes/{slug}/recrutement/postes/{id}/appel": {
+      "post": {
+        "operationId": "RecrutementController_enregistrerAppel",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/postes/{id}/appel/etat": {
+      "post": {
+        "operationId": "RecrutementController_etatAppel",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EtatAppelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/candidats/{id}": {
+      "get": {
+        "operationId": "RecrutementController_fiche",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      },
+      "delete": {
+        "operationId": "RecrutementController_retirerCandidat",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/candidats/{id}/pieces/{pieceId}": {
+      "get": {
+        "operationId": "RecrutementController_piece",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pieceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
     "/api/societes/{slug}/recrutement/postes/{id}/candidats": {
       "get": {
         "operationId": "RecrutementController_candidats",
@@ -8553,20 +8734,12 @@
         ]
       }
     },
-    "/api/societes/{slug}/recrutement/candidats/{id}": {
-      "delete": {
-        "operationId": "RecrutementController_retirerCandidat",
+    "/api/recrutement-public/appels/{slug}": {
+      "get": {
+        "operationId": "CandidaturePublicController_appel",
         "parameters": [
           {
             "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
             "required": true,
             "in": "path",
             "schema": {
@@ -8580,7 +8753,63 @@
           }
         },
         "tags": [
-          "Recrutement"
+          "CandidaturePublic"
+        ]
+      }
+    },
+    "/api/recrutement-public/appels/{slug}/candidatures": {
+      "post": {
+        "operationId": "CandidaturePublicController_candidater",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidaterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "CandidaturePublic"
+        ]
+      }
+    },
+    "/api/recrutement-public/carrieres/{societe}": {
+      "get": {
+        "operationId": "CandidaturePublicController_carrieres",
+        "parameters": [
+          {
+            "name": "societe",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "CandidaturePublic"
         ]
       }
     },
@@ -16664,6 +16893,106 @@
           "accepter"
         ]
       },
+      "PieceDemandeeDto": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string",
+            "enum": [
+              "autre",
+              "cv",
+              "diplomes",
+              "lettre",
+              "portfolio",
+              "references"
+            ]
+          },
+          "libelle": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "obligatoire": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cle",
+          "obligatoire"
+        ]
+      },
+      "QuestionAppelDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300
+          },
+          "obligatoire": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "libelle",
+          "obligatoire"
+        ]
+      },
+      "AppelDto": {
+        "type": "object",
+        "properties": {
+          "presentation": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 8000
+          },
+          "lieu": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "typeContrat": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "dateLimite": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "pieces": {
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PieceDemandeeDto"
+            }
+          },
+          "questions": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionAppelDto"
+            }
+          }
+        },
+        "required": [
+          "presentation",
+          "pieces",
+          "questions"
+        ]
+      },
+      "EtatAppelDto": {
+        "type": "object",
+        "properties": {
+          "ouvert": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ouvert"
+        ]
+      },
       "NouveauCandidatDto": {
         "type": "object",
         "properties": {
@@ -16716,6 +17045,9 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "prevenirCandidat": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -16745,6 +17077,9 @@
           "embaucher": {
             "type": "boolean"
           },
+          "prevenirCandidat": {
+            "type": "boolean"
+          },
           "dateEntree": {
             "type": "string",
             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -16757,6 +17092,88 @@
         },
         "required": [
           "embaucher"
+        ]
+      },
+      "PieceDeposeeDto": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string",
+            "enum": [
+              "autre",
+              "cv",
+              "diplomes",
+              "lettre",
+              "portfolio",
+              "references"
+            ]
+          },
+          "nom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cle",
+          "nom",
+          "url"
+        ]
+      },
+      "CandidaterDto": {
+        "type": "object",
+        "properties": {
+          "prenom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "nom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 160,
+            "format": "email"
+          },
+          "telephone": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 40
+          },
+          "reponses": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "pieces": {
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PieceDeposeeDto"
+            }
+          },
+          "consentement": {
+            "type": "boolean"
+          },
+          "siteWeb": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "prenom",
+          "nom",
+          "email",
+          "telephone",
+          "pieces",
+          "consentement"
         ]
       },
       "CreerLocaliteDto": {
