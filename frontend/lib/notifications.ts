@@ -47,7 +47,7 @@ export function lienNotificationAdmin(
   slug: string,
   n: Pick<NotificationItem, 'type' | 'projetId' | 'dossierCrmId' | 'factureId'>,
   session: Session | null,
-): string | null {
+): string {
   if (
     (n.type === 'offre_acceptee' || n.type === 'contrat_signe') &&
     n.projetId &&
@@ -139,10 +139,29 @@ export function lienNotificationAdmin(
   if (n.type === 'connexion_secours') return `${base}?onglet=journal`;
   if (n.type === 'synthese_mensuelle') return `${base}?onglet=synthese`;
   if (n.type === 'delegation_ceo') return base;
+  // Agenda, Annonces, Recrutement (01/11/2026).
+  if (['rdv_invitation', 'rdv_annule', 'entretien_planifie'].includes(n.type)) return `${base}/agenda`;
+  if (n.type === 'annonce_importante' || n.type === 'annonce_a_valider') return `${base}/annonces`;
+  if (n.type === 'embauche_decidee') return `${base}/rh?onglet=personnel`;
+  if (['poste_a_approuver', 'poste_decide', 'poste_ouvert', 'candidat_decide', 'candidature_recue'].includes(n.type))
+    return `${base}/recrutement`;
   if (n.dossierCrmId) return `/admin/${slug}/crm?dossier=${n.dossierCrmId}`;
   // Mention dans un fil : le projet ouvert dans la vue « Projets · gabarit ».
   if (n.projetId) return `/admin/${slug}/projets?projet=${n.projetId}`;
-  return null;
+  // Sans écran propre (droits modifiés…) : l'accueil, où s'affiche le bandeau.
+  return base;
+}
+
+// Ouvrir une notification (01/11/2026) : une conversation (mention, groupe)
+// s'ouvre dans la messagerie sans quitter la page ; le reste mène à sa page.
+export type CibleNotification = { conversation: string } | { href: string };
+export function cibleNotification(
+  slug: string,
+  n: Pick<NotificationItem, 'type' | 'projetId' | 'dossierCrmId' | 'factureId' | 'canalId'>,
+  session: Session | null,
+): CibleNotification {
+  if (n.canalId) return { conversation: n.canalId };
+  return { href: lienNotificationAdmin(slug, n, session) };
 }
 
 // Mention d'une alerte dérivée à la place de « il y a … » (elle n'a pas de
@@ -186,5 +205,8 @@ const TYPES_DECISION: ReadonlySet<NotificationType> = new Set<NotificationType>(
   'facture_a_valider',
   'fiche_a_completer',
   'attente_ceo',
+  'annonce_a_valider',
+  'poste_a_approuver',
+  'candidature_recue',
 ]);
 export const estDecision = (n: Pick<NotificationItem, 'type' | 'derivee'>) => n.derivee || TYPES_DECISION.has(n.type);

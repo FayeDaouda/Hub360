@@ -281,7 +281,18 @@
 .notif-liste li:last-child .notif-item {
   border-bottom: 0;
 }
-a.notif-item:hover {
+button.notif-item {
+  width: 100%;
+  border-top: none;
+  border-right: none;
+  border-left: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.notif-item:hover,
+button.notif-item:focus-visible {
   background: var(--admin-fond, #f4f2ec);
 }
 .notif-point {
@@ -313,91 +324,202 @@ a.notif-item:hover {
   color: var(--text-muted);
 }
 
-/* Toast de notification — bandeau éphémère (5 s), une seule notif à la fois.
-   cf. lib/use-notifications-poll.ts pour le minutage. */
-.notif-toast-hote {
+/* Pop-ups des notifications (01/11/2026) — cartes empilées en haut à droite,
+   teintées selon le sens ; cf. components/notif-popups.tsx et
+   lib/use-notifications-poll.ts (présence, file d'attente). */
+.npop-hote {
   position: fixed;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 70;
+  top: 76px;
+  right: 24px;
+  z-index: 80;
+  display: grid;
+  gap: 0.75rem;
+  width: min(400px, calc(100vw - 2rem));
   pointer-events: none;
 }
-
-.notif-toast {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  pointer-events: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.55rem 0.6rem 0.55rem 1rem;
-  box-shadow: var(--shadow-md);
-  animation: notif-toast-entree 0.25s ease;
-}
-
-.notif-toast--sortie {
-  animation: notif-toast-sortie 0.3s ease forwards;
-}
-
-.notif-toast-corps {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.notif-toast-txt {
-  font-size: 0.85rem;
-  max-width: 46vw;
+.npop {
+  --npop-ton: var(--action);
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.85rem;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 1rem 0.9rem 1.1rem 1rem;
+  border: 1px solid color-mix(in oklch, var(--npop-ton) 35%, var(--border));
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, color-mix(in oklch, var(--npop-ton) 14%, transparent), transparent 60%), var(--surface);
+  box-shadow:
+    0 24px 60px rgba(10, 10, 20, 0.28),
+    0 2px 6px rgba(10, 10, 20, 0.12);
+  color: var(--text);
+  pointer-events: auto;
+  animation: npop-entree 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
-
-.notif-toast-fermer {
+.npop--decision {
+  --npop-ton: var(--pill-attention);
+}
+.npop--mention {
+  --npop-ton: var(--fuchsia);
+}
+.npop--groupe {
+  --npop-ton: var(--iris);
+}
+.npop--resume {
+  --npop-ton: var(--action);
+}
+.npop-icone {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--npop-ton) 20%, transparent);
+  color: color-mix(in oklch, var(--npop-ton) 85%, var(--text));
+}
+:root[data-theme='dark'] .npop-icone {
+  color: color-mix(in oklch, var(--npop-ton) 50%, white);
+}
+.npop-corps {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.npop-genre {
+  color: color-mix(in oklch, var(--npop-ton) 80%, var(--text));
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:root[data-theme='dark'] .npop-genre {
+  color: color-mix(in oklch, var(--npop-ton) 45%, white);
+}
+.npop-quand {
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.npop-titre {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.4;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.npop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+.npop-ouvrir,
+.npop-plus-tard {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border: none;
-  background: none;
+  gap: 0.25rem;
+  padding: 0.42rem 0.85rem;
   border-radius: 999px;
-  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
 }
-
-.notif-toast-fermer:hover {
-  background: var(--admin-fond);
+.npop-ouvrir {
+  border: none;
+  background: var(--npop-ton);
+  color: #fff;
+}
+.npop-ouvrir:hover {
+  filter: brightness(1.08);
+}
+.npop-plus-tard {
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-muted);
+}
+.npop-plus-tard:hover {
   color: var(--text);
 }
-
-@keyframes notif-toast-entree {
+.npop-fermer {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.npop-fermer:hover {
+  background: color-mix(in oklch, var(--text-muted) 14%, transparent);
+  color: var(--text);
+}
+.npop-temps {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--npop-ton);
+  transform-origin: left;
+  transition: transform 0.1s linear;
+}
+.npop-liste {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.npop-liste li {
+  min-width: 0;
+}
+.npop-liste button {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--text-muted) 8%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.npop-liste button:hover {
+  background: color-mix(in oklch, var(--npop-ton) 14%, transparent);
+}
+@keyframes npop-entree {
   from {
     opacity: 0;
-    transform: translateY(-14px);
+    transform: translateX(24px) scale(0.96);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-
-@keyframes notif-toast-sortie {
-  to {
-    opacity: 0;
-    transform: translateY(-14px);
+@media (prefers-reduced-motion: reduce) {
+  .npop {
+    animation: none;
   }
 }
-
 @media (max-width: 620px) {
-  .notif-toast-txt {
-    max-width: 60vw;
+  .npop-hote {
+    top: 68px;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
   }
 }

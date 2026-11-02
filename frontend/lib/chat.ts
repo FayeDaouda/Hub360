@@ -1,4 +1,12 @@
-import type { CanalChat, EtatFluxChat, EvenementChat, MembreAnnuaire, MessageChat, PageMessagesChat } from './types';
+import type {
+  CanalChat,
+  EtatFluxChat,
+  EvenementChat,
+  MembreAnnuaire,
+  MessageChat,
+  PageMessagesChat,
+  PersonneChat,
+} from './types';
 import { apiSociete } from './client-api';
 
 // Chat multi-canaux (lot 3). API NestJS (src/chat) :
@@ -20,10 +28,15 @@ export function getMessages(slug: string, canalId: string, curseur?: string): Pr
   return apiSociete<PageMessagesChat>(slug, `/canaux/${canalId}/messages${qs}`);
 }
 
-export function envoyerMessage(slug: string, canalId: string, texte: string): Promise<MessageChat> {
+export function envoyerMessage(
+  slug: string,
+  canalId: string,
+  texte: string,
+  mentionIds: string[] = [],
+): Promise<MessageChat> {
   return apiSociete<MessageChat>(slug, `/canaux/${canalId}/messages`, {
     method: 'POST',
-    body: { texte },
+    body: { texte, ...(mentionIds.length && { mentionIds }) },
   });
 }
 
@@ -126,4 +139,30 @@ export function connecterFluxChat(opts: OptionsFlux): () => void {
     if (timer) clearTimeout(timer);
     es?.close();
   };
+}
+
+// Groupes de discussion et mentions (01/11/2026).
+export const getMentionnables = (slug: string, canalId: string) =>
+  apiSociete<PersonneChat[]>(slug, `/canaux/${canalId}/mentionnables`);
+export const creerGroupe = (slug: string, nom: string, membreIds: string[]) =>
+  apiSociete<CanalChat>(slug, '/canaux/groupes', { method: 'POST', body: { nom, membreIds } });
+export const getMembresGroupe = (slug: string, canalId: string) =>
+  apiSociete<PersonneChat[]>(slug, `/canaux/${canalId}/membres`);
+export const ajouterMembresGroupe = (slug: string, canalId: string, membreIds: string[]) =>
+  apiSociete<PersonneChat[]>(slug, `/canaux/${canalId}/membres`, { method: 'POST', body: { membreIds } });
+export const retirerMembreGroupe = (slug: string, canalId: string, utilisateurId: string) =>
+  apiSociete<{ ok: true }>(slug, `/canaux/${canalId}/membres/${utilisateurId}`, { method: 'DELETE' });
+export const renommerGroupe = (slug: string, canalId: string, nom: string) =>
+  apiSociete<{ ok: true }>(slug, `/canaux/${canalId}`, { method: 'PATCH', body: { nom } });
+
+// Ouvre une conversation depuis n'importe où (clic sur une notification de
+// mention) : la messagerie de la barre du haut l'écoute.
+const EVENEMENT_CONVERSATION = 'hub:ouvrir-conversation';
+export function ouvrirConversation(canalId: string) {
+  window.dispatchEvent(new CustomEvent(EVENEMENT_CONVERSATION, { detail: canalId }));
+}
+export function surOuvrirConversation(f: (canalId: string) => void): () => void {
+  const ecoute = (e: Event) => f((e as CustomEvent<string>).detail);
+  window.addEventListener(EVENEMENT_CONVERSATION, ecoute);
+  return () => window.removeEventListener(EVENEMENT_CONVERSATION, ecoute);
 }

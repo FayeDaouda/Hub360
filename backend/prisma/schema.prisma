@@ -146,6 +146,7 @@ model Utilisateur {
   evenementsCompte       EvenementCompte[]
   messages               Message[]
   canauxDmP1             Canal[]                  @relation("CanalDmP1")
+  membresCanal           MembreCanal[]
   canauxDmP2             Canal[]                  @relation("CanalDmP2")
   lecturesCanal          LectureCanal[]
   dossiersCrees          DossierCrm[]             @relation("DossierCreePar")
@@ -313,6 +314,8 @@ enum NotificationType {
   entretien_planifie // Recrutement : entretien fixé (au demandeur du poste)
   candidat_decide // Recrutement : candidat embauché ou refusé (au demandeur du poste)
   candidature_recue // Recrutement : candidature déposée par le lien externe (RH, demandeur du poste)
+  mention_chat // Messagerie (01/11/2026) : on vous a mentionné (@) dans une conversation
+  groupe_chat // Messagerie : vous avez été ajouté à un groupe de discussion
 }
 
 model Notification {
@@ -323,6 +326,7 @@ model Notification {
   projetId       String?          @map("projet_id") // contexte cliquable
   dossierCrmId   String?          @map("dossier_crm_id") // contexte cliquable (cycle CRM)
   factureId      String?          @map("facture_id") // contexte cliquable (facture à valider)
+  canalId        String?          @map("canal_id") // contexte cliquable (conversation : mention, groupe)
   titre          String // texte pré-rendu par le service
   parId          String?          @map("par_id") // qui a déclenché (audit, pas de FK)
   luLe           DateTime?        @map("lu_le")
@@ -332,6 +336,7 @@ model Notification {
   projet       Projet?     @relation(fields: [projetId], references: [id], onDelete: SetNull)
   dossierCrm   DossierCrm? @relation(fields: [dossierCrmId], references: [id], onDelete: SetNull)
   facture      Facture?    @relation(fields: [factureId], references: [id], onDelete: SetNull)
+  canal        Canal?      @relation(fields: [canalId], references: [id], onDelete: SetNull)
 
   @@index([destinataireId, luLe])
   @@map("notifications")
@@ -1334,6 +1339,7 @@ enum TypeCanal {
   cellule
   general
   direct
+  groupe // groupe de discussion : nom et membres choisis (01/11/2026)
 }
 
 model Canal {
@@ -1346,14 +1352,19 @@ model Canal {
   // (ordre canonique) ; le @@unique garantit un seul DM par paire.
   participant1Id String?   @map("participant1_id")
   participant2Id String?   @map("participant2_id")
+  // type = groupe : nom et créateur (il gère les membres).
+  nom            String?
+  creeParId      String?   @map("cree_par_id")
   createdAt      DateTime  @default(now()) @map("created_at")
 
-  societe      Societe        @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  cellule      Cellule?       @relation(fields: [celluleId], references: [id], onDelete: Cascade)
-  participant1 Utilisateur?   @relation("CanalDmP1", fields: [participant1Id], references: [id])
-  participant2 Utilisateur?   @relation("CanalDmP2", fields: [participant2Id], references: [id])
-  messages     Message[]
-  lectures     LectureCanal[]
+  societe       Societe        @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  cellule       Cellule?       @relation(fields: [celluleId], references: [id], onDelete: Cascade)
+  participant1  Utilisateur?   @relation("CanalDmP1", fields: [participant1Id], references: [id])
+  participant2  Utilisateur?   @relation("CanalDmP2", fields: [participant2Id], references: [id])
+  messages      Message[]
+  lectures      LectureCanal[]
+  membres       MembreCanal[]
+  notifications Notification[]
 
   @@unique([participant1Id, participant2Id])
   // Unicité du Général par société : index partiel posé en SQL brut dans la
@@ -1368,6 +1379,10 @@ model Message {
   // écrit (convention « on désactive, on ne supprime pas », cf. Utilisateur.desactiveLe).
   auteurId  String   @map("auteur_id")
   texte     String // plafonné à ~4000 au DTO
+  // Ligne d'information d'un groupe (« X a ajouté Y »), pas un message.
+  systeme   Boolean  @default(false)
+  // Personnes mentionnées (@) : identifiants de compte.
+  mentions  String[] @default([])
   createdAt DateTime @default(now()) @map("created_at")
 
   canal  Canal       @relation(fields: [canalId], references: [id], onDelete: Cascade)
@@ -3166,4 +3181,18 @@ model ModificationProjet {
 
   @@index([projetId, createdAt])
   @@map("modifications_projet")
+}
+
+// Membre d'un groupe de discussion (01/11/2026).
+model MembreCanal {
+  canalId       String   @map("canal_id")
+  utilisateurId String   @map("utilisateur_id")
+  ajouteLe      DateTime @default(now()) @map("ajoute_le")
+
+  canal       Canal       @relation(fields: [canalId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@id([canalId, utilisateurId])
+  @@index([utilisateurId])
+  @@map("membres_canal")
 }

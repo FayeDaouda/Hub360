@@ -35,7 +35,7 @@ function svc(
     lectureCanal: { findMany: jest.fn().mockResolvedValue([]) },
     utilisateurSocieteRole: { findMany: usrFindMany },
   } as unknown as PrismaService;
-  return { s: new ChatService(prisma, {} as ChatBus), canalFindMany, usrFindMany };
+  return { s: new ChatService(prisma, {} as ChatBus, {} as never), canalFindMany, usrFindMany };
 }
 
 const acteur = (role: string) => ({ userId: 'U1', societeId: 'S1', role });
@@ -50,16 +50,16 @@ describe('ChatService.listerCanaux', () => {
     await expect(s.listerCanaux(acteur('holding_admin'))).rejects.toThrow(ForbiddenException);
   });
 
-  it('rôle de direction sans fiche → Général + DM, aucune cellule', async () => {
+  it('rôle de direction sans fiche → Général + DM + ses groupes, aucune cellule', async () => {
     const { s, canalFindMany } = svc({ collab: null });
     await expect(s.listerCanaux(acteur('CFO'))).resolves.toEqual([]);
-    expect(typesDemandes(canalFindMany)).toEqual(['general', 'direct', 'direct']);
+    expect(typesDemandes(canalFindMany)).toEqual(['general', 'direct', 'direct', 'groupe']);
   });
 
   it('rôle de direction AVEC fiche → sa cellule en plus', async () => {
     const { s, canalFindMany } = svc({ collab: { celluleId: 'CEL1' } });
     await s.listerCanaux(acteur('Dir. GC'));
-    expect(typesDemandes(canalFindMany)).toEqual(['general', 'cellule:CEL1', 'direct', 'direct']);
+    expect(typesDemandes(canalFindMany)).toEqual(['general', 'cellule:CEL1', 'direct', 'direct', 'groupe']);
   });
 
   it('holding_admin sans fiche → 403 (hors back-office, pas de chat)', async () => {
@@ -118,5 +118,122 @@ describe('ChatService.annuaire', () => {
       OR: [{ societeId: 'S1' }, { societeId: null }],
       role: { nom: { not: 'holding_admin' }, supprimeLe: null },
     });
+  });
+});
+
+// Groupes de discussion et mentions (01/11/2026).
+describe('ChatService · groupes et mentions', () => {
+  const acteur = { userId: 'U1', societeId: 'S1', role: 'Dir. GC' };
+  const monter = () => {
+    const bus = { publier: jest.fn() };
+    const notifications = { envoyer: jest.fn() };
+    const auteur = { id: 'U1', prenom: 'Cheikh', nom: 'Fall', nomAffiche: null, photoCle: null };
+    const prisma = {
+      canal: {
+        create: jest
+          .fn()
+          .mockResolvedValue({ id: 'G1', type: 'groupe', nom: 'Chantier Ouakam', _count: { membres: 3 } }),
+        findUnique: jest.fn().mockImplementation(({ select }) =>
+          Promise.resolve({
+            id: 'G1',
+            societeId: 'S1',
+            type: 'groupe',
+            nom: 'Chantier Ouakam',
+            creeParId: 'U1',
+            celluleId: null,
+            participant1Id: null,
+            participant2Id: null,
+            cellule: null,
+            participant1: null,
+            participant2: null,
+            membres: select?.membres
+              ? [{ utilisateurId: 'U1' }, { utilisateurId: 'U2' }, { utilisateurId: 'U3' }]
+              : undefined,
+          }),
+        ),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
+      membreCanal: {
+        findMany: jest.fn().mockResolvedValue([{ utilisateurId: 'U2', ajouteLe: new Date() }]),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        createMany: jest.fn(),
+      },
+      message: {
+        create: jest.fn().mockImplementation(({ data }) =>
+          Promise.resolve({
+            id: 'M1',
+            canalId: 'G1',
+            texte: data.texte,
+            systeme: !!data.systeme,
+            mentions: data.mentions ?? [],
+            createdAt: new Date(),
+            auteur,
+          }),
+        ),
+      },
+      utilisateur: {
+        findMany: jest.fn().mockImplementation(({ where }) =>
+          Promise.resolve(
+            (where.id.in as string[]).map((id) => ({
+              id,
+              prenom: id === 'U1' ? 'Cheikh' : 'Awa',
+              nom: id,
+              nomAffiche: null,
+              photoCle: null,
+            })),
+          ),
+        ),
+      },
+      collaborateur: { findMany: jest.fn().mockResolvedValue([]) },
+      utilisateurSocieteRole: {
+        findMany: jest.fn().mockResolvedValue(
+          ['U2', 'U3'].map((id) => ({
+            utilisateur: { id, prenom: 'Awa', nom: id, nomAffiche: null, photoCle: null },
+            role: { nom: 'Salarié' },
+          })),
+        ),
+      },
+    } as unknown as PrismaService;
+    return {
+      s: new ChatService(prisma, bus as unknown as ChatBus, notifications as never),
+      prisma,
+      bus,
+      notifications,
+    };
+  };
+
+  it('crée un groupe : le créateur et ses membres, une ligne « a créé le groupe », les membres prévenus', async () => {
+    const { s, prisma, notifications } = monter();
+    const g = await s.creerGroupe(acteur, ' Chantier Ouakam ', ['U2', 'U3']);
+    expect(g).toMatchObject({ id: 'G1', type: 'groupe', nom: 'Chantier Ouakam', creeParId: 'U1', membres: 3 });
+    const data = (prisma.canal.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.membres.create).toEqual([{ utilisateurId: 'U1' }, { utilisateurId: 'U2' }, { utilisateurId: 'U3' }]);
+    expect((prisma.message.create as jest.Mock).mock.calls[0][0].data).toMatchObject({ systeme: true });
+    expect(notifications.envoyer).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'groupe_chat', destinataireIds: ['U2', 'U3'], canalId: 'G1' }),
+    );
+  });
+
+  it('refuse une personne hors de la société', async () => {
+    await expect(monter().s.creerGroupe(acteur, 'Groupe', ['U2', 'INCONNU'])).rejects.toThrow(
+      'pas membre de la société',
+    );
+  });
+
+  it('mention : seulement un lecteur de la conversation, prévenu avec la conversation à ouvrir', async () => {
+    const { s, prisma, notifications } = monter();
+    const m = await s.envoyer('G1', 'U1', 'Bonjour @Awa U2', ['U2', 'U9', 'U1']);
+    expect((prisma.message.create as jest.Mock).mock.calls[0][0].data.mentions).toEqual(['U2']);
+    expect(m.mentions).toEqual([{ id: 'U2', nom: 'Awa U2' }]);
+    expect(notifications.envoyer).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'mention_chat', destinataireIds: ['U2'], canalId: 'G1' }),
+    );
+  });
+
+  it('seul le créateur retire un membre ; chacun peut quitter', async () => {
+    const { s } = monter();
+    await expect(s.retirerMembre({ ...acteur, userId: 'U2' }, 'G1', 'U3')).rejects.toThrow(ForbiddenException);
+    await expect(s.retirerMembre({ ...acteur, userId: 'U2' }, 'G1', 'U2')).resolves.toEqual({ ok: true });
   });
 });

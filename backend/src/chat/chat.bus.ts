@@ -14,6 +14,8 @@ type EvtMessage = {
   celluleId: string | null;
   participant1Id: string | null;
   participant2Id: string | null;
+  // Groupe : ses membres (seuls destinataires).
+  membreIds: string[];
   message: MessageRendu;
 };
 
@@ -64,6 +66,7 @@ export class ChatBus {
     if (e.canalType === TypeCanal.direct) {
       return a.userId === e.participant1Id || a.userId === e.participant2Id;
     }
+    if (e.canalType === TypeCanal.groupe) return e.membreIds.includes(a.userId);
     // cellule
     return a.role === ROLE_COMPANY_ADMIN || a.celluleId === e.celluleId;
   }
