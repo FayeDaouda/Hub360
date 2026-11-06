@@ -6,7 +6,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { decodeRights } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
+import { RightsService } from '../rights/rights.service';
 import {
   AuthService,
   dateEmission,
@@ -37,21 +39,29 @@ const UTILISATEUR = {
   motDePasseHash: 'hash',
 };
 
+// `perms` : niveaux de l'ancienne matrice, convertis comme la migration du
+// 31/10/2026 (lus par le vrai RightsService, base simulée).
 function affectation(societeId: string | null, nom: string, perms: [string, string][] = []) {
-  return {
-    societeId,
-    role: { nom, permissions: perms.map(([cle, niveau]) => ({ module: { cle }, niveau })) },
-  };
+  return { societeId, roleId: `R:${nom}`, role: { nom }, perms };
 }
+type Affectation = ReturnType<typeof affectation>;
 
 const interrupteurs = (coupes: string[] = [], maintenance = false) => ({
-  refuseDuringMaintenance: jest.fn(async (adminHub: boolean) => {
-    if (maintenance && !adminHub) throw new ServiceUnavailableException('Maintenance en cours.');
+  refuseDuringMaintenance: jest.fn(async (fullAccess: boolean) => {
+    if (maintenance && !fullAccess) throw new ServiceUnavailableException('Maintenance en cours.');
   }),
-  effectivePermissions: jest.fn(async (_s: string, p: Record<string, string>) =>
-    Object.fromEntries(Object.entries(p).map(([c, n]) => [c, coupes.includes(c) ? 'aucun' : n])),
-  ),
+  disabledModules: jest.fn(async () => new Set(coupes)),
 });
+
+const ETAPES = ['crm', 'finances_marges'].map((cle) => ({ cle, module: { cle } }));
+const droitsSimules = (affectations: unknown[]) =>
+  jest.fn(async ({ where }: { where: { roleId: string } }) =>
+    (affectations as Affectation[])
+      .filter((a) => a.roleId === where.roleId)
+      .flatMap((a) => a.perms)
+      .map(([cle, niveau]) => ({ etape: { cle }, ...decodeRights(niveau) })),
+  );
+const droits = (prisma: unknown, switches: unknown) => new RightsService(prisma as never, switches as never);
 
 function svc(affectations: unknown[], switches = interrupteurs()) {
   const findMany = jest.fn().mockResolvedValue(affectations);
@@ -60,7 +70,8 @@ function svc(affectations: unknown[], switches = interrupteurs()) {
     utilisateur: { findUnique: jest.fn().mockResolvedValue(UTILISATEUR), update },
     societe: { findUnique: jest.fn().mockResolvedValue(SOCIETE) },
     utilisateurSocieteRole: { findMany },
-    module: { findMany: jest.fn().mockResolvedValue([{ cle: 'crm' }, { cle: 'finances_marges' }]) },
+    roleRight: { findMany: droitsSimules(affectations) },
+    moduleStep: { findMany: jest.fn().mockResolvedValue(ETAPES) },
     evenementCompte: { create: jest.fn((a: unknown) => a) },
     $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
   } as unknown as PrismaService;
@@ -70,7 +81,14 @@ function svc(affectations: unknown[], switches = interrupteurs()) {
   const email = { envoyerAvisSecurite: jest.fn().mockResolvedValue({ envoye: true }) };
   return {
     email,
-    svc: new AuthService(prisma, jwt, notifications as never, email as never, switches as never),
+    svc: new AuthService(
+      prisma,
+      jwt,
+      notifications as never,
+      email as never,
+      switches as never,
+      droits(prisma, switches),
+    ),
     findMany,
     update,
     sign,
@@ -90,7 +108,7 @@ describe('AuthService.login — choix de l’affectation', () => {
     ]);
     const res = (await s.login(DTO)) as Session;
     expect(res.role).toBe('Salarié');
-    expect(res.permissions).toEqual({ mon_espace: 'ecriture' });
+    expect(res.permissions).toEqual({ mon_espace: 'LES' });
   });
 
   it('se rabat sur l’affectation transverse sans affectation dans la société', async () => {
@@ -155,8 +173,9 @@ describe('Durée des sessions (lot B)', () => {
     societeId: 'S1',
     societeSlug: 'grey-concrete',
     role: 'Salarié',
-    permissions: { crm: 'aucun' },
+    permissions: {},
     adminHub: false,
+    fullAccess: false,
   };
   const maintenant = () => Math.floor(Date.now() / 1000);
 
@@ -173,10 +192,10 @@ describe('Durée des sessions (lot B)', () => {
     const t = maintenant();
     const res = await s.prolongerSession({ ...CONNECTE, debutSession: t - 3600, emissionJeton: t - 600 });
     const [contenu, options] = sign.mock.calls[0];
-    expect(contenu).toMatchObject({ sub: 'U1', role: 'Salarié', permissions: { crm: 'aucun' }, debut: t - 3600 });
+    expect(contenu).toMatchObject({ sub: 'U1', role: 'Salarié', permissions: {}, debut: t - 3600 });
     expect(contenu.iat).toBeGreaterThanOrEqual(t);
     expect(options).toEqual({ expiresIn: 4 * 3600 });
-    expect(res).toEqual({ access_token: 'jeton', permissions: { crm: 'aucun' } });
+    expect(res).toEqual({ access_token: 'jeton', permissions: {} });
   });
 
   it('prolongation près des 12 h : le jeton s’arrête avec la session ; au-delà, refus', async () => {
@@ -233,10 +252,8 @@ describe('Double authentification', () => {
         jwt,
         { envoyer: jest.fn() } as never,
         email as never,
-        {
-          refuseDuringMaintenance: jest.fn(),
-          effectivePermissions: jest.fn((_s: string, p: unknown) => Promise.resolve(p)),
-        } as never,
+        { refuseDuringMaintenance: jest.fn() } as never,
+        { forRole: jest.fn().mockResolvedValue({}), full: jest.fn(), forUser: jest.fn() } as never,
       ),
       update,
       updateMany,
@@ -324,7 +341,7 @@ describe('AuthService · compte de secours', () => {
 
 describe('Administrateur HUB (carte blanche)', () => {
   const ADMIN = 'Administrateur HUB (transverse)';
-  const TOUT = { crm: 'validation', finances_marges: 'validation' };
+  const TOUT = { crm: 'LEVS', finances_marges: 'LEVS' };
 
   it('connexion : endosse le CEO, tous les modules en validation, rôle tracé', async () => {
     const { svc: s, sign, evenement } = svc([affectation(null, ADMIN)]);
@@ -341,7 +358,7 @@ describe('Administrateur HUB (carte blanche)', () => {
   it('compte ordinaire : pas de drapeau, droits de la matrice', async () => {
     const { svc: s, sign } = svc([affectation('S1', 'CFO', [['crm', 'lecture']])]);
     const res = (await s.login(DTO)) as Session & { adminHub: boolean };
-    expect(res).toMatchObject({ role: 'CFO', permissions: { crm: 'lecture' }, adminHub: false });
+    expect(res).toMatchObject({ role: 'CFO', permissions: { crm: 'L' }, adminHub: false });
     expect(sign.mock.calls[0][0].adminHub).toBeUndefined();
   });
 
@@ -354,6 +371,7 @@ describe('Administrateur HUB (carte blanche)', () => {
     role: 'CEO (transverse)',
     permissions: TOUT,
     adminHub: true,
+    fullAccess: true,
     debutSession: t - 600,
     emissionJeton: t - 60,
   };
@@ -389,8 +407,19 @@ describe('Administrateur HUB (carte blanche)', () => {
   });
 });
 
+describe('CIO (carte blanche, 31/10/2026)', () => {
+  it('connexion : toutes les étapes, quatre droits, interrupteurs et maintenance passés', async () => {
+    const ferme = interrupteurs(['crm'], true);
+    const res = (await svc([affectation(null, 'CIO (transverse)', [['crm', 'lecture']])], ferme).svc.login(
+      DTO,
+    )) as Session & { adminHub: boolean };
+    expect(res).toMatchObject({ role: 'CIO (transverse)', adminHub: false });
+    expect(res.permissions).toEqual({ crm: 'LEVS', finances_marges: 'LEVS' });
+  });
+});
+
 describe('Interrupteurs (Administrateur HUB)', () => {
-  it('connexion : un module coupé pour la société vaut « aucun »', async () => {
+  it('connexion : un module coupé pour la société ne donne plus aucun droit', async () => {
     const { svc: s } = svc(
       [
         affectation('S1', 'CFO', [
@@ -400,14 +429,14 @@ describe('Interrupteurs (Administrateur HUB)', () => {
       ],
       interrupteurs(['crm']),
     );
-    expect(((await s.login(DTO)) as Session).permissions).toEqual({ crm: 'aucun', rh: 'lecture' });
+    expect(((await s.login(DTO)) as Session).permissions).toEqual({ rh: 'L' });
   });
 
   it('maintenance : connexion refusée, sauf à l’Administrateur HUB (droits complets gardés)', async () => {
     const ferme = interrupteurs(['crm'], true);
     await expect(svc([affectation('S1', 'CFO')], ferme).svc.login(DTO)).rejects.toThrow(ServiceUnavailableException);
     const admin = (await svc([affectation(null, 'Administrateur HUB (transverse)')], ferme).svc.login(DTO)) as Session;
-    expect(admin.permissions).toEqual({ crm: 'validation', finances_marges: 'validation' });
+    expect(admin.permissions).toEqual({ crm: 'LEVS', finances_marges: 'LEVS' });
   });
 });
 
@@ -454,10 +483,8 @@ describe('Verrouillage du compte (lot C)', () => {
         jwt,
         { envoyer: jest.fn() } as never,
         email as never,
-        {
-          refuseDuringMaintenance: jest.fn(),
-          effectivePermissions: jest.fn((_s: string, p: unknown) => Promise.resolve(p)),
-        } as never,
+        { refuseDuringMaintenance: jest.fn() } as never,
+        { forRole: jest.fn().mockResolvedValue({}), full: jest.fn(), forUser: jest.fn() } as never,
       ),
       update,
       email,

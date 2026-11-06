@@ -331,9 +331,13 @@ describe('RentabiliteService', () => {
 
   it('blocages : feuilles à contrôler par mois, salaires manquants, et qui doit agir', async () => {
     const { s } = svc({ salaire: null });
-    (s as unknown as { temps: { feuilles: jest.Mock } }).temps.feuilles.mockResolvedValue({
-      feuilles: [{ dossierId: 'D2', statut: 'a_controler', lignes: [{ id: 'T1', projetCode: 'P1', heures: 40 }] }],
-    });
+    // Une feuille à contrôler dans le premier mois clos seulement : le nombre
+    // de mois clos grandit avec la date du jour (septembre, octobre, …).
+    (s as unknown as { temps: { feuilles: jest.Mock } }).temps.feuilles
+      .mockResolvedValue({ feuilles: [] })
+      .mockResolvedValueOnce({
+        feuilles: [{ dossierId: 'D2', statut: 'a_controler', lignes: [{ id: 'T1', projetCode: 'P1', heures: 40 }] }],
+      });
     const r = await s.portefeuille(CFO);
     expect(r.blocages).toEqual({
       feuilles: [{ mois: expect.stringMatching(/^\d{4}-\d{2}$/), feuilles: 1, projets: 1 }],

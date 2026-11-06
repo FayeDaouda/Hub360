@@ -69,12 +69,12 @@ export function consultationEtCommentaires(session: Session): boolean {
   return [ROLE_CEO, ROLE_CFO].includes(session.role);
 }
 
-// Administration du HUB (/groupe : comptes, rôles, salaires) — même règle
-// que backend/src/commun/administration-hub.guard.ts : le CIO, ou le compte
-// technique holding_admin (secours), et l'Administrateur HUB quel que soit le
-// rôle endossé (carte blanche, 29/10/2026).
+// Administration du HUB (/groupe : comptes, rôles, salaires, matrice des
+// droits, journal, déblocages, interrupteurs) — même règle que
+// backend/src/commun/administration-hub.guard.ts : le CIO et l'Administrateur
+// HUB quel que soit le rôle endossé (carte blanche, 31/10/2026).
 export function estAdministrateurHub(session: Session): boolean {
-  return !!session.adminHub || session.role === ROLE_CIO || session.role === ROLE_HOLDING_ADMIN;
+  return !!session.adminHub || session.role === ROLE_CIO;
 }
 
 // Réglages des contrats (modèle, signataires, annexes) — même règle que

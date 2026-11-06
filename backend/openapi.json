@@ -7235,30 +7235,14 @@
         ]
       }
     },
-    "/api/societes/{slug}/roles/{roleId}/modules/{moduleCle}": {
-      "patch": {
-        "operationId": "RolesController_majPermission",
+    "/api/societes/{slug}/roles/droits": {
+      "put": {
+        "operationId": "RolesController_enregistrer",
         "parameters": [
           {
             "name": "slug",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "roleId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "moduleCle",
-            "required": true,
-            "in": "path",
             "schema": {
               "type": "string"
             }
@@ -7269,7 +7253,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MajPermissionDto"
+                "$ref": "#/components/schemas/EnregistrerDroitsDto"
               }
             }
           }
@@ -7281,70 +7265,6 @@
         },
         "tags": [
           "Roles"
-        ]
-      }
-    },
-    "/api/societes/{slug}/droits/demandes": {
-      "get": {
-        "operationId": "DemandesDroitController_lister",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "DemandesDroit"
-        ]
-      }
-    },
-    "/api/societes/{slug}/droits/demandes/{id}/decision": {
-      "post": {
-        "operationId": "DemandesDroitController_decider",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DecisionDroitDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "DemandesDroit"
         ]
       }
     },
@@ -9431,6 +9351,65 @@
         },
         "tags": [
           "Switches"
+        ]
+      }
+    },
+    "/api/auth/moi/droits": {
+      "get": {
+        "operationId": "RightsNoticesController_droits",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DroitsCourantsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RightsNotices"
+        ]
+      }
+    },
+    "/api/auth/moi/avis-droits": {
+      "get": {
+        "operationId": "RightsNoticesController_lister",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RightsNoticeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RightsNotices"
+        ]
+      }
+    },
+    "/api/auth/moi/avis-droits/compris": {
+      "post": {
+        "operationId": "RightsNoticesController_compris",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "RightsNotices"
         ]
       }
     },
@@ -15603,36 +15582,64 @@
           "commentaire"
         ]
       },
-      "MajPermissionDto": {
+      "DroitsEtapeDto": {
         "type": "object",
         "properties": {
-          "niveau": {
-            "type": "string",
-            "enum": [
-              "aucun",
-              "ecriture",
-              "lecture",
-              "validation"
-            ]
-          }
-        },
-        "required": [
-          "niveau"
-        ]
-      },
-      "DecisionDroitDto": {
-        "type": "object",
-        "properties": {
-          "accepter": {
+          "lecture": {
             "type": "boolean"
           },
-          "motif": {
-            "type": "string",
-            "maxLength": 500
+          "ecriture": {
+            "type": "boolean"
+          },
+          "validation": {
+            "type": "boolean"
+          },
+          "suppression": {
+            "type": "boolean"
           }
         },
         "required": [
-          "accepter"
+          "lecture",
+          "ecriture",
+          "validation",
+          "suppression"
+        ]
+      },
+      "ChangementDroitsDto": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "etapeCle": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "droits": {
+            "$ref": "#/components/schemas/DroitsEtapeDto"
+          }
+        },
+        "required": [
+          "roleId",
+          "etapeCle",
+          "droits"
+        ]
+      },
+      "EnregistrerDroitsDto": {
+        "type": "object",
+        "properties": {
+          "changements": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChangementDroitsDto"
+            }
+          }
+        },
+        "required": [
+          "changements"
         ]
       },
       "CreerCompteDto": {
@@ -16354,6 +16361,40 @@
           "motif",
           "actif",
           "message"
+        ]
+      },
+      "DroitsCourantsDto": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "permissions"
+        ]
+      },
+      "RightsNoticeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "message",
+          "createdAt"
         ]
       },
       "ClientErrorDto": {

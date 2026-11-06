@@ -10,8 +10,8 @@ export class SocieteAccesGuard implements CanActivate {
     const user = req.user;
     const slug = req.params.slug;
 
-    // L'Administrateur HUB (carte blanche, 29/10/2026) passe partout où passe societe_admin.
-    if (!user || !(user.adminHub || user.role === ROLE_COMPANY_ADMIN) || user.societeSlug !== slug) {
+    // La carte blanche (Administrateur HUB, CIO) passe partout où passe societe_admin.
+    if (!user || !(user.fullAccess || user.role === ROLE_COMPANY_ADMIN) || user.societeSlug !== slug) {
       throw new ForbiddenException("Accès réservé à l'administration de cette société");
     }
     return true;

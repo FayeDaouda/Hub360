@@ -1,351 +1,170 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NO_RIGHTS } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { RolesService } from './roles.service';
-import { ROLE_CIO } from '@hub/domain';
 
-// Gouvernance de la matrice (CIO = super admin du HUB, 28/09/2026) : rôles
-// propres → admin société ou CIO ; rôles transverses (CEO/CTO/CIO) → CIO
-// seul ; rôles socles → personne ; rôle d'une AUTRE société → jamais
-// (cloisonnement). La liste expose `modifiable` selon la même règle.
+// Matrice des droits (31/10/2026) : quatre droits indépendants par rôle et
+// par étape ; le CIO et les comptes d'administration hors matrice ; un
+// changement s'applique tout de suite (mémoire des droits vidée), avertit
+// chaque titulaire du rôle et laisse une trace au CEO.
 
-function svc(
-  opts: {
-    roles?: unknown[];
-    modules?: unknown[];
-    roleTrouve?: unknown;
-    moduleTrouve?: unknown;
-    permissionActuelle?: unknown;
-  } = {},
-) {
-  const upsert = jest.fn().mockResolvedValue({});
-  const revoquer = jest.fn().mockResolvedValue({ count: 0 });
-  const tracer = jest.fn((a: unknown) => a);
+const ETAPE = {
+  id: 'E-crm',
+  cle: 'crm',
+  nom: 'Ensemble du module',
+  libelles: { lecture: 'Voit', ecriture: 'Modifie', suppression: 'Archive' }, // validation sans objet
+  module: { cle: 'crm', nom: 'CRM' },
+};
+const DIR_GC = { id: 'R1', nom: 'Dir. GC', societeId: 'S1', supprimeLe: null };
+
+function svc(o: { role?: unknown; etape?: unknown; actuelle?: unknown; affectations?: unknown[] } = {}) {
   const prisma = {
     role: {
-      findMany: jest.fn().mockResolvedValue(opts.roles ?? []),
-      findUnique: jest.fn().mockResolvedValue(opts.roleTrouve ?? null),
-    },
-    module: {
-      findMany: jest.fn().mockResolvedValue(opts.modules ?? []),
-      findUnique: jest.fn().mockResolvedValue(opts.moduleTrouve ?? null),
-    },
-    rolePermission: {
-      upsert,
-      findUnique: jest.fn().mockResolvedValue(opts.permissionActuelle ?? null),
-    },
-    utilisateur: { updateMany: revoquer, findUnique: jest.fn().mockResolvedValue({ prenom: 'Awa', nom: 'Diallo' }) },
-    demandeDroit: {
-      findFirst: jest.fn().mockResolvedValue(null),
-      create: jest.fn(),
       findMany: jest.fn().mockResolvedValue([]),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUnique: jest.fn().mockResolvedValue(o.role ?? DIR_GC),
     },
-    journalDroit: { create: tracer },
+    module: { findMany: jest.fn().mockResolvedValue([]) },
+    moduleStep: { findUnique: jest.fn().mockResolvedValue(o.etape === undefined ? ETAPE : o.etape) },
+    roleRight: {
+      findUnique: jest.fn().mockResolvedValue(o.actuelle ?? null),
+      upsert: jest.fn((a: unknown) => a),
+    },
+    journalDroit: { create: jest.fn((a: unknown) => a) },
+    utilisateurSocieteRole: {
+      findMany: jest.fn().mockResolvedValue(
+        o.affectations ?? [
+          { utilisateurId: 'U1', societeId: 'S1', roleId: 'R1' },
+          { utilisateurId: 'U2', societeId: null, roleId: 'R1' },
+        ],
+      ),
+    },
+    rightsNotice: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+    utilisateur: { findUnique: jest.fn().mockResolvedValue({ prenom: 'Awa', nom: 'Diallo' }) },
     $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
-  } as unknown as PrismaService;
+  };
   const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CEO1']) };
+  const rights = { invalidate: jest.fn() };
   return {
-    svc: new RolesService(prisma, notifications as never),
-    upsert,
-    revoquer,
-    tracer,
+    svc: new RolesService(prisma as unknown as PrismaService, notifications as never, rights as never),
+    prisma,
     notifications,
-    prisma: prisma as unknown as Record<string, Record<string, jest.Mock>>,
+    rights,
   };
 }
 
-describe('RolesService.listerAvecPermissions', () => {
-  it('expose transverse=true pour un rôle societeId null, false sinon', async () => {
-    const { svc: s } = svc({
-      roles: [
-        { id: 'R1', nom: 'Dir. GC', societeId: 'S1', permissions: [] },
-        { id: 'R2', nom: 'CEO (transverse)', societeId: null, permissions: [] },
-      ],
-      modules: [{ cle: 'crm', nom: 'CRM' }],
-    });
-    const res = await s.listerAvecPermissions('S1', 'societe_admin');
+const droits = (lettres: string) => ({
+  lecture: lettres.includes('L'),
+  ecriture: lettres.includes('E'),
+  validation: lettres.includes('V'),
+  suppression: lettres.includes('S'),
+});
+
+describe('RolesService.matrice', () => {
+  it('rôles métier seulement, CIO marqué carte blanche ; étapes avec leurs phrases', async () => {
+    const { svc: s, prisma } = svc();
+    prisma.role.findMany.mockResolvedValue([
+      { id: 'R1', nom: 'Dir. GC', societeId: 'S1', droits: [{ etape: { cle: 'crm' }, ...droits('LE') }] },
+      { id: 'R2', nom: 'CIO (transverse)', societeId: null, droits: [] },
+      { id: 'RA', nom: 'societe_admin', societeId: null, droits: [] },
+      { id: 'RC', nom: 'collaborateur', societeId: null, droits: [] },
+    ]);
+    prisma.module.findMany.mockResolvedValue([
+      { cle: 'crm', nom: 'CRM', etapes: [ETAPE] },
+      { cle: 'vide', nom: 'Sans étape', etapes: [] },
+    ]);
+    const res = await s.matrice('S1');
+    expect(res.modules).toEqual([
+      { cle: 'crm', nom: 'CRM', etapes: [{ cle: 'crm', nom: 'Ensemble du module', libelles: ETAPE.libelles }] },
+    ]);
     expect(res.roles).toEqual([
-      { id: 'R1', nom: 'Dir. GC', transverse: false, modifiable: true, permissions: {} },
-      { id: 'R2', nom: 'CEO (transverse)', transverse: true, modifiable: false, permissions: {} },
+      { id: 'R1', nom: 'Dir. GC', transverse: false, carteBlanche: false, droits: { crm: droits('LE') } },
+      { id: 'R2', nom: 'CIO', transverse: true, carteBlanche: true, droits: {} },
     ]);
-  });
-
-  it('modifiable : le CIO édite les transverses, personne n’édite les rôles socles', async () => {
-    const { svc: s } = svc({
-      roles: [
-        { id: 'R2', nom: 'CEO (transverse)', societeId: null, permissions: [] },
-        { id: 'RA', nom: 'societe_admin', societeId: null, permissions: [] },
-        { id: 'RH', nom: 'holding_admin', societeId: null, permissions: [] },
-      ],
-    });
-    const res = await s.listerAvecPermissions('S1', ROLE_CIO);
-    expect(res.roles.map((r) => [r.nom, r.modifiable])).toEqual([
-      ['CEO (transverse)', true],
-      ['societe_admin', false],
-      ['holding_admin', false],
-    ]);
-  });
-
-  it('regroupe les permissions par cle de module', async () => {
-    const { svc: s } = svc({
-      roles: [
-        {
-          id: 'R1',
-          nom: 'CFO',
-          societeId: 'S1',
-          permissions: [
-            { module: { cle: 'finances_marges' }, niveau: 'validation' },
-            { module: { cle: 'crm' }, niveau: 'lecture' },
-          ],
-        },
-      ],
-    });
-    const res = await s.listerAvecPermissions('S1', 'societe_admin');
-    expect(res.roles[0].permissions).toEqual({
-      finances_marges: 'validation',
-      crm: 'lecture',
-    });
   });
 });
 
-describe('RolesService.majPermission', () => {
-  it('AUTORISÉ : rôle propre à la société → upsert la permission', async () => {
-    const { svc: s, upsert } = svc({
-      roleTrouve: { id: 'R1', nom: 'Dir. GC', societeId: 'S1' },
-      moduleTrouve: { id: 'M1', cle: 'crm' },
-    });
-    await expect(s.majPermission('S1', 'R1', 'crm', 'ecriture', 'societe_admin')).resolves.toEqual({
-      roleId: 'R1',
-      moduleCle: 'crm',
-      niveau: 'ecriture',
-      enAttente: false,
-    });
-    expect(upsert).toHaveBeenCalledWith({
-      where: { roleId_moduleId: { roleId: 'R1', moduleId: 'M1' } },
-      update: { niveau: 'ecriture' },
-      create: { roleId: 'R1', moduleId: 'M1', niveau: 'ecriture' },
-    });
-  });
+const un = (etapeCle: string, d: ReturnType<typeof droits>) => [{ roleId: 'R1', etapeCle, droits: d }];
 
-  it('révoque les sessions de tous les titulaires du rôle (droit appliqué immédiatement)', async () => {
-    const { svc: s, revoquer } = svc({
-      roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' },
-      moduleTrouve: { id: 'M1', cle: 'crm' },
-      permissionActuelle: { niveau: 'lecture' },
-    });
-    await s.majPermission('S1', 'R1', 'crm', 'aucun', 'societe_admin');
-    expect(revoquer).toHaveBeenCalledWith({
-      where: { roles: { some: { roleId: 'R1' } } },
-      data: { sessionsValidesDepuis: expect.any(Date) },
-    });
-  });
-
-  it('trace le changement pour le journal d’audit (avant → après, auteur)', async () => {
-    const { svc: s, tracer } = svc({
-      roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' },
-      moduleTrouve: { id: 'M1', cle: 'crm' },
-      permissionActuelle: { niveau: 'lecture' },
-    });
-    await s.majPermission('S1', 'R1', 'crm', 'ecriture', 'societe_admin', 'U9');
-    expect(tracer).toHaveBeenCalledWith({
-      data: {
-        societeId: 'S1',
-        roleNom: 'CFO',
-        module: 'crm',
-        avant: 'lecture',
-        apres: 'ecriture',
-        parId: 'U9',
-        valideParId: null,
-      },
-    });
-  });
-
-  it('niveau inchangé → ni écriture ni révocation', async () => {
-    const {
-      svc: s,
-      upsert,
-      revoquer,
-    } = svc({
-      roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' },
-      moduleTrouve: { id: 'M1', cle: 'crm' },
-      permissionActuelle: { niveau: 'lecture' },
-    });
-    await s.majPermission('S1', 'R1', 'crm', 'lecture', 'societe_admin');
-    expect(upsert).not.toHaveBeenCalled();
-    expect(revoquer).not.toHaveBeenCalled();
-  });
-
-  it('REFUSÉ : rôle transverse par l’admin société → 403, pas d’upsert', async () => {
-    const { svc: s, upsert } = svc({ roleTrouve: { id: 'R2', nom: 'CEO (transverse)', societeId: null } });
-    await expect(s.majPermission('S1', 'R2', 'crm', 'lecture', 'societe_admin')).rejects.toThrow('CIO');
-    expect(upsert).not.toHaveBeenCalled();
-  });
-
-  it('AUTORISÉ : rôle transverse par le CIO', async () => {
-    const { svc: s, upsert } = svc({
-      roleTrouve: { id: 'R2', nom: 'CEO (transverse)', societeId: null },
-      moduleTrouve: { id: 'M1', cle: 'crm' },
-    });
-    await s.majPermission('S1', 'R2', 'crm', 'lecture', ROLE_CIO);
-    expect(upsert).toHaveBeenCalled();
-  });
-
-  it('AUTORISÉ : rôle propre à la société par le CIO', async () => {
-    const { svc: s, upsert } = svc({
-      roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' },
-      moduleTrouve: { id: 'M1', cle: 'crm' },
-    });
-    await s.majPermission('S1', 'R1', 'crm', 'lecture', ROLE_CIO);
-    expect(upsert).toHaveBeenCalled();
-  });
-
-  it.each([['societe_admin'], ['holding_admin']])('REFUSÉ : rôle socle %s, même par le CIO', async (nom) => {
-    const { svc: s, upsert } = svc({ roleTrouve: { id: 'RS', nom, societeId: null } });
-    await expect(s.majPermission('S1', 'RS', 'crm', 'lecture', ROLE_CIO)).rejects.toThrow(ForbiddenException);
-    expect(upsert).not.toHaveBeenCalled();
-  });
-
-  it('REFUSÉ : rôle d’une autre société, même par le CIO → 403', async () => {
-    const { svc: s, upsert } = svc({ roleTrouve: { id: 'R3', nom: 'CFO', societeId: 'AUTRE' } });
-    await expect(s.majPermission('S1', 'R3', 'crm', 'lecture', ROLE_CIO)).rejects.toThrow(ForbiddenException);
-    expect(upsert).not.toHaveBeenCalled();
-  });
-
-  it('rôle supprimé → 404', async () => {
-    const { svc: s } = svc({ roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1', supprimeLe: new Date() } });
-    await expect(s.majPermission('S1', 'R1', 'crm', 'lecture', ROLE_CIO)).rejects.toThrow(NotFoundException);
-  });
-
-  it('rôle introuvable → 404', async () => {
-    const { svc: s } = svc({ roleTrouve: null });
-    await expect(s.majPermission('S1', 'INEXISTANT', 'crm', 'lecture', 'societe_admin')).rejects.toThrow(
-      NotFoundException,
+describe('RolesService.enregistrer', () => {
+  it('enregistre, trace, vide la mémoire des droits, avertit les titulaires et le CEO', async () => {
+    const { svc: s, prisma, notifications, rights } = svc({ actuelle: { ...droits('L') } });
+    await s.enregistrer('S1', un('crm', droits('LS')), 'CIO1');
+    expect(prisma.roleRight.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: droits('LS'), create: { roleId: 'R1', etapeId: 'E-crm', ...droits('LS') } }),
     );
-  });
-
-  it('module introuvable → 404', async () => {
-    const { svc: s } = svc({ roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' }, moduleTrouve: null });
-    await expect(s.majPermission('S1', 'R1', 'inexistant', 'lecture', 'societe_admin')).rejects.toThrow(
-      NotFoundException,
-    );
-  });
-});
-
-// Revue CIO (22/10/2026) : le CEO prévenu de chaque changement ; le rôle CIO
-// ne se modifie que par une demande validée par le CEO.
-describe('RolesService · contrôle du CIO', () => {
-  const crm = { id: 'M1', cle: 'crm', nom: 'CRM' };
-  it('changement ordinaire : appliqué, tracé, CEO prévenu', async () => {
-    const {
-      svc: s,
-      tracer,
-      notifications,
-    } = svc({
-      roleTrouve: { id: 'R1', nom: 'Dir. GC', societeId: 'S1' },
-      moduleTrouve: crm,
-      permissionActuelle: { niveau: 'ecriture' },
-    } as never);
-    await s.majPermission('S1', 'R1', 'crm', 'lecture', 'CIO (transverse)', 'CIO1');
-    expect(tracer).toHaveBeenCalledWith({
+    expect(prisma.journalDroit.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         roleNom: 'Dir. GC',
-        avant: 'ecriture',
-        apres: 'lecture',
+        module: 'CRM',
+        droitsAvant: 'L',
+        droitsApres: 'LS',
         parId: 'CIO1',
-        valideParId: null,
       }),
     });
-    expect(notifications.envoyer).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'droits_modifies', destinataireIds: ['CEO1'] }),
-    );
-  });
-
-  it('rôle CIO : rien d’appliqué, une demande attend le CEO', async () => {
-    const {
-      svc: s,
-      upsert,
-      prisma,
-      notifications,
-    } = svc({
-      roleTrouve: { id: 'RC', nom: 'CIO (transverse)', societeId: null },
-      moduleTrouve: crm,
-      permissionActuelle: { niveau: 'ecriture' },
-    } as never);
-    const r = await s.majPermission('S1', 'RC', 'crm', 'lecture', 'CIO (transverse)', 'CIO1');
-    expect(r).toMatchObject({ enAttente: true, niveau: 'ecriture' });
-    expect(upsert).not.toHaveBeenCalled();
-    expect(prisma.demandeDroit.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        roleNom: 'CIO (transverse)',
-        avant: 'ecriture',
-        apres: 'lecture',
-        demandeParId: 'CIO1',
-      }),
-    });
-    expect(notifications.envoyer).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'demande_droit_a_valider', destinataireIds: ['CEO1'] }),
-    );
-  });
-
-  it('Administrateur HUB : rôle CIO appliqué directement, sans demande au CEO', async () => {
-    const {
-      svc: s,
-      upsert,
-      prisma,
-    } = svc({
-      roleTrouve: { id: 'RC', nom: 'CIO (transverse)', societeId: null },
-      moduleTrouve: crm,
-      permissionActuelle: { niveau: 'ecriture' },
-    } as never);
-    const r = await s.majPermission('S1', 'RC', 'crm', 'lecture', 'CEO (transverse)', 'ADM', true);
-    expect(r).toMatchObject({ enAttente: false });
-    expect(upsert).toHaveBeenCalled();
-    expect(prisma.demandeDroit.create).not.toHaveBeenCalled();
-  });
-
-  it('Administrateur HUB : rôles transverses modifiables, rôles d’administration jamais', async () => {
-    const { svc: s } = svc({
-      roles: [
-        { id: 'R1', nom: 'CTO (transverse)', societeId: null, permissions: [] },
-        { id: 'R2', nom: 'societe_admin', societeId: null, permissions: [] },
+    expect(rights.invalidate).toHaveBeenCalled();
+    expect(prisma.rightsNotice.createMany).toHaveBeenCalledWith({
+      data: [
+        { utilisateurId: 'U1', message: 'Vos droits ont changé · CRM : Suppression ajoutée' },
+        { utilisateurId: 'U2', message: 'Vos droits ont changé · CRM : Suppression ajoutée' },
       ],
     });
-    const { roles } = await s.listerAvecPermissions('S1', 'Salarié', true);
-    expect(roles.map((r) => [r.nom, r.modifiable])).toEqual([
-      ['CTO (transverse)', true],
-      ['societe_admin', false],
+    expect(notifications.envoyer).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'own_rights_changed', destinataireIds: ['U1'], societeId: 'S1' }),
+    );
+    expect(notifications.envoyer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'droits_modifies',
+        destinataireIds: ['CEO1'],
+        titre: 'Droits modifiés · Dir. GC · CRM : Suppression ajoutée · par Awa Diallo',
+      }),
+    );
+  });
+
+  it('plusieurs cases d’un coup : un seul avis par personne, qui les résume', async () => {
+    const { svc: s, prisma } = svc({ affectations: [{ utilisateurId: 'U1', societeId: 'S1', roleId: 'R1' }] });
+    prisma.moduleStep.findUnique
+      .mockResolvedValueOnce(ETAPE)
+      .mockResolvedValueOnce({ ...ETAPE, id: 'E-d', cle: 'crm.dossiers', nom: 'Dossiers et leads' });
+    await s.enregistrer('S1', [...un('crm', droits('L')), ...un('crm.dossiers', droits('LE'))], 'CIO1');
+    expect(prisma.rightsNotice.createMany).toHaveBeenCalledTimes(1);
+    expect(prisma.rightsNotice.createMany.mock.calls[0][0].data).toEqual([
+      {
+        utilisateurId: 'U1',
+        message:
+          'Vos droits ont changé · CRM : Lecture ajoutée ; CRM › Dossiers et leads : Lecture ajoutée, Écriture ajoutée',
+      },
     ]);
   });
 
-  it('décision : le CEO seul ; refus motivé ; acceptée = appliquée « validée par » le CEO', async () => {
-    const demande = {
-      id: 'D1',
-      societeId: 'S1',
-      roleId: 'RC',
-      roleNom: 'CIO (transverse)',
-      module: 'crm',
-      avant: 'ecriture',
-      apres: 'lecture',
-      demandeParId: 'CIO1',
-      statut: 'en_attente',
-    };
-    const {
-      svc: s,
-      prisma,
-      tracer,
-      notifications,
-    } = svc({ moduleTrouve: crm, permissionActuelle: { niveau: 'ecriture' } } as never);
-    prisma.demandeDroit.findFirst.mockResolvedValue(demande);
-    (prisma.module as unknown as Record<string, jest.Mock>).findUniqueOrThrow = jest.fn().mockResolvedValue(crm);
-    await expect(s.decider('S1', 'CIO (transverse)', 'CIO1', 'D1', true)).rejects.toThrow('Seul le CEO');
-    await expect(s.decider('S1', 'CEO (transverse)', 'CEO1', 'D1', false)).rejects.toThrow('motif');
-    await s.decider('S1', 'CEO (transverse)', 'CEO1', 'D1', true);
-    expect(tracer).toHaveBeenCalledWith({
-      data: expect.objectContaining({ apres: 'lecture', parId: 'CIO1', valideParId: 'CEO1' }),
-    });
-    expect(notifications.envoyer).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'demande_droit_decidee', destinataireIds: ['CIO1'] }),
+  it('cohérence : agir donne la lecture ; un droit sans objet n’est jamais accordé', async () => {
+    const { svc: s, prisma } = svc();
+    await s.enregistrer('S1', un('crm', { ...NO_RIGHTS, ecriture: true, validation: true }), 'CIO1');
+    expect(prisma.roleRight.upsert.mock.calls[0][0]).toMatchObject({ update: droits('LE') });
+  });
+
+  it('rien ne change : ni écriture, ni avis', async () => {
+    const { svc: s, prisma, notifications } = svc({ actuelle: droits('LE') });
+    await s.enregistrer('S1', un('crm', droits('LE')), 'CIO1');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(notifications.envoyer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['le CIO (carte blanche)', { ...DIR_GC, nom: 'CIO (transverse)', societeId: null }],
+    ['un compte d’administration', { ...DIR_GC, nom: 'societe_admin', societeId: null }],
+    ['le rôle d’une autre société', { ...DIR_GC, societeId: 'S2' }],
+  ])('refuse %s, sans rien écrire', async (_cas, role) => {
+    const { svc: s, prisma } = svc({ role });
+    await expect(s.enregistrer('S1', un('crm', droits('L')), 'CIO1')).rejects.toThrow(ForbiddenException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rôle ou étape introuvable → 404', async () => {
+    await expect(svc({ etape: null }).svc.enregistrer('S1', un('x', droits('L')), 'CIO1')).rejects.toThrow(
+      NotFoundException,
     );
-    expect(notifications.envoyer).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'droits_modifies' }));
+    await expect(
+      svc({ role: { ...DIR_GC, supprimeLe: new Date() } }).svc.enregistrer('S1', un('crm', droits('L')), 'CIO1'),
+    ).rejects.toThrow(NotFoundException);
   });
 });

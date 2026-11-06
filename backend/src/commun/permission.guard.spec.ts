@@ -4,9 +4,9 @@ import { PermissionGuard } from './permission.guard';
 import type { PermissionRequise } from './permission.decorator';
 
 // PermissionGuard est opt-in par route (@RequiertPermission) : on teste
-// l'absence de décorateur (laisse passer), l'ordre total des niveaux
-// (validation ⊇ ecriture ⊇ lecture ⊇ aucun), et l'absence d'entrée pour le
-// module (fail closed, traité comme 'aucun').
+// l'absence de décorateur (laisse passer), les quatre droits indépendants
+// (31/10/2026 : la validation ne donne pas l'écriture), et l'absence
+// d'entrée pour l'étape (refus par défaut).
 
 type User = { permissions?: Record<string, string> };
 
@@ -28,24 +28,29 @@ describe('PermissionGuard', () => {
     expect(guard.canActivate(ctxOf(req({})))).toBe(true);
   });
 
-  it('AUTORISÉ : niveau exact requis', () => {
+  it('AUTORISÉ : le droit requis est accordé', () => {
     const guard = new PermissionGuard(reflector({ module: 'crm', niveau: 'ecriture' }));
+    expect(guard.canActivate(ctxOf(req({ crm: 'LE' })))).toBe(true);
+  });
+
+  it('REFUSÉ : la validation ne donne pas l’écriture (droits indépendants) → 403', () => {
+    const guard = new PermissionGuard(reflector({ module: 'finances_devis', niveau: 'ecriture' }));
+    expect(() => guard.canActivate(ctxOf(req({ finances_devis: 'LV' })))).toThrow(ForbiddenException);
+  });
+
+  it('REFUSÉ : lecture seule pour une écriture → 403', () => {
+    const guard = new PermissionGuard(reflector({ module: 'crm', niveau: 'ecriture' }));
+    expect(() => guard.canActivate(ctxOf(req({ crm: 'L' })))).toThrow(ForbiddenException);
+  });
+
+  it('jeton d’avant le 31/10/2026 : ancien niveau lu comme converti par la migration', () => {
+    const guard = new PermissionGuard(reflector({ module: 'crm', niveau: 'suppression' }));
     expect(guard.canActivate(ctxOf(req({ crm: 'ecriture' })))).toBe(true);
   });
 
-  it('AUTORISÉ : niveau supérieur au requis (validation couvre ecriture)', () => {
-    const guard = new PermissionGuard(reflector({ module: 'finances_devis', niveau: 'ecriture' }));
-    expect(guard.canActivate(ctxOf(req({ finances_devis: 'validation' })))).toBe(true);
-  });
-
-  it('REFUSÉ : niveau inférieur au requis (lecture ne couvre pas ecriture) → 403', () => {
-    const guard = new PermissionGuard(reflector({ module: 'crm', niveau: 'ecriture' }));
-    expect(() => guard.canActivate(ctxOf(req({ crm: 'lecture' })))).toThrow(ForbiddenException);
-  });
-
-  it('REFUSÉ : aucune entrée pour le module (fail closed) → 403', () => {
+  it('REFUSÉ : aucune entrée pour l’étape (refus par défaut) → 403', () => {
     const guard = new PermissionGuard(reflector({ module: 'rh', niveau: 'lecture' }));
-    expect(() => guard.canActivate(ctxOf(req({ crm: 'validation' })))).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(ctxOf(req({ crm: 'LEVS' })))).toThrow(ForbiddenException);
   });
 
   it('REFUSÉ : permissions absentes (token émis avant ce champ) → 403', () => {
@@ -68,32 +73,34 @@ describe('PermissionGuard — règle selon la méthode', () => {
   const g = (valeurs: Record<string, unknown>) => new PermissionGuard(parCle(valeurs));
 
   it('GET avec projets:lecture → autorisé', () => {
-    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('GET', 'COO', { projets: 'lecture' })))).toBe(
-      true,
-    );
+    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('GET', 'COO', { projets: 'L' })))).toBe(true);
   });
 
   it.each([['POST'], ['PATCH'], ['PUT'], ['DELETE']])('%s avec projets:lecture seulement → 403', (m) => {
-    expect(() =>
-      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete(m, 'COO', { projets: 'lecture' }))),
-    ).toThrow(ForbiddenException);
+    expect(() => g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete(m, 'COO', { projets: 'L' })))).toThrow(
+      ForbiddenException,
+    );
   });
 
-  it('PATCH avec projets:ecriture → autorisé ; validation couvre écriture', () => {
+  it('PATCH avec l’écriture → autorisé', () => {
     expect(
-      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('PATCH', 'Dir. GC', { projets: 'ecriture' }))),
+      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('PATCH', 'Dir. GC', { projets: 'LE' }))),
     ).toBe(true);
+  });
+
+  it('DELETE exige la suppression, pas l’écriture', () => {
+    expect(() =>
+      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('DELETE', 'Dir. GC', { projets: 'LE' }))),
+    ).toThrow(ForbiddenException);
     expect(
-      g({ permissionSelonMethode: SELON }).canActivate(
-        ctxOf(requete('PATCH', 'CTO (transverse)', { projets: 'validation' })),
-      ),
+      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('DELETE', 'Dir. GC', { projets: 'LS' }))),
     ).toBe(true);
   });
 
   it('GET sans aucune ligne projets (RH, CIO) → 403', () => {
-    expect(() =>
-      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('GET', 'RH', { rh: 'ecriture' }))),
-    ).toThrow(ForbiddenException);
+    expect(() => g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('GET', 'RH', { rh: 'LE' })))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('collaborateur exempté SUR CES ROUTES (cellule gérée par AccesProjetGuard), même en écriture', () => {
@@ -119,43 +126,18 @@ describe('PermissionGuard — règle selon la méthode', () => {
     const chat = { module: 'communication', roleHorsMatrice: 'collaborateur' };
     expect(
       g({ permissionSelonMethode: chat, compteCommeLecture: true }).canActivate(
-        ctxOf(requete('PATCH', 'CEO (transverse)', { communication: 'lecture' })),
+        ctxOf(requete('PATCH', 'CEO (transverse)', { communication: 'L' })),
       ),
     ).toBe(true);
     expect(() =>
       g({ permissionSelonMethode: chat }).canActivate(
-        ctxOf(requete('POST', 'CEO (transverse)', { communication: 'lecture' })),
+        ctxOf(requete('POST', 'CEO (transverse)', { communication: 'L' })),
       ),
     ).toThrow(ForbiddenException);
     expect(() =>
       g({ permissionSelonMethode: chat, compteCommeLecture: true }).canActivate(
-        ctxOf(requete('PATCH', 'CIO (transverse)', { communication: 'aucun' })),
+        ctxOf(requete('PATCH', 'RH', { communication: '' })),
       ),
     ).toThrow(ForbiddenException);
-  });
-});
-
-// Interrupteurs (Administrateur HUB) : un module coupé pour la société est
-// refusé même avec les droits ; l'Administrateur HUB passe.
-describe('PermissionGuard — module coupé', () => {
-  const switches = { disabledModules: jest.fn().mockResolvedValue(new Set(['crm'])) };
-  const guard = () => new PermissionGuard(reflector({ module: 'crm', niveau: 'lecture' }), switches as never);
-  const avec = (user: Record<string, unknown>) => ({
-    user: { societeId: 'S1', permissions: { crm: 'validation' }, ...user },
-  });
-
-  it('REFUSÉ : droits suffisants mais module coupé → 403', async () => {
-    await expect(guard().canActivate(ctxOf(avec({})))).rejects.toThrow(ForbiddenException);
-    expect(switches.disabledModules).toHaveBeenCalledWith('S1');
-  });
-
-  it('AUTORISÉ : l’Administrateur HUB, module coupé ou non', async () => {
-    expect(await guard().canActivate(ctxOf(avec({ adminHub: true })))).toBe(true);
-  });
-
-  it('AUTORISÉ : module actif', async () => {
-    const actifs = { disabledModules: jest.fn().mockResolvedValue(new Set()) };
-    const g = new PermissionGuard(reflector({ module: 'crm', niveau: 'lecture' }), actifs as never);
-    expect(await g.canActivate(ctxOf(avec({})))).toBe(true);
   });
 });

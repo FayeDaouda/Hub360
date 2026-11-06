@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   AlarmClock,
   ChevronDown,
-  KeyRound,
   MailWarning,
   MessageSquareWarning,
   ShieldAlert,
@@ -25,7 +24,6 @@ const TYPE: Record<ElementAdministration['type'], { icone: LucideIcon; action: s
   invitation: { icone: MailWarning, action: 'Comptes', rang: 2 },
   chef_sans_compte: { icone: UserX, action: 'Comptes', rang: 3 },
   salarie_sans_compte: { icone: UsersRound, action: 'Comptes', rang: 4 },
-  droit_cio: { icone: KeyRound, action: 'Matrice', rang: 5 },
 };
 
 // « À traiter aujourd'hui » du CIO (revue CIO, 22/10/2026), en tête de
@@ -57,11 +55,7 @@ export function ATraiterAdministration({
   const urgents = tries.filter((e) => e.ton === 'risque').length;
   const visibles = tout ? tries : tries.slice(0, VISIBLES);
   const ouvrir = (e: ElementAdministration) =>
-    e.type === 'signalement'
-      ? onSection('signalements')
-      : e.type === 'droit_cio'
-        ? onSection('administration')
-        : router.push('/groupe');
+    e.type === 'signalement' ? onSection('signalements') : router.push('/groupe');
 
   return (
     <section className="panel glass-panel at-rh" aria-label="À traiter aujourd’hui">

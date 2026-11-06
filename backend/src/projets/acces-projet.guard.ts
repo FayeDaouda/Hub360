@@ -21,11 +21,11 @@ export class AccesProjetGuard implements CanActivate {
 
   canActivate(ctx: ExecutionContext): boolean {
     const req = ctx.switchToHttp().getRequest();
-    const user = req.user as { societeSlug: string | null; role: string; adminHub?: boolean } | undefined;
+    const user = req.user as { societeSlug: string | null; role: string; fullAccess?: boolean } | undefined;
     if (!user || user.societeSlug !== req.params.slug) {
       throw new ForbiddenException("Vous n'avez pas accès à cette société");
     }
-    if (user.adminHub || user.role === ROLE_COMPANY_ADMIN) return true;
+    if (user.fullAccess || user.role === ROLE_COMPANY_ADMIN) return true;
     if (user.role === ROLE_EMPLOYEE) {
       throw new ForbiddenException('Vos projets sont accessibles depuis « Projets ».');
     }

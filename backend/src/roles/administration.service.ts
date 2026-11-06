@@ -4,7 +4,7 @@ import { doubleFacteurSuspendue } from '../auth/auth.service';
 import { daysSince, formatDate, formatDayMonth, plural, toIsoDay } from '@hub/domain';
 
 export type ElementAdministration = {
-  type: 'signalement' | 'droit_cio' | 'invitation' | 'chef_sans_compte' | 'double_facteur' | 'salarie_sans_compte';
+  type: 'signalement' | 'invitation' | 'chef_sans_compte' | 'double_facteur' | 'salarie_sans_compte';
   cle: string;
   titre: string;
   detail: string;
@@ -25,13 +25,12 @@ export class AdministrationService {
 
   async aTraiter(societeId: string): Promise<ElementAdministration[]> {
     const maintenant = Date.now();
-    const [signalements, demandes, membres, cellules, dossiers] = await Promise.all([
+    const [signalements, membres, cellules, dossiers] = await Promise.all([
       this.prisma.signalement.findMany({
         where: { societeId, statut: { in: ['a_traiter', 'en_cours'] } },
         orderBy: { creeLe: 'asc' },
         select: { id: true, description: true, statut: true, role: true, creeLe: true },
       }),
-      this.prisma.demandeDroit.findMany({ where: { societeId, statut: 'en_attente' }, orderBy: { createdAt: 'asc' } }),
       this.prisma.utilisateurSocieteRole.findMany({
         where: { societeId, utilisateur: { actif: true } },
         select: {
@@ -100,16 +99,6 @@ export class AdministrationService {
         detail: s.description.length > 90 ? `${s.description.slice(0, 89)}…` : s.description,
         ton: jours > 3 ? 'risque' : 'attention',
         le: s.creeLe.toISOString(),
-      });
-    }
-    for (const d of demandes) {
-      elements.push({
-        type: 'droit_cio',
-        cle: `droit-${d.id}`,
-        titre: `Droits du CIO · ${d.module} → ${d.apres}`,
-        detail: `en attente du CEO depuis ${daysSince(d.createdAt, maintenant)} j (demandée le ${formatDayMonth(toIsoDay(d.createdAt))})`,
-        ton: 'info',
-        le: d.createdAt.toISOString(),
       });
     }
     // Un compte par personne (un compte peut porter plusieurs rôles).

@@ -1,0 +1,89 @@
+// Les quatre droits de la matrice (décision du 31/10/2026) : Lecture,
+// Écriture, Validation, Suppression, indépendants les uns des autres, réglés
+// par étape d'un module. Une seule écriture pour le serveur et l'écran : qui a
+// quel droit reste décidé au serveur (matrice), ceci n'est que le codage.
+//
+// Codage : une étape vaut une chaîne de lettres parmi « LEVS » (ex. « LE »),
+// la chaîne vide = aucun droit. C'est ce que portent la session et le jeton.
+
+export const RIGHTS = ['lecture', 'ecriture', 'validation', 'suppression'] as const;
+export type Right = (typeof RIGHTS)[number];
+
+export const RIGHT_LABELS: Record<Right, string> = {
+  lecture: 'Lecture',
+  ecriture: 'Écriture',
+  validation: 'Validation',
+  suppression: 'Suppression',
+};
+
+const LETTERS: Record<Right, string> = { lecture: 'L', ecriture: 'E', validation: 'V', suppression: 'S' };
+
+export type RightSet = Record<Right, boolean>;
+
+export const NO_RIGHTS: RightSet = { lecture: false, ecriture: false, validation: false, suppression: false };
+export const ALL_RIGHTS: RightSet = { lecture: true, ecriture: true, validation: true, suppression: true };
+
+// Anciennes valeurs (niveaux en échelle, avant le 31/10/2026), encore
+// présentes dans une session ouverte avant la mise à jour : lues comme la
+// migration les a converties (écriture couvrait aussi la suppression).
+const LEGACY_LEVELS: Record<string, string> = {
+  aucun: '',
+  lecture: 'L',
+  ecriture: 'LES',
+  validation: 'LEVS',
+};
+
+/** Droits d'une étape lus depuis la session ou le jeton. */
+export function decodeRights(value: string | undefined | null): RightSet {
+  const letters = value ? (LEGACY_LEVELS[value] ?? value) : '';
+  return {
+    lecture: letters.includes('L'),
+    ecriture: letters.includes('E'),
+    validation: letters.includes('V'),
+    suppression: letters.includes('S'),
+  };
+}
+
+/** Écriture compacte, toujours dans l'ordre L, E, V, S. */
+export function encodeRights(rights: RightSet): string {
+  return RIGHTS.filter((r) => rights[r])
+    .map((r) => LETTERS[r])
+    .join('');
+}
+
+/**
+ * Règle de cohérence : agir (Écriture, Validation, Suppression) donne la
+ * Lecture ; un droit « sans objet » pour l'étape n'est jamais accordé.
+ */
+export function normalizeRights(rights: RightSet, applicable: RightSet = ALL_RIGHTS): RightSet {
+  const kept = {
+    lecture: rights.lecture && applicable.lecture,
+    ecriture: rights.ecriture && applicable.ecriture,
+    validation: rights.validation && applicable.validation,
+    suppression: rights.suppression && applicable.suppression,
+  };
+  if (kept.ecriture || kept.validation || kept.suppression) kept.lecture = applicable.lecture;
+  return kept;
+}
+
+/**
+ * La carte des droits (étape → lettres) donne-t-elle `right` sur `step` ?
+ * Une étape absente vaut aucun droit (refus par défaut). « aucun » n'exige rien.
+ */
+export function hasRight(
+  permissions: Record<string, string> | undefined | null,
+  step: string,
+  right: Right | 'aucun',
+): boolean {
+  if (right === 'aucun') return true;
+  return decodeRights(permissions?.[step])[right];
+}
+
+/** « Écriture ajoutée, Suppression retirée » : ce qui change entre deux états. */
+export function describeRightsChange(before: RightSet, after: RightSet): string {
+  const parts: string[] = [];
+  for (const r of RIGHTS) {
+    if (before[r] !== after[r]) parts.push(`${RIGHT_LABELS[r]} ${after[r] ? 'ajoutée' : 'retirée'}`);
+  }
+  return parts.join(', ');
+}

@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { HelpCircle } from 'lucide-react';
 import { moduleDeSection, ORDRE_SECTIONS, sectionAccessible } from '@/lib/acces-back-office';
-import { FICHES_AIDE, phraseNiveau, REPERES_AIDE } from '@/lib/aide';
+import { FICHES_AIDE, phraseDroits, REPERES_AIDE } from '@/lib/aide';
 import { lireFichier } from '@/lib/fichiers';
 import { creerSignalement } from '@/lib/signalements';
-import type { NiveauPermission, Session } from '@/lib/types';
+import type { Session } from '@/lib/types';
+import { ALL_RIGHTS, decodeRights, type RightSet } from '@hub/domain';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 import { ROLE_COMPANY_ADMIN } from '@hub/domain';
@@ -95,10 +96,10 @@ function Panneau({
 }
 
 function Guide({ session, onSignaler }: { session: Session; onSignaler: () => void }) {
-  const niveauDe = (cle: string): NiveauPermission => {
-    if (session.role === ROLE_COMPANY_ADMIN) return 'validation';
+  const droitsDe = (cle: string): RightSet => {
+    if (session.role === ROLE_COMPANY_ADMIN) return ALL_RIGHTS;
     const moduleMatrice = moduleDeSection(cle);
-    return moduleMatrice ? (session.permissions?.[moduleMatrice] ?? 'aucun') : 'aucun';
+    return decodeRights(moduleMatrice ? session.permissions?.[moduleMatrice] : '');
   };
   const sections = [...ORDRE_SECTIONS, 'parametres'].filter(
     (cle) => sectionAccessible(session, cle) && FICHES_AIDE[cle],
@@ -113,7 +114,7 @@ function Guide({ session, onSignaler }: { session: Session; onSignaler: () => vo
       <ul className="aide-sections">
         {sections.map((cle) => {
           const f = FICHES_AIDE[cle];
-          const actions = phraseNiveau(f, niveauDe(cle));
+          const actions = phraseDroits(f, droitsDe(cle));
           return (
             <li key={cle}>
               <strong>{f.titre}</strong>

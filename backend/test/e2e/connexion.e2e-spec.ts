@@ -35,7 +35,8 @@ describe('Connexion et droits', () => {
       .send({ email: COMPTES.cfo, motDePasse: MOT_DE_PASSE, societeSlug: SLUG })
       .expect(200);
     expect(r.body.role).toBe('CFO');
-    expect(r.body.permissions.finances_factures).toBe('validation');
+    // Quatre droits en lettres (31/10/2026) : Lecture, Écriture, Validation, Suppression.
+    expect(r.body.permissions.finances_factures).toBe('LEVS');
   });
 
   it('refuse une route protégée sans session, et hors droits pour le rôle', async () => {

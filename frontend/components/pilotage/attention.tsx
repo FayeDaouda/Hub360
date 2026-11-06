@@ -12,7 +12,6 @@ import {
   FileWarning,
   Gavel,
   Hourglass,
-  KeyRound,
   ReceiptText,
   Scale,
   Undo2,
@@ -26,10 +25,8 @@ import { useMediaQuery } from '@/lib/media';
 import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
 import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import type { Projet } from '@/lib/types';
-import { getDemandesDroit, type DemandeDroit } from '@/lib/roles';
 import { getNotifications, marquerLuesParId } from '@/lib/notifications';
 import type { NotificationItem, NotificationType } from '@/lib/types';
-import { DecisionDroit } from './decision-droit';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { lienFacturationProjet } from '@/lib/facturation';
 import { addDays, daysBetween, formatAmount, formatDateTime, formatDayMonth, plural, todayIso } from '@hub/domain';
@@ -50,12 +47,6 @@ const TYPES_CONTROLE: ReadonlySet<NotificationType> = new Set<NotificationType>(
   'connexion_secours',
   'reglage_gouvernance_modifie',
 ]);
-const NIVEAU_DROIT: Record<DemandeDroit['apres'], string> = {
-  aucun: 'aucun',
-  lecture: 'lecture',
-  ecriture: 'écriture',
-  validation: 'validation',
-};
 
 type Ligne = {
   cle: string;
@@ -84,8 +75,6 @@ export function Attention({
   const jour = todayIso();
   const base = `/admin/${slug}`;
   // Droits du CIO à valider (revue CIO, 22/10/2026) : le CEO seul tranche.
-  const [droits, setDroits] = useState<DemandeDroit[]>([]);
-  const [droitOuvert, setDroitOuvert] = useState<DemandeDroit | null>(null);
   // Revue CEO (22/10/2026) : toutes ses décisions ici, aucune ailleurs seulement —
   // offres à contresigner, avoirs au-delà du seuil, salaire du CFO.
   const session = useSessionCourante();
@@ -95,9 +84,6 @@ export function Attention({
   const [avoirOuvert, setAvoirOuvert] = useState<AvoirAValider | null>(null);
   const [salaires, setSalaires] = useState<SalaireAValider[]>([]);
   useEffect(() => {
-    getDemandesDroit(slug)
-      .then((l) => setDroits(l.filter((d) => d.peutDecider)))
-      .catch(() => setDroits([]));
     getProjets(slug)
       .then((l) => setOffres(l.filter((d) => d.statut === 'en_validation')))
       .catch(() => setOffres([]));
@@ -136,20 +122,6 @@ export function Attention({
   const proposees = vue.decisions.filter((d) => d.peutArbitrer);
 
   const toutes: Rubrique[] = [
-    {
-      cle: 'droits',
-      decision: true,
-      titre: 'Droits du CIO à valider',
-      icone: <KeyRound size={16} aria-hidden />,
-      couleur: 'var(--corail)',
-      lignes: droits.map((d) => ({
-        cle: d.id,
-        titre: `${d.module} · ${NIVEAU_DROIT[d.avant]} → ${NIVEAU_DROIT[d.apres]}`,
-        detail: `demandé par ${d.demandePar}`,
-        pill: { libelle: 'À valider', ton: 'attention' as const },
-        onClick: () => setDroitOuvert(d),
-      })),
-    },
     {
       cle: 'controle',
       titre: 'Contrôle interne · 7 derniers jours',
@@ -411,14 +383,6 @@ export function Attention({
       )}
       {avoirOuvert && (
         <DecisionAvoir slug={slug} avoir={avoirOuvert} onFait={setAvoirs} onClose={() => setAvoirOuvert(null)} />
-      )}
-      {droitOuvert && (
-        <DecisionDroit
-          slug={slug}
-          demande={droitOuvert}
-          onFait={(l) => setDroits(l.filter((d) => d.peutDecider))}
-          onClose={() => setDroitOuvert(null)}
-        />
       )}
     </section>
   );

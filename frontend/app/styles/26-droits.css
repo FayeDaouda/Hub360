@@ -1,0 +1,323 @@
+/* ==========================================================================
+   Matrice des droits (31/10/2026) : un module à la fois, ses étapes, quatre
+   droits en toutes lettres par rôle ; avis « Vos droits ont changé » en haut
+   de chaque espace connecté. Teintes via transparent, jamais via blanc
+   (mode sombre).
+   ========================================================================== */
+
+/* --- Avis en haut de page ------------------------------------------------ */
+.avis-droits {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-12);
+  margin: 0 0 var(--e-16);
+  padding: var(--e-12) var(--e-16);
+  border: 1px solid color-mix(in oklch, var(--action) 45%, var(--border));
+  border-radius: var(--r-14);
+  background: color-mix(in oklch, var(--action) 9%, var(--surface));
+  color: var(--text);
+  font-size: var(--t-14);
+}
+.avis-droits-icone {
+  flex: none;
+  margin-top: 2px;
+  color: var(--lien);
+}
+.avis-droits-texte {
+  flex: 1;
+  min-width: 0;
+}
+.avis-droits-titre {
+  margin: 0 0 var(--e-4);
+  font-weight: 600;
+}
+.avis-droits ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  overflow-wrap: anywhere;
+}
+.avis-droits-aide {
+  margin: var(--e-4) 0 0;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}
+.avis-droits-bouton {
+  flex: none;
+}
+@media (max-width: 560px) {
+  .avis-droits {
+    flex-wrap: wrap;
+  }
+  .avis-droits-bouton {
+    width: 100%;
+  }
+}
+
+/* --- Matrice ------------------------------------------------------------- */
+.droits {
+  display: grid;
+  gap: var(--e-16);
+}
+.droits-intro {
+  margin: 0 0 var(--e-8);
+  color: var(--text-muted);
+  font-size: var(--t-14);
+}
+.droits-sens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-8) var(--e-16);
+  margin: 0;
+  font-size: var(--t-13);
+}
+.droits-sens div {
+  display: flex;
+  gap: var(--e-4);
+}
+.droits-sens dt {
+  font-weight: 600;
+}
+.droits-sens dd {
+  margin: 0;
+  color: var(--text-muted);
+}
+.droits-sens dd::before {
+  content: '— ';
+}
+
+/* Choix du module : pastilles qui passent à la ligne (téléphone compris). */
+.droits-modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-8);
+}
+.droits-module {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-8);
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-13);
+  cursor: pointer;
+}
+.droits-module:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.droits-module.is-active {
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--action-texte);
+}
+.droits-module:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.droits-module-compte {
+  min-width: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--attention);
+  color: var(--encre);
+  font-size: var(--t-12);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Une étape : son nom, la phrase de chaque droit, puis les rôles. */
+.droits-etape {
+  display: grid;
+  gap: var(--e-12);
+  padding: var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+}
+.droits-etape-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-8);
+}
+.droits-etape-tete h3 {
+  margin: 0;
+  font-size: var(--t-16);
+}
+.droits-etape-nom {
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}
+.droits-phrases {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--e-8);
+  margin: 0;
+}
+.droits-phrases div {
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+}
+.droits-phrases dt {
+  font-size: var(--t-12);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.droits-phrases dd {
+  margin: var(--e-4) 0 0;
+  font-size: var(--t-13);
+}
+.droits-phrases .is-sans-objet {
+  color: var(--text-subtle);
+}
+
+.droits-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-14);
+}
+.droits-table th,
+.droits-table td {
+  padding: var(--e-8);
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.droits-table thead th {
+  border-top: none;
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.droits-table th:first-child {
+  text-align: left;
+}
+.droits-role {
+  font-weight: 500;
+}
+.droits-role .pill {
+  margin-left: var(--e-8);
+}
+.droits-table td.is-modifie {
+  background: color-mix(in oklch, var(--attention) 16%, transparent);
+}
+.droits-carte-blanche {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.droits-case {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-8);
+  min-width: 44px;
+  min-height: 32px;
+  cursor: pointer;
+}
+.droits-case input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--action);
+  cursor: pointer;
+}
+.droits-case.is-sans-objet {
+  color: var(--text-subtle);
+  cursor: default;
+}
+/* Le mot du droit sert sur téléphone, où l'en-tête du tableau disparaît. */
+.droits-case-mot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Barre d'enregistrement : collée en bas tant qu'il reste des cases à enregistrer. */
+.droits-barre {
+  display: grid;
+  gap: var(--e-8);
+}
+.droits-barre.is-visible {
+  position: sticky;
+  bottom: var(--e-16);
+  z-index: 2;
+  padding: var(--e-12) var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+  box-shadow: var(--ombre-3);
+}
+.droits-barre-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8) var(--e-12);
+}
+.droits-barre-actions span {
+  flex: 1;
+  min-width: 12rem;
+  font-size: var(--t-14);
+}
+
+@media (max-width: 1100px) {
+  .droits-phrases {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Téléphone : chaque rôle devient une carte, ses quatre droits en 2 × 2
+   avec leur mot écrit (plus d'en-tête de colonnes). */
+@media (max-width: 720px) {
+  .droits-etape {
+    padding: var(--e-12);
+  }
+  .droits-phrases {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .droits-table thead {
+    display: none;
+  }
+  .droits-table,
+  .droits-table tbody {
+    display: block;
+  }
+  .droits-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: var(--e-8) 0;
+    border-top: 1px solid var(--border);
+  }
+  .droits-table th,
+  .droits-table td {
+    border-top: none;
+    padding: var(--e-4);
+    text-align: left;
+  }
+  .droits-table .droits-role,
+  .droits-table .droits-carte-blanche {
+    grid-column: 1 / -1;
+  }
+  .droits-case {
+    justify-content: flex-start;
+    min-height: 44px;
+  }
+  .droits-case-mot {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+  .droits-barre.is-visible {
+    /* Au-dessus de la navigation du bas (coque mobile). */
+    bottom: calc(var(--e-16) + 64px);
+  }
+}

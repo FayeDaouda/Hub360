@@ -37,6 +37,7 @@ import { dureeVerrouillage, ESSAIS_AVANT_VERROUILLAGE, estVerrouille } from './v
 import type { UtilisateurConnecte } from './jwt.strategy';
 import { EmailService, type AvisSecurite } from '../email/email.service';
 import { SwitchesService } from '../switches/switches.service';
+import { hasFullAccess, RightsService } from '../rights/rights.service';
 
 // Double authentification obligatoire pour tous les rôles (décision du
 // 28/10/2026, lot A ; elle épargnait jusque-là le Salarié qui ne pilote pas de
@@ -108,6 +109,7 @@ export class AuthService {
     private notifications: NotificationsService,
     private email: EmailService,
     private switches: SwitchesService,
+    private rights: RightsService,
   ) {}
 
   // Avis de sécurité à la personne (lot A) : envoyé sans retarder la réponse ;
@@ -138,7 +140,7 @@ export class AuthService {
     const { acces } = await this.acces(utilisateur.id, dto.societeSlug);
     const role = acces.role.nom;
     // Maintenance du HUB : dit tout de suite, avant le code de double authentification.
-    await this.switches.refuseDuringMaintenance(role === ROLE_HUB_ADMIN);
+    await this.switches.refuseDuringMaintenance(role === ROLE_HUB_ADMIN || role === ROLE_CIO);
     if (utilisateur.totpActifLe && !doubleFacteurSuspenduePour(role))
       return this.etape('code', utilisateur.id, dto.societeSlug);
     if (doubleFacteurExigePour(role)) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
@@ -359,12 +361,13 @@ export class AuthService {
   // Prolongation par l'activité dans le HUB (lot B) : même rôle, même début
   // de session ; seule l'expiration avance (session.ts). Les droits sont
   // relus (matrice, puis interrupteurs : un module coupé ou rendu entre-temps)
-  // et rendus avec le jeton. Un compte désactivé ou une session coupée
+  // et rendus avec le jeton — l'écran les redemande aussi dès qu'un avis
+  // « Vos droits ont changé » arrive (31/10/2026). Un compte désactivé ou une session coupée
   // n'arrivent pas jusqu'ici (JwtStrategy). Jamais daté avant le jeton
   // présenté (cf. dateEmission).
   async prolongerSession(u: UtilisateurConnecte) {
     const iat = Math.max(Math.floor(Date.now() / 1000), u.emissionJeton);
-    const permissions = await this.permissionsActuelles(u);
+    const permissions = await this.rights.forUser(u);
     const contenu = {
       sub: u.userId,
       email: u.email,
@@ -377,14 +380,6 @@ export class AuthService {
     return { access_token: this.signerSession(contenu, iat, u.debutSession), permissions };
   }
 
-  private async permissionsActuelles(u: UtilisateurConnecte): Promise<Record<string, string>> {
-    if (u.adminHub) return this.permissionsCompletes();
-    if (!u.societeSlug || !u.societeId) return u.permissions;
-    const { acces } = await this.acces(u.userId, u.societeSlug);
-    const matrice = Object.fromEntries(acces.role.permissions.map((p) => [p.module.cle, p.niveau as string]));
-    return this.switches.effectivePermissions(u.societeId, matrice);
-  }
-
   // Administrateur HUB : endosse un autre rôle (menu du compte), mêmes droits
   // complets, même début de session. Revérifie que le compte détient
   // toujours ce rôle d'administration dans la société de la session.
@@ -393,7 +388,7 @@ export class AuthService {
     if (!estEndossable(role)) throw new BadRequestException('Rôle inconnu.');
     const { societe, acces } = await this.acces(u.userId, u.societeSlug);
     if (acces.role.nom !== ROLE_HUB_ADMIN) throw new ForbiddenException('Réservé à l’Administrateur HUB.');
-    const permissions = await this.permissionsCompletes();
+    const permissions = await this.rights.full();
     await this.tracerRoleEndosse(u.userId, `${societe.nom} · en tant que ${role}`);
     const iat = Math.max(Math.floor(Date.now() / 1000), u.emissionJeton);
     const contenu = {
@@ -406,13 +401,6 @@ export class AuthService {
       adminHub: true as const,
     };
     return { access_token: this.signerSession(contenu, iat, u.debutSession), role, permissions };
-  }
-
-  // Carte blanche : chaque module du HUB, y compris ceux ajoutés plus tard,
-  // au niveau le plus haut.
-  private async permissionsCompletes(): Promise<Record<string, string>> {
-    const modules = await this.prisma.module.findMany({ select: { cle: true } });
-    return Object.fromEntries(modules.map((m) => [m.cle, 'validation']));
   }
 
   private async tracerRoleEndosse(utilisateurId: string, detail: string) {
@@ -448,7 +436,7 @@ export class AuthService {
         OR: [{ societeId: societe.id }, { societeId: null }],
         role: { supprimeLe: null },
       },
-      include: { role: { include: { permissions: { include: { module: true } } } } },
+      include: { role: true },
     });
     const acces =
       affectations.find((a) => a.societeId === societe.id) ?? affectations.find((a) => a.societeId === null);
@@ -501,21 +489,17 @@ export class AuthService {
     const { societe, acces } = await this.acces(utilisateur.id, societeSlug);
     const adminHub = acces.role.nom === ROLE_HUB_ADMIN;
 
-    // Niveau par module (cle), lu dans la matrice RolePermission. societe_admin
-    // y a des lignes explicites (validation partout, cf. seed.ts) ; les autres
-    // rôles socles (holding_admin/collaborateur) n'en ont pas → {} (fail closed
-    // sur toute route marquée @RequiertPermission).
-    let permissions: Record<string, string> = {};
-    for (const p of acces.role.permissions) {
-      permissions[p.module.cle] = p.niveau;
-    }
+    // Droits par étape (matrice, interrupteurs de la société appliqués).
+    // societe_admin y a des lignes explicites (cf. socle.ts) ; les autres
+    // rôles socles (holding_admin/collaborateur) n'en ont pas → {} (refus par
+    // défaut sur toute route marquée @RequiertPermission). Carte blanche
+    // (Administrateur HUB, CIO) : tout.
     const role = adminHub ? (estEndossable(roleEndosse) ? roleEndosse : ROLE_CEO) : acces.role.nom;
-    await this.switches.refuseDuringMaintenance(adminHub);
-    if (!adminHub) permissions = await this.switches.effectivePermissions(societe.id, permissions);
-    if (adminHub) {
-      permissions = await this.permissionsCompletes();
-      if (debut === undefined)
-        await this.tracerRoleEndosse(utilisateur.id, `Connexion à ${societe.nom} · en tant que ${role}`);
+    const fullAccess = hasFullAccess({ adminHub, role });
+    await this.switches.refuseDuringMaintenance(fullAccess);
+    const permissions = fullAccess ? await this.rights.full() : await this.rights.forRole(acces.roleId, societe.id);
+    if (adminHub && debut === undefined) {
+      await this.tracerRoleEndosse(utilisateur.id, `Connexion à ${societe.nom} · en tant que ${role}`);
     }
 
     if (ROLES_SECOURS.has(acces.role.nom)) await this.tracerSecours(utilisateur, societe);

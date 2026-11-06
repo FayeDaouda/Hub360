@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import type { NiveauPermission, Session } from '@/lib/types';
+import type { Session } from '@/lib/types';
 import { apiAuth } from '@/lib/client-api';
 import { remplacerSession } from '@/lib/auth';
 import { libelleRole } from '@/lib/groupe';
@@ -40,7 +40,7 @@ import { formatDayMonth, formatTime, ROLES_ENDOSSABLES, todayIso, toIsoDay } fro
 // referme et rend le focus à l'avatar.
 
 type EtatDoubleFacteur = { actifLe: string | null; exige: boolean; suspendue: boolean };
-type RoleEndosse = { access_token: string; role: string; permissions: Record<string, NiveauPermission> };
+type RoleEndosse = { access_token: string; role: string; permissions: Record<string, string> };
 
 const LIBELLE_ABSENCE: Record<NonNullable<Profil['absence']>['type'], string> = {
   conge_paye: 'congés payés',

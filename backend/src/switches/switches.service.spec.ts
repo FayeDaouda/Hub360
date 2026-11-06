@@ -32,12 +32,9 @@ function setup(o: { coupes?: string[]; maintenance?: { actif: boolean; message: 
 }
 
 describe('SwitchesService', () => {
-  it('droits effectifs : module coupé → « aucun », les autres intacts ; lecture mise en cache', async () => {
+  it('modules coupés : lecture mise en cache', async () => {
     const { svc, prisma } = setup({ coupes: ['crm'] });
-    expect(await svc.effectivePermissions('S1', { crm: 'validation', rh: 'lecture' })).toEqual({
-      crm: 'aucun',
-      rh: 'lecture',
-    });
+    expect(await svc.disabledModules('S1')).toEqual(new Set(['crm']));
     await svc.disabledModules('S1');
     expect(prisma.moduleDesactive.findMany).toHaveBeenCalledTimes(1);
   });

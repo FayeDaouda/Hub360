@@ -7,8 +7,8 @@ import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 type R = { user: { userId: string } };
 
-// Écran « Comptes & rôles » — administration du HUB (CIO, ou compte
-// technique holding_admin), cf. AdministrationHubGuard.
+// Écran « Comptes & rôles » — administration du HUB (CIO, Administrateur
+// HUB), cf. AdministrationHubGuard.
 @GroupScope()
 @Controller('groupe/comptes')
 @UseGuards(JwtAuthGuard, AdministrationHubGuard)
