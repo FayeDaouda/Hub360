@@ -239,3 +239,9 @@ export class SiteStatusResultDto {
 export class SiteVisitDateResultDto {
   dateVisiteSite!: string | null;
 }
+
+// Personnalisation d'un projet : ligne ajoutée (son id), modifiée ou retirée.
+export class CustomizationResultDto {
+  ok!: boolean;
+  tacheId?: string;
+}

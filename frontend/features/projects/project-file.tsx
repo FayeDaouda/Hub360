@@ -7,7 +7,12 @@ import { Pill } from '@/components/ui/pill';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { ETAPE, formatDate } from '@hub/domain';
+import { useConfirmer } from '@/components/confirmation';
+import { FieldError } from '@/components/ui/field';
+import { ApiError } from '@/lib/client-api';
 import { AddTsElement } from './add-ts-element';
+import { removeProjectLine } from './api';
+import { CustomizeBar, LineDialog } from './project-customization';
 import { CardThreadPanel } from './card-thread-panel';
 import { stepNumber, stepPill } from './labels';
 import { ProjectCardView, SURVEY_CARD_KEY } from './project-card';
@@ -16,7 +21,7 @@ import { ProjectTeams } from './project-teams';
 import { CardAssignment } from './card-assignment';
 import { SiteStatusField } from './site-fields';
 import { TaskPanel } from './task-panel';
-import type { AssignableEmployee, OpenProjectFile } from './types';
+import type { AssignableEmployee, OpenProjectFile, ProjectCard, ProjectTask } from './types';
 import type { Selection } from './use-open-projects';
 
 type Props = {
@@ -66,6 +71,27 @@ export function ProjectFile({
   const taskId = selection?.type === 'tache' ? selection.id : null;
   // Bloc dont on choisit la personne (bouton de l'en-tête de la carte).
   const [blockCardId, setBlockCardId] = useState<string | null>(null);
+  // Personnalisation du projet (01/11/2026) : mode, ligne ouverte, erreur.
+  const confirmer = useConfirmer();
+  const [customizing, setCustomizing] = useState(false);
+  const [lineDialog, setLineDialog] = useState<{ card: ProjectCard; task?: ProjectTask } | null>(null);
+  const [customizeError, setCustomizeError] = useState<string | null>(null);
+  async function removeLine(card: ProjectCard, task: ProjectTask) {
+    const ok = await confirmer({
+      titre: `Retirer « ${task.libelle} » ?`,
+      message: `La ligne est retirée de ce projet seulement (${card.libelle}). Le gabarit ne change pas.`,
+      confirmer: 'Retirer la ligne',
+      danger: true,
+    });
+    if (!ok) return;
+    setCustomizeError(null);
+    try {
+      await removeProjectLine(slug, d.id, task.id);
+      await onUpdate();
+    } catch (e) {
+      setCustomizeError(e instanceof ApiError ? e.message : 'La ligne n’a pas été retirée.');
+    }
+  }
   const blockCard = d.cartes.find((c) => c.id === blockCardId) ?? null;
   const chosen =
     d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === taskId) ?? null;
@@ -178,6 +204,8 @@ export function ProjectFile({
       </div>
 
       {d.optionsTs.length > 0 && <AddTsElement slug={slug} file={d} onUpdate={onUpdate} />}
+      {!employee && <CustomizeBar file={d} active={customizing} onToggle={() => setCustomizing((x) => !x)} />}
+      {customizeError && <FieldError>{customizeError}</FieldError>}
 
       {hasMine && (
         <label className="po-miennes">
@@ -212,10 +240,33 @@ export function ProjectFile({
               }
               blockTasks={d.cartes.find((x) => x.id === c.id)?.taches}
               onAssignBlock={d.peutAssigner && assignable ? () => setBlockCardId(c.id) : undefined}
+              customize={
+                customizing && d.peutPersonnaliser
+                  ? {
+                      onAdd: () => setLineDialog({ card: c }),
+                      onEdit: (t) => setLineDialog({ card: c, task: t }),
+                      onRemove: (t) => void removeLine(c, t),
+                    }
+                  : undefined
+              }
             />
           ))}
         </div>
       </div>
+
+      {lineDialog && (
+        <LineDialog
+          slug={slug}
+          projectId={d.id}
+          card={lineDialog.card}
+          task={lineDialog.task}
+          onClose={() => setLineDialog(null)}
+          onDone={() => {
+            setLineDialog(null);
+            void onUpdate();
+          }}
+        />
+      )}
 
       {blockCard && assignable && (
         <CardAssignment

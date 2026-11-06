@@ -330,10 +330,176 @@
   border-color: color-mix(in oklch, var(--fuchsia) 40%, var(--border));
 }
 .po-tache-libelle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+  font-size: 0.92rem;
+}
+.po-tache-titre {
   display: grid;
   gap: 0.1rem;
   min-width: 0;
-  font-size: 0.92rem;
+}
+/* Coche d'une ligne (01/11/2026) : verte quand elle est validée (visa
+   compris), grise quand elle est « non nécessaire », cercle vide sinon. */
+.po-coche {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.05rem;
+  border: 1.5px solid color-mix(in oklch, var(--text-muted) 55%, transparent);
+  border-radius: 50%;
+  color: #fff;
+}
+.po-coche--faite {
+  border-color: var(--pill-succes);
+  background: var(--pill-succes);
+}
+.po-coche--sans_objet {
+  border-color: var(--pill-neutre);
+  background: var(--pill-neutre);
+}
+.po-tache-titre strong.is-faite {
+  color: var(--text-muted);
+}
+.po-compteur {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--text-muted) 10%, transparent);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.po-compteur.is-complet {
+  background: color-mix(in oklch, var(--pill-succes) 14%, transparent);
+  color: color-mix(in oklch, var(--pill-succes) 85%, var(--text));
+}
+:root[data-theme='dark'] .po-compteur.is-complet {
+  color: color-mix(in oklch, var(--pill-succes) 45%, var(--text));
+}
+/* Personnalisation du projet : outils au bout de la ligne, ajout en fin de carte. */
+.po-tache-perso {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.po-tache-perso > .po-tache {
+  flex: 1;
+  min-width: 0;
+}
+.po-tache-outils {
+  display: inline-flex;
+  flex: none;
+  gap: 0.2rem;
+}
+.po-outil {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.po-outil:hover {
+  border-color: var(--action);
+  color: var(--action);
+}
+.po-outil--retirer:hover {
+  border-color: color-mix(in oklch, var(--pill-risque) 50%, var(--border));
+  color: var(--pill-risque);
+}
+.po-ajouter-ligne {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  padding: 0.4rem 0.7rem;
+  border: 1px dashed color-mix(in oklch, var(--action) 50%, var(--border));
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--action);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.po-ajouter-ligne:hover {
+  background: color-mix(in oklch, var(--action) 7%, transparent);
+}
+.po-perso {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0.75rem;
+}
+.po-perso.is-actif {
+  padding: 0.75rem;
+  border: 1px solid color-mix(in oklch, var(--action) 35%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--action) 5%, transparent);
+}
+.po-perso-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.po-perso-journal summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.po-perso-journal ul {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+.po-perso-journal li {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 6%, transparent);
+}
+.po-ligne-form {
+  display: grid;
+  gap: 0.85rem;
+}
+.po-ligne-form-rangee {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  align-items: end;
+  gap: 0.75rem;
+}
+.po-ligne-form-cases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+}
+.po-ligne-form-cases label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+@media (max-width: 640px) {
+  .po-ligne-form-rangee {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 .po-tache-assigne,
 .po-tache-heures,

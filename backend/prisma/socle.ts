@@ -112,6 +112,9 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
   };
   droits[ETAPE.projetsFils] = { ...NO_RIGHTS, ecriture: projets.ecriture || est(ROLE_CEO, ROLE_CFO, ROLE_EMPLOYEE) };
   droits[ETAPE.projetsProduction] = { ...NO_RIGHTS, lecture: est(ROLE_DIR_GC, ROLE_CTO, ROLE_CEO, ROLE_COMPANY_ADMIN) };
+  // Personnalisation d'un projet (migration 20261102130000_personnalisation_projet) : la direction.
+  const pilotesProjet = est(ROLE_DIR_GC, ROLE_CTO, ROLE_CEO, ROLE_COMPANY_ADMIN);
+  droits[ETAPE.projetsPersonnalisation] = { ...NO_RIGHTS, lecture: pilotesProjet, ecriture: pilotesProjet };
   // Équipe (lot 6, migration 20261101200000_equipe_etapes).
   const equipe = versDroits(niveaux.equipe);
   droits[ETAPE.equipe] = { ...equipe, validation: false };

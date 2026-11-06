@@ -1700,6 +1700,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/projets-ouverts/{id}/cartes/{carteId}/lignes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenProjectsController_addLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/ligne": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["OpenProjectsController_removeLine"];
+        options?: never;
+        head?: never;
+        patch: operations["OpenProjectsController_updateLine"];
+        trace?: never;
+    };
     "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/visa": {
         parameters: {
             query?: never;
@@ -5033,6 +5065,12 @@ export interface components {
             /** @enum {string} */
             F3: "absente" | "brouillon" | "emise";
         };
+        ProjectCustomizationDto: {
+            id: string;
+            libelle: string;
+            par: string | null;
+            le: string;
+        };
         TsOptionDto: {
             carteId: string;
             libelle: string;
@@ -5089,6 +5127,7 @@ export interface components {
             id: string;
             cle: string;
             libelle: string;
+            ajouteeAuProjet: boolean;
             descriptif: string | null;
             sourceNative: boolean;
             fichierObligatoire: boolean;
@@ -5157,6 +5196,8 @@ export interface components {
             statutChantier: "chantier" | "conception" | "livre";
             factures: components["schemas"]["TrancheStatusesDto"];
             peutAssigner: boolean;
+            peutPersonnaliser: boolean;
+            personnalisations: components["schemas"]["ProjectCustomizationDto"][];
             optionsTs: components["schemas"]["TsOptionDto"][];
             attentes: components["schemas"]["InvoiceWaitsDto"];
             etapes: components["schemas"]["ProjectStepDto"][];
@@ -5251,6 +5292,28 @@ export interface components {
         ReviewDecisionResultDto: {
             /** @enum {string} */
             statut: "reprise" | "validee";
+        };
+        CustomLineDto: {
+            libelle: string;
+            debutJ?: number;
+            finJ?: number;
+            heures?: number | null;
+            visaRequis?: boolean;
+            fichierObligatoire?: boolean;
+            descriptif?: string;
+        };
+        CustomizationResultDto: {
+            ok: boolean;
+            tacheId?: string;
+        };
+        UpdateLineDto: {
+            libelle?: string;
+            debutJ?: number | null;
+            finJ?: number | null;
+            heures?: number | null;
+            visaRequis?: boolean;
+            fichierObligatoire?: boolean;
+            descriptif?: string;
         };
         TaskVisaDto: {
             apposer: boolean;
@@ -8759,6 +8822,83 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewDecisionResultDto"];
+                };
+            };
+        };
+    };
+    OpenProjectsController_addLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                carteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomLineDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomizationResultDto"];
+                };
+            };
+        };
+    };
+    OpenProjectsController_removeLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomizationResultDto"];
+                };
+            };
+        };
+    };
+    OpenProjectsController_updateLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLineDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomizationResultDto"];
                 };
             };
         };
