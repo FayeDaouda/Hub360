@@ -3972,6 +3972,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/annonces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AnnoncesController_vue"];
+        put?: never;
+        post: operations["AnnoncesController_creer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/annonces/{id}/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AnnoncesController_valider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/annonces/{id}/retrait": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AnnoncesController_retirer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/annonces/{id}/lecture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AnnoncesController_lire"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sante": {
         parameters: {
             query?: never;
@@ -5689,6 +5753,42 @@ export interface components {
             lieu?: string;
             description?: string;
             inviteIds?: string[];
+        };
+        AnnonceDto: {
+            id: string;
+            titre: string;
+            contenu: string;
+            /** @enum {string} */
+            audience: "equipe" | "groupe" | "societe";
+            destinataires: string;
+            importante: boolean;
+            /** @enum {string} */
+            statut: "a_valider" | "publiee" | "retiree";
+            auteur: string;
+            societe: string;
+            publieeLe: string | null;
+            lue: boolean;
+            lectures: number | null;
+            peutRetirer: boolean;
+        };
+        VueAnnoncesDto: {
+            annonces: components["schemas"]["AnnonceDto"][];
+            aValider: components["schemas"]["AnnonceDto"][];
+            peutRediger: boolean;
+            publieDirectement: boolean;
+            equipes: {
+                id: string;
+                nom: string;
+            }[];
+        };
+        CreerAnnonceDto: {
+            titre: string;
+            contenu: string;
+            /** @enum {string} */
+            audience: "equipe" | "groupe" | "societe";
+            /** Format: uuid */
+            celluleId?: string;
+            importante?: boolean;
         };
         ClientErrorDto: {
             message: string;
@@ -11809,6 +11909,110 @@ export interface operations {
         };
     };
     AgendaController_annuler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AnnoncesController_vue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VueAnnoncesDto"];
+                };
+            };
+        };
+    };
+    AnnoncesController_creer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreerAnnonceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AnnoncesController_valider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AnnoncesController_retirer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AnnoncesController_lire: {
         parameters: {
             query?: never;
             header?: never;

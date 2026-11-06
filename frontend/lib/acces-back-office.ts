@@ -31,6 +31,7 @@ const SECTIONS_DIRECTION: Record<string, string> = {
   facturation: 'finances_factures',
   rh: 'rh',
   agenda: ETAPE.agenda, // Agenda (lot 11, 01/11/2026)
+  annonces: ETAPE.annonces, // Annonces (lot 12, 01/11/2026)
 };
 
 // Module de la matrice qui gouverne une section (guide d'aide : niveau du rôle).
@@ -46,6 +47,7 @@ export const ORDRE_SECTIONS = [
   'rh',
   'equipe',
   'agenda',
+  'annonces',
   'mon-espace',
 ];
 const CHEMINS: Record<string, string> = {
@@ -59,6 +61,7 @@ const CHEMINS: Record<string, string> = {
   equipe: 'equipe',
   'mon-espace': 'mon-espace',
   agenda: 'agenda',
+  annonces: 'annonces',
   parametres: 'reglages',
 };
 

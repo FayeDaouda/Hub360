@@ -14,6 +14,7 @@ import {
   LifeBuoy,
   ListChecks,
   LogOut,
+  Megaphone,
   Menu,
   ReceiptText,
   Settings,
@@ -64,6 +65,7 @@ const NAV: NavItem[] = [
   { cle: 'rh', libelle: 'RH', icone: IdCard, chemin: 'rh' },
   { cle: 'equipe', libelle: 'Équipes', icone: Users, chemin: 'equipe' },
   { cle: 'agenda', libelle: 'Agenda', icone: CalendarDays, chemin: 'agenda' },
+  { cle: 'annonces', libelle: 'Annonces', icone: Megaphone, chemin: 'annonces' },
   { cle: 'mon-espace', libelle: 'Mon espace', icone: UserRound, chemin: 'mon-espace' },
 ];
 

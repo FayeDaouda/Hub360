@@ -23,7 +23,7 @@ export const CATALOGUE_MODULES: FamilleModules[] = [
       { nom: 'Tâches et suivi d’actions', statut: 'en_service', module: 'projets', note: 'Mes tâches' },
       { nom: 'Notifications et alertes', statut: 'en_service', note: 'Cloche, alertes d’échéance' },
       { nom: 'Recherche globale', statut: 'en_service', note: 'Ctrl+K' },
-      { nom: 'Actualités et annonces', statut: 'a_venir' },
+      { nom: 'Actualités et annonces', statut: 'en_service', module: 'annonces' },
     ],
   },
   {

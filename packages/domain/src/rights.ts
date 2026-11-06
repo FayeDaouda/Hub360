@@ -144,4 +144,6 @@ export const ETAPE = {
   agenda: 'agenda',
   agendaReunions: 'agenda.reunions',
   agendaAutres: 'agenda.autres',
+  // Annonces (lot 12).
+  annonces: 'annonces',
 } as const;
