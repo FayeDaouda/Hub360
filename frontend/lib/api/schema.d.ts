@@ -4410,9 +4410,25 @@ export interface components {
             champ: "debut" | "fichier" | "fin" | "heures" | "visa";
             valeur: number;
         };
+        AjoutLigneDto: {
+            carte: string;
+            libelle: string;
+            debut?: number;
+            fin?: number;
+            heures?: number | null;
+            visaDplg?: boolean;
+            fichierObligatoire?: boolean;
+            descriptif?: string;
+        };
+        RetraitLigneDto: {
+            carte: string;
+            tache: string;
+        };
         GabaritDto: {
             depuis: number;
             changements: components["schemas"]["ChangementDto"][];
+            ajouts?: components["schemas"]["AjoutLigneDto"][];
+            retraits?: components["schemas"]["RetraitLigneDto"][];
             motif: string;
         };
         ValeursDto: {

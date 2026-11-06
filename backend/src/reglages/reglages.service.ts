@@ -3,7 +3,17 @@ import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { PartsFactures } from '../projets/domaine/config';
-import { appliquer, type Changement, type ContenuGabarit, decrire, ErreurGabarit, libelleVersion } from './gabarit';
+import {
+  type AjoutLigne,
+  appliquer,
+  appliquerLignes,
+  type Changement,
+  type ContenuGabarit,
+  decrire,
+  ErreurGabarit,
+  libelleVersion,
+  type RetraitLigne,
+} from './gabarit';
 import { type DefinitionReglage, GABARITS_PAR_SOCIETE, normaliser, OBJECTIFS, REGLES } from './definitions';
 import { formatDate, formatNumber, ROLE_CEO } from '@hub/domain';
 
@@ -89,7 +99,13 @@ export class ReglagesService {
     societeId: string,
     userId: string,
     code: string,
-    corps: { depuis: number; motif: string; changements: Changement[] },
+    corps: {
+      depuis: number;
+      motif: string;
+      changements: Changement[];
+      ajouts?: AjoutLigne[];
+      retraits?: RetraitLigne[];
+    },
   ) {
     const g = (await this.gabaritsDe(societeId))?.find((x) => x.code === code);
     if (!g) throw new NotFoundException('Gabarit inconnu.');
@@ -97,14 +113,19 @@ export class ReglagesService {
     if (corps.depuis !== actuelle.numero) {
       throw new ConflictException(`Le gabarit est passé en ${actuelle.libelle} entre-temps : recharge la page.`);
     }
+    // Lignes retirées et ajoutées d'abord (01/11/2026), puis les champs.
+    let lignes: ReturnType<typeof appliquerLignes>;
     let resultat: ReturnType<typeof appliquer>;
     try {
-      resultat = appliquer(actuelle.contenu as unknown as ContenuGabarit, corps.changements);
+      lignes = appliquerLignes(actuelle.contenu as unknown as ContenuGabarit, corps.ajouts ?? [], corps.retraits ?? []);
+      resultat = appliquer(lignes.contenu, corps.changements);
     } catch (e) {
       if (e instanceof ErreurGabarit) throw new BadRequestException(e.message);
       throw e;
     }
-    if (!resultat.appliques.length) throw new BadRequestException('Aucune modification à enregistrer.');
+    if (!resultat.appliques.length && !lignes.appliques.length) {
+      throw new BadRequestException('Aucune modification à enregistrer.');
+    }
 
     const numero = actuelle.numero + 1;
     const libelle = libelleVersion(numero);
@@ -124,17 +145,30 @@ export class ReglagesService {
           },
         }),
         this.prisma.journalReglage.createMany({
-          data: resultat.appliques.map((ch) => ({
-            societeId,
-            lot,
-            section: 'gabarit',
-            cle: `${code}:${ch.carte}${ch.tache ? `:${ch.tache}` : ''}:${ch.champ}`,
-            libelle: `${code} ${libelle} · ${decrire(ch)}`,
-            avant: ch.avant,
-            apres: ch.valeur,
-            motif,
-            parId: userId,
-          })),
+          data: [
+            ...lignes.appliques.map((l) => ({
+              societeId,
+              lot,
+              section: 'gabarit',
+              cle: `${code}:${l.cle}`,
+              libelle: `${code} ${libelle} · ${l.libelle}`,
+              avant: l.avant ?? Prisma.JsonNull,
+              apres: l.apres ?? Prisma.JsonNull,
+              motif,
+              parId: userId,
+            })),
+            ...resultat.appliques.map((ch) => ({
+              societeId,
+              lot,
+              section: 'gabarit',
+              cle: `${code}:${ch.carte}${ch.tache ? `:${ch.tache}` : ''}:${ch.champ}`,
+              libelle: `${code} ${libelle} · ${decrire(ch)}`,
+              avant: ch.avant,
+              apres: ch.valeur,
+              motif,
+              parId: userId,
+            })),
+          ],
         }),
       ]);
     } catch (e) {

@@ -37,6 +37,8 @@ export type CarteGabarit = {
   client?: boolean;
   desactivee?: boolean;
   fichiers?: boolean;
+  // « carte.tâche » qui doivent être validées pour ouvrir la carte.
+  ouvreApres?: string[];
   taches: TacheGabarit[];
 };
 export type EtapeGabarit = { numero: number; cle: string; libelle: string; cartes: CarteGabarit[] };
@@ -79,6 +81,18 @@ export type Changement = {
   champ: 'debut' | 'fin' | 'heures' | 'visa' | 'fichier';
   valeur: number;
 };
+// Ligne (tâche) ajoutée en fin de carte, ou retirée (01/11/2026).
+export type AjoutLigne = {
+  carte: string;
+  libelle: string;
+  debut?: number;
+  fin?: number;
+  heures?: number | null; // absent : sans temps atelier
+  visaDplg?: boolean;
+  fichierObligatoire?: boolean;
+  descriptif?: string;
+};
+export type RetraitLigne = { carte: string; tache: string };
 export type LigneJournal = {
   id: string;
   lot: string;
@@ -94,7 +108,13 @@ export const getJournalReglages = (slug: string) => apiSociete<LigneJournal[]>(s
 export const enregistrerGabarit = (
   slug: string,
   code: string,
-  corps: { depuis: number; motif: string; changements: Changement[] },
+  corps: {
+    depuis: number;
+    motif: string;
+    changements: Changement[];
+    ajouts?: AjoutLigne[];
+    retraits?: RetraitLigne[];
+  },
 ) => apiSociete<Reglages>(slug, `/reglages/gabarits/${code}`, { method: 'PUT', body: corps });
 export const enregistrerValeurs = (
   slug: string,

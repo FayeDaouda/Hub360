@@ -159,3 +159,132 @@ export function decrire(ch: ChangementApplique): string {
   if (ch.champ === 'heures') return `${ch.libelle} — temps : ${ch.avant} h → ${ch.valeur} h`;
   return `${ch.libelle} — ${ch.champ === 'debut' ? 'début' : 'fin'} : J${ch.avant} → J${ch.valeur}`;
 }
+
+// --- Lignes ajoutées ou retirées (Réglages CIO, 01/11/2026) ------------------
+// Une ligne = une tâche d'une carte. Ajoutée en fin de carte, avec sa fenêtre
+// (facultative), son temps (heures, sans temps atelier, ou part du temps de la
+// carte quand la carte porte un temps par unité ou au total), visa DPLG et
+// fichier obligatoire. Retirée : jamais la dernière ligne d'une carte, ni une
+// ligne qui conditionne l'ouverture d'une autre carte (« ouvreApres »). Les
+// projets déjà ouverts gardent leur version.
+
+export type AjoutLigne = {
+  carte: string;
+  libelle: string;
+  debut?: number;
+  fin?: number;
+  heures?: number | null; // null ou absent : sans temps atelier
+  visaDplg?: boolean;
+  fichierObligatoire?: boolean;
+  descriptif?: string;
+};
+export type RetraitLigne = { carte: string; tache: string };
+export type LigneAppliquee = { cle: string; libelle: string; avant: string | null; apres: string | null };
+
+const MAX_LIGNES_CARTE = 60;
+
+const versCle = (libelle: string) =>
+  libelle
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40) || 'ligne';
+
+const jourValide = (n: unknown): n is number => Number.isInteger(n) && (n as number) >= 1 && (n as number) <= 999;
+
+function resumeTache(t: TacheGabarit): string {
+  const parts = [t.fenetre ? `J${t.fenetre.debut} → J${t.fenetre.fin}` : null];
+  if (t.temps.type === 'heures') parts.push(`${t.temps.heures} h`);
+  else if (t.temps.type === 'part_carte') parts.push('part du temps de la carte');
+  else if (t.temps.type === 'sans') parts.push('sans temps atelier');
+  if (t.visaDplg) parts.push('visa DPLG');
+  if (t.fichierFacultatif) parts.push('fichier facultatif');
+  return parts.filter(Boolean).join(', ');
+}
+
+export function appliquerLignes(
+  contenu: ContenuGabarit,
+  ajouts: AjoutLigne[],
+  retraits: RetraitLigne[],
+): { contenu: ContenuGabarit; appliques: LigneAppliquee[] } {
+  const copie: ContenuGabarit = structuredClone(contenu);
+  const cartes = new Map(copie.etapes.flatMap((e) => e.cartes.map((c) => [c.cle, c] as const)));
+  const appliques: LigneAppliquee[] = [];
+
+  for (const r of retraits) {
+    const carte = cartes.get(r.carte);
+    if (!carte) throw new ErreurGabarit(`Carte inconnue : ${r.carte}.`);
+    const tache = carte.taches.find((t) => t.cle === r.tache);
+    if (!tache) throw new ErreurGabarit(`Ligne inconnue dans ${carte.libelle} : ${r.tache}.`);
+    const libelle = `${carte.libelle} · ${tache.libelle}`;
+    const condition = [...cartes.values()].find((c) => c.ouvreApres?.includes(`${carte.cle}.${tache.cle}`));
+    if (condition) {
+      throw new ErreurGabarit(`${libelle} : elle conditionne l’ouverture de la carte « ${condition.libelle} ».`);
+    }
+    if (carte.taches.length === 1) throw new ErreurGabarit(`${libelle} : une carte garde au moins une ligne.`);
+    carte.taches = carte.taches.filter((t) => t !== tache);
+    appliques.push({
+      cle: `${carte.cle}:${tache.cle}:retrait`,
+      libelle: `${libelle} — ligne retirée`,
+      avant: tache.libelle,
+      apres: null,
+    });
+  }
+
+  for (const a of ajouts) {
+    const carte = cartes.get(a.carte);
+    if (!carte) throw new ErreurGabarit(`Carte inconnue : ${a.carte}.`);
+    if (carte.fichiers || carte.desactivee) {
+      throw new ErreurGabarit(`${carte.libelle} : cette carte ne porte pas de lignes.`);
+    }
+    const libelle = a.libelle?.trim() ?? '';
+    if (libelle.length < 2 || libelle.length > 160) {
+      throw new ErreurGabarit(`${carte.libelle} : intitulé de ligne de 2 à 160 caractères.`);
+    }
+    if (carte.taches.some((t) => t.libelle.toLowerCase() === libelle.toLowerCase())) {
+      throw new ErreurGabarit(`${carte.libelle} : la ligne « ${libelle} » existe déjà.`);
+    }
+    if (carte.taches.length >= MAX_LIGNES_CARTE) {
+      throw new ErreurGabarit(`${carte.libelle} : ${MAX_LIGNES_CARTE} lignes au plus.`);
+    }
+    const aFenetre = a.debut !== undefined || a.fin !== undefined;
+    if (aFenetre && !(jourValide(a.debut) && jourValide(a.fin) && a.debut <= a.fin)) {
+      throw new ErreurGabarit(`${carte.libelle} · ${libelle} : fenêtre invalide (J début ≤ J fin, à partir de J1).`);
+    }
+    // Carte au temps par unité ou au total : la ligne en prend sa part.
+    let temps: Temps;
+    if (carte.temps && (carte.temps.type === 'par_unite' || carte.temps.type === 'total'))
+      temps = { type: 'part_carte' };
+    else if (a.heures === null || a.heures === undefined) temps = { type: 'sans' };
+    else if (a.heures > 0 && a.heures <= 999 && Math.abs(Math.round(a.heures * 10) - a.heures * 10) < 1e-9) {
+      temps = { type: 'heures', heures: a.heures };
+    } else
+      throw new ErreurGabarit(
+        `${carte.libelle} · ${libelle} : temps invalide (heures positives, une décimale au plus).`,
+      );
+
+    const base = `l_${versCle(libelle)}`;
+    let cle = base;
+    for (let i = 2; carte.taches.some((t) => t.cle === cle); i++) cle = `${base}_${i}`;
+    const tache: TacheGabarit = {
+      cle,
+      libelle,
+      ...(aFenetre && { fenetre: { debut: a.debut!, fin: a.fin! } }),
+      temps,
+      ...(a.descriptif?.trim() && { descriptif: a.descriptif.trim().slice(0, 1000) }),
+      ...(a.visaDplg && { visaDplg: true }),
+      ...(a.fichierObligatoire === false && { fichierFacultatif: true }),
+    };
+    carte.taches.push(tache);
+    const resume = resumeTache(tache);
+    appliques.push({
+      cle: `${carte.cle}:${cle}:ajout`,
+      libelle: `${carte.libelle} · ${libelle} — ligne ajoutée${resume ? ` (${resume})` : ''}`,
+      avant: null,
+      apres: libelle,
+    });
+  }
+  return { contenu: copie, appliques };
+}

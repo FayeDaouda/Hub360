@@ -1,4 +1,4 @@
-import { appliquer, decrire, ErreurGabarit, libelleVersion } from './gabarit';
+import { appliquer, appliquerLignes, type ContenuGabarit, decrire, ErreurGabarit, libelleVersion } from './gabarit';
 import { GABARIT_GC_CONCEPTION } from './gabarit-gc-conception';
 import { normaliser, OBJECTIFS, REGLES } from './definitions';
 
@@ -115,5 +115,88 @@ describe('gabarit · visa DPLG', () => {
         { carte: 'pe_architecture', tache: 'pe_architecture', champ: 'visa', valeur: 1 },
       ]).appliques,
     ).toEqual([]);
+  });
+});
+
+// Lignes ajoutées ou retirées (Réglages CIO, 01/11/2026).
+describe('appliquerLignes', () => {
+  const g = () => structuredClone(GABARIT_GC_CONCEPTION);
+  const carte = (c: ContenuGabarit, cle: string) => c.etapes.flatMap((e) => e.cartes).find((x) => x.cle === cle)!;
+
+  it('ajoute une ligne en fin de carte, avec fenêtre, temps, visa et fichier facultatif ; sans toucher l’original', () => {
+    const avant = g();
+    const { contenu, appliques } = appliquerLignes(
+      avant,
+      [
+        {
+          carte: 'documents_client',
+          libelle: 'Attestation de propriété',
+          debut: 2,
+          fin: 4,
+          heures: 1.5,
+          visaDplg: true,
+          fichierObligatoire: false,
+        },
+      ],
+      [],
+    );
+    const t = carte(contenu, 'documents_client').taches.at(-1)!;
+    expect(t).toEqual({
+      cle: 'l_attestation_de_propriete',
+      libelle: 'Attestation de propriété',
+      fenetre: { debut: 2, fin: 4 },
+      temps: { type: 'heures', heures: 1.5 },
+      visaDplg: true,
+      fichierFacultatif: true,
+    });
+    expect(carte(avant, 'documents_client').taches.at(-1)!.cle).toBe('expertise');
+    expect(appliques[0].libelle).toBe(
+      'Documents du client · Attestation de propriété — ligne ajoutée (J2 → J4, 1.5 h, visa DPLG, fichier facultatif)',
+    );
+  });
+
+  it('sans heures : sans temps atelier ; carte au temps « par unité » ou « au total » : part de la carte', () => {
+    const c = g();
+    const parUnite = c.etapes
+      .flatMap((e) => e.cartes)
+      .find((x) => x.temps?.type === 'par_unite' || x.temps?.type === 'total')!;
+    const { contenu } = appliquerLignes(
+      c,
+      [
+        { carte: 'documents_client', libelle: 'Quitus fiscal' },
+        { carte: parUnite.cle, libelle: 'Ligne en plus', heures: 4 },
+      ],
+      [],
+    );
+    expect(carte(contenu, 'documents_client').taches.at(-1)!.temps).toEqual({ type: 'sans' });
+    expect(carte(contenu, parUnite.cle).taches.at(-1)!.temps).toEqual({ type: 'part_carte' });
+  });
+
+  it('retire une ligne ; refuse la dernière d’une carte et celle qui ouvre une autre carte', () => {
+    const { contenu } = appliquerLignes(g(), [], [{ carte: 'documents_client', tache: 'ninea' }]);
+    expect(carte(contenu, 'documents_client').taches.some((t) => t.cle === 'ninea')).toBe(false);
+    expect(() => appliquerLignes(g(), [], [{ carte: 'livrables', tache: 'details_facade' }])).toThrow(
+      /conditionne l’ouverture de la carte/,
+    );
+    const une = g();
+    carte(une, 'documents_client').taches = carte(une, 'documents_client').taches.slice(0, 1);
+    expect(() => appliquerLignes(une, [], [{ carte: 'documents_client', tache: 'piece_identite' }])).toThrow(
+      'une carte garde au moins une ligne',
+    );
+  });
+
+  it('refuse un doublon, une fenêtre incohérente, une carte sans lignes', () => {
+    expect(() => appliquerLignes(g(), [{ carte: 'documents_client', libelle: 'ninea' }], [])).toThrow('existe déjà');
+    expect(() => appliquerLignes(g(), [{ carte: 'documents_client', libelle: 'Plan', debut: 5, fin: 2 }], [])).toThrow(
+      'fenêtre invalide',
+    );
+    const fichiers = g()
+      .etapes.flatMap((e) => e.cartes)
+      .find((x) => x.fichiers);
+    if (fichiers) {
+      expect(() => appliquerLignes(g(), [{ carte: fichiers.cle, libelle: 'Une ligne' }], [])).toThrow(
+        'ne porte pas de lignes',
+      );
+    }
   });
 });
