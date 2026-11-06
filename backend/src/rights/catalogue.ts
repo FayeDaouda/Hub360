@@ -279,4 +279,24 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
     ordre: 7,
     libelles: { lecture: 'Voit le tableau de production (le Dir. GC : les projets qu’il porte)' },
   },
+
+  // Équipe (lot 6, 31/10/2026).
+  {
+    module: 'equipe',
+    cle: ETAPE.equipe,
+    nom: 'Équipes et collaborateurs',
+    ordre: 0,
+    libelles: {
+      lecture: 'Voit les collaborateurs, les équipes et leur charge',
+      ecriture: 'Modifie une fiche, crée une équipe, change ses membres, désigne le chef',
+      suppression: 'Supprime une équipe sans membres',
+    },
+  },
+  {
+    module: 'equipe',
+    cle: ETAPE.equipeProjets,
+    nom: 'Équipes des projets',
+    ordre: 1,
+    libelles: { ecriture: 'Affecte une équipe à un projet, ou la retire' },
+  },
 ];

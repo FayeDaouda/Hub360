@@ -5,7 +5,7 @@ import { Teams } from '@/features/teams/teams';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
 import type { Session } from '@/lib/types';
-import { ROLE_COMPANY_ADMIN } from '@hub/domain';
+import { ETAPE } from '@hub/domain';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -18,11 +18,17 @@ export default function EquipePage(props: Props) {
   const session = useSessionCourante();
   const societe = useSocieteCourante();
   useTitrePage(societe?.nom ? `Équipes · ${societe.nom}` : 'Équipes');
-  return <Teams slug={params.slug} canWrite={niveauEquipeEcriture(session)} />;
+  return (
+    <Teams
+      slug={params.slug}
+      canWrite={niveauEquipeEcriture(session)}
+      canDelete={niveauSuffisant(session, ETAPE.equipe, 'suppression')}
+    />
+  );
 }
 
-// Module « équipe » de la matrice : écriture = admin ou rôle en écriture
-// (Dir. GC…) ; les autres rôles qui y ont accès consultent seulement.
+// Étape « Équipes et collaborateurs » de la matrice : l'Écriture modifie,
+// la Suppression supprime une équipe ; sans elles, on consulte.
 function niveauEquipeEcriture(session: Session): boolean {
-  return session.role === ROLE_COMPANY_ADMIN || niveauSuffisant(session, 'equipe', 'ecriture');
+  return niveauSuffisant(session, ETAPE.equipe, 'ecriture');
 }

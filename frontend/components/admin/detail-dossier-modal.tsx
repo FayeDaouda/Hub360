@@ -16,7 +16,7 @@ import {
   type StatutCrm,
   type TransitionDossier,
 } from '@/lib/types';
-import { formatDate, formatNumber, ROLE_COMPANY_ADMIN } from '@hub/domain';
+import { ETAPE, formatDate, formatNumber } from '@hub/domain';
 import type { ActionCrm } from '@/lib/cycle-crm';
 import { completudeFiche, getHistorique, libelleCategorie, type OffreEmise } from '@/lib/crm';
 import { CycleDossier } from './cycle-dossier';
@@ -119,7 +119,7 @@ export function DetailDossierModal({
   // Équipes du projet : écriture sur le module « équipe » (le Dir. GC,
   // l'administration).
   const session = useSessionCourante();
-  const peutAffecterEquipes = session.role === ROLE_COMPANY_ADMIN || niveauSuffisant(session, 'equipe', 'ecriture');
+  const peutAffecterEquipes = niveauSuffisant(session, ETAPE.equipeProjets, 'ecriture');
   // Lien public émis (validation DAF / relance) : le clair n'existe qu'une
   // fois, affiché jusqu'à fermeture.
   const [lienEmis, setLienEmis] = useState<OffreEmise | null>(null);

@@ -6,7 +6,7 @@ import { SidePanel } from './side-panel';
 import { Pill } from '@/components/ui/pill';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { formatDate, ROLE_COMPANY_ADMIN } from '@hub/domain';
+import { ETAPE, formatDate } from '@hub/domain';
 import { AddTsElement } from './add-ts-element';
 import { CardThreadPanel } from './card-thread-panel';
 import { stepNumber, stepPill } from './labels';
@@ -62,7 +62,7 @@ export function ProjectFile({
   const session = useSessionCourante();
   const canWrite = niveauSuffisant(session, 'projets', 'ecriture');
   // Équipes du projet : écriture sur le module « équipe » (le Dir. GC, l'administration).
-  const canEditTeams = session.role === ROLE_COMPANY_ADMIN || niveauSuffisant(session, 'equipe', 'ecriture');
+  const canEditTeams = niveauSuffisant(session, ETAPE.equipeProjets, 'ecriture');
   const taskId = selection?.type === 'tache' ? selection.id : null;
   // Bloc dont on choisit la personne (bouton de l'en-tête de la carte).
   const [blockCardId, setBlockCardId] = useState<string | null>(null);
