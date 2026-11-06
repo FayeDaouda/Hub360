@@ -116,6 +116,19 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
   const equipe = versDroits(niveaux.equipe);
   droits[ETAPE.equipe] = { ...equipe, validation: false };
   droits[ETAPE.equipeProjets] = { ...NO_RIGHTS, ecriture: equipe.ecriture };
+  // RH (lot 7, migration 20261101220000_rh_etapes) : mêmes règles.
+  const rh = versDroits(niveaux.rh);
+  droits[ETAPE.rh] = { lecture: rh.lecture, ecriture: rh.ecriture, validation: rh.ecriture, suppression: rh.ecriture };
+  droits[ETAPE.rhSalaires] = {
+    lecture: rh.lecture,
+    ecriture: rh.ecriture,
+    validation: est(ROLE_CFO, ROLE_CEO),
+    suppression: rh.ecriture,
+  };
+  droits[ETAPE.rhBulletins] = { ...NO_RIGHTS, ecriture: rh.ecriture, suppression: rh.ecriture };
+  droits[ETAPE.rhTemps] = { ...NO_RIGHTS, lecture: rh.lecture, ecriture: rh.ecriture, validation: rh.ecriture };
+  droits[ETAPE.rhIntegration] = { ...NO_RIGHTS, lecture: rh.lecture, ecriture: rh.ecriture };
+  droits[ETAPE.rhDemandes] = { ...NO_RIGHTS, lecture: rh.lecture, ecriture: rh.ecriture, validation: rh.ecriture };
   return droits;
 }
 

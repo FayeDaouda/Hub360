@@ -299,4 +299,70 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
     ordre: 1,
     libelles: { ecriture: 'Affecte une équipe à un projet, ou la retire' },
   },
+
+  // RH (lot 7, 31/10/2026) : les circuits (N+1, validation finale par la RH
+  // ou le CEO, salaire du CFO validé par le CEO) restent des règles.
+  {
+    module: 'rh',
+    cle: ETAPE.rh,
+    nom: 'Dossiers du personnel',
+    ordre: 0,
+    libelles: {
+      lecture: 'Voit les dossiers, contrats, pièces, alertes et bulletins',
+      ecriture: 'Crée ou modifie un dossier, dépose une pièce',
+      validation: 'Valide un changement de moyen de paiement demandé par un salarié',
+      suppression: 'Archive un dossier (départ), ou le rouvre',
+    },
+  },
+  {
+    module: 'rh',
+    cle: ETAPE.rhSalaires,
+    nom: 'Salaires',
+    ordre: 1,
+    libelles: {
+      lecture: 'Voit les salaires et la masse salariale',
+      ecriture: 'Propose un changement de salaire',
+      validation: 'Valide un changement de salaire (le CEO pour celui du CFO)',
+      suppression: 'Retire une proposition pas encore décidée',
+    },
+  },
+  {
+    module: 'rh',
+    cle: ETAPE.rhBulletins,
+    nom: 'Bulletins de paie',
+    ordre: 2,
+    libelles: { ecriture: 'Dépose ou remplace un bulletin de paie', suppression: 'Retire un bulletin' },
+  },
+  {
+    module: 'rh',
+    cle: ETAPE.rhTemps,
+    nom: 'Feuilles de temps',
+    ordre: 3,
+    libelles: {
+      lecture: 'Voit les feuilles de temps de chacun',
+      ecriture: 'Traite un écart signalé par un salarié',
+      validation: 'Contrôle une feuille de temps du mois',
+    },
+  },
+  {
+    module: 'rh',
+    cle: ETAPE.rhIntegration,
+    nom: 'Intégration des arrivées',
+    ordre: 4,
+    libelles: {
+      lecture: 'Voit les arrivées en cours',
+      ecriture: 'Coche les étapes de l’intégration, confirme la période d’essai',
+    },
+  },
+  {
+    module: 'rh',
+    cle: ETAPE.rhDemandes,
+    nom: 'Demandes des salariés',
+    ordre: 5,
+    libelles: {
+      lecture: 'Voit les demandes (congés, remboursements, attestations)',
+      ecriture: 'Délivre une attestation, traite un remboursement',
+      validation: 'Valide en dernier une absence, après le N+1 (le CEO pour la RH)',
+    },
+  },
 ];

@@ -3,10 +3,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { PermissionGuard } from '../commun/permission.guard';
-import { PermissionSelonMethode } from '../commun/permission.decorator';
+import { PermissionSelonMethode, RequiertPermission } from '../commun/permission.decorator';
 import { TempsService } from './temps.service';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
 import { MoisQuery, SignalerEcartDto, TraiterEcartDto } from './temps.dto';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { userId: string; societeId: string } };
 
@@ -24,12 +25,14 @@ export class FeuillesTempsController {
   }
 
   @Post(':dossierId/:mois/controle')
+  @RequiertPermission(ETAPE.rhTemps, 'validation')
   controler(@Req() req: R, @Param('dossierId', ParseUUIDPipe) dossierId: string, @Param('mois') mois: string) {
     return this.temps.controler(req.user.userId, dossierId, mois);
   }
 
   // Réponse à un écart signalé par le salarié (écriture RH).
   @Post('ecarts/:ecartId/traitement')
+  @RequiertPermission(ETAPE.rhTemps, 'ecriture')
   traiterEcart(@Req() req: R, @Param('ecartId', ParseUUIDPipe) ecartId: string, @Body() dto: TraiterEcartDto) {
     return this.temps.traiterEcart(req.user.userId, ecartId, dto.reponse);
   }
