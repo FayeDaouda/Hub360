@@ -23,6 +23,12 @@ const dateLongue = new Intl.DateTimeFormat('fr-FR', {
 const moisAnnee = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', month: 'long', year: 'numeric' });
 const jourMoisCourt = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, day: '2-digit', month: 'short' });
 const jourMoisLong = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long' });
+const jourSemaine = new Intl.DateTimeFormat('fr-FR', {
+  timeZone: FUSEAU,
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
 const heureMinute = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' });
 const dateHeure = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, dateStyle: 'short', timeStyle: 'short' });
 const dateHeureLongue = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, dateStyle: 'long', timeStyle: 'short' });
@@ -111,6 +117,11 @@ export function formatDayLongMonth(iso: string): string {
 }
 
 /** « 18:40 ». */
+/** « lundi 2 novembre » (Agenda). */
+export function formatWeekdayDayMonth(iso: string): string {
+  return jourSemaine.format(new Date(iso));
+}
+
 export function formatTime(iso: string): string {
   return heureMinute.format(new Date(iso));
 }

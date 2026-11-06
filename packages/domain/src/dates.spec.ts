@@ -9,6 +9,7 @@ import {
   formatDayLongMonth,
   formatDayMonth,
   formatDayShortMonth,
+  formatWeekdayDayMonth,
   formatLongDate,
   formatLongDateTime,
   formatMonthYear,
@@ -152,4 +153,8 @@ describe('heure de Dakar, quel que soit le lieu de l’utilisateur', () => {
     expect(addMonths('2026-11-30', 3)).toBe('2027-02-28');
     expect(addMonths('2027-01-15', -2)).toBe('2026-11-15');
   });
+});
+
+it('jour de la semaine (Agenda)', () => {
+  expect(formatWeekdayDayMonth('2026-11-02')).toBe('lundi 2 novembre');
 });

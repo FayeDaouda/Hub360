@@ -146,4 +146,8 @@ export const ETAPE = {
   agendaAutres: 'agenda.autres',
   // Annonces (lot 12).
   annonces: 'annonces',
+  // Recrutement (lot 13).
+  recrutementPostes: 'recrutement.postes',
+  recrutementCandidatures: 'recrutement.candidatures',
+  recrutementDecision: 'recrutement.decision',
 } as const;

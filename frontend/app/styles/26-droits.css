@@ -408,12 +408,15 @@
 .agenda-jour.is-aujourdhui {
   border-color: var(--action);
 }
+/* « lundi 2 novembre » : la première lettre en capitale. */
+.agenda-jour h3::first-letter {
+  text-transform: uppercase;
+}
 .agenda-jour h3 {
   margin: 0;
   color: var(--text-muted);
   font-size: var(--t-13);
   font-weight: 600;
-  text-transform: capitalize;
 }
 .agenda-jour ul {
   display: grid;
@@ -558,4 +561,58 @@
   align-items: flex-start;
   gap: var(--e-8);
   font-size: var(--t-14);
+}
+
+/* --- Recrutement (lot 13) ---------------------------------------------- */
+.recrutement {
+  display: grid;
+  gap: var(--e-16);
+}
+.recrutement-postes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--e-12);
+}
+.recrutement-poste.is-actif {
+  border-color: var(--action);
+}
+.recrutement-candidats {
+  display: grid;
+  gap: var(--e-12);
+}
+.recrutement-candidats h2 {
+  margin: 0;
+  font-size: var(--t-16);
+}
+.recrutement-colonnes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--e-8);
+}
+.recrutement-colonne {
+  display: grid;
+  align-content: start;
+  gap: var(--e-8);
+}
+.recrutement-colonne h3 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}
+.recrutement-notes {
+  white-space: pre-line;
+}
+.recrutement-ligne {
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 1100px) {
+  .recrutement-colonnes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .recrutement-colonnes,
+  .recrutement-ligne {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

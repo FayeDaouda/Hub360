@@ -480,4 +480,36 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
       suppression: 'Retire une annonce publiée',
     },
   },
+
+  // Recrutement (lot 13, 01/11/2026).
+  {
+    module: 'recrutement',
+    cle: ETAPE.recrutementPostes,
+    nom: 'Postes',
+    ordre: 0,
+    libelles: {
+      lecture: 'Voit les postes à pourvoir',
+      ecriture: 'Demande l’ouverture d’un poste, le modifie',
+      validation: 'Approuve ou refuse l’ouverture d’un poste',
+      suppression: 'Ferme un poste',
+    },
+  },
+  {
+    module: 'recrutement',
+    cle: ETAPE.recrutementCandidatures,
+    nom: 'Candidatures et entretiens',
+    ordre: 1,
+    libelles: {
+      lecture: 'Voit les candidats d’un poste',
+      ecriture: 'Ajoute un candidat, note un entretien, le fait avancer',
+      suppression: 'Retire une candidature',
+    },
+  },
+  {
+    module: 'recrutement',
+    cle: ETAPE.recrutementDecision,
+    nom: 'Décision d’embauche',
+    ordre: 2,
+    libelles: { validation: 'Décide l’embauche (le dossier du personnel s’ouvre) ou refuse le candidat' },
+  },
 ];

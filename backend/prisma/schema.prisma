@@ -87,6 +87,8 @@ model Societe {
 
   annonces Annonce[]
 
+  postesRecrutement PosteRecrutement[]
+
   @@map("societes")
 }
 
@@ -303,6 +305,9 @@ enum NotificationType {
   rdv_annule // Agenda : une réunion où vous étiez invité est annulée
   annonce_importante // Annonces (01/11/2026) : une annonce importante à lire
   annonce_a_valider // Annonces : une annonce attend sa validation avant publication
+  poste_a_approuver // Recrutement (01/11/2026) : ouverture d'un poste à approuver
+  poste_decide // Recrutement : votre demande d'ouverture de poste a été tranchée
+  embauche_decidee // Recrutement : un candidat embauché, dossier RH ouvert
 }
 
 model Notification {
@@ -3025,4 +3030,65 @@ model LectureAnnonce {
 
   @@id([annonceId, utilisateurId])
   @@map("lectures_annonces")
+}
+
+// Recrutement (lot 13, décision du 01/11/2026) : Poste ouvert → Candidatures
+// → Entretiens → Décision → Intégration RH (le dossier du personnel s'ouvre à
+// l'embauche). Saisie manuelle des candidatures ; une candidature refusée est
+// effacée 12 mois après le refus (données personnelles).
+enum StatutPoste {
+  a_approuver
+  ouvert
+  pourvu
+  ferme
+}
+
+enum EtapeCandidature {
+  candidature
+  entretien
+  embauche
+  refusee
+}
+
+model PosteRecrutement {
+  id            String      @id @default(uuid())
+  societeId     String      @map("societe_id")
+  intitule      String
+  description   String?
+  celluleId     String?     @map("cellule_id")
+  statut        StatutPoste
+  demandeParId  String      @map("demande_par_id")
+  approuveParId String?     @map("approuve_par_id")
+  approuveLe    DateTime?   @map("approuve_le")
+  motifRefus    String?     @map("motif_refus")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  societe      Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  candidatures Candidature[]
+
+  @@index([societeId, statut])
+  @@map("postes_recrutement")
+}
+
+model Candidature {
+  id          String           @id @default(uuid())
+  posteId     String           @map("poste_id")
+  prenom      String
+  nom         String
+  email       String?
+  telephone   String?
+  notes       String           @default("")
+  etape       EtapeCandidature @default(candidature)
+  decideParId String?          @map("decide_par_id")
+  decideLe    DateTime?        @map("decide_le")
+  motif       String?
+  dossierId   String?          @map("dossier_id") // dossier du personnel ouvert à l'embauche
+  creeParId   String           @map("cree_par_id")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  poste PosteRecrutement @relation(fields: [posteId], references: [id], onDelete: Cascade)
+
+  @@index([posteId, etape])
+  @@index([etape, decideLe])
+  @@map("candidatures")
 }

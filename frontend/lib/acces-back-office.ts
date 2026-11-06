@@ -32,6 +32,7 @@ const SECTIONS_DIRECTION: Record<string, string> = {
   rh: 'rh',
   agenda: ETAPE.agenda, // Agenda (lot 11, 01/11/2026)
   annonces: ETAPE.annonces, // Annonces (lot 12, 01/11/2026)
+  recrutement: ETAPE.recrutementPostes, // Recrutement (lot 13, 01/11/2026)
 };
 
 // Module de la matrice qui gouverne une section (guide d'aide : niveau du rôle).
@@ -46,9 +47,12 @@ export const ORDRE_SECTIONS = [
   'facturation',
   'rh',
   'equipe',
+  'mon-espace',
+  // Nouveaux modules (01/11/2026) : après Mon espace, qui garde sa place
+  // dans la barre du bas sur téléphone.
   'agenda',
   'annonces',
-  'mon-espace',
+  'recrutement',
 ];
 const CHEMINS: Record<string, string> = {
   'mes-taches': 'mes-taches',
@@ -62,6 +66,7 @@ const CHEMINS: Record<string, string> = {
   'mon-espace': 'mon-espace',
   agenda: 'agenda',
   annonces: 'annonces',
+  recrutement: 'recrutement',
   parametres: 'reglages',
 };
 

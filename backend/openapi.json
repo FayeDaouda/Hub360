@@ -9751,6 +9751,322 @@
         ]
       }
     },
+    "/api/societes/{slug}/recrutement": {
+      "get": {
+        "operationId": "RecrutementController_vue",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/postes": {
+      "post": {
+        "operationId": "RecrutementController_demanderPoste",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandePosteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/postes/{id}/decision": {
+      "post": {
+        "operationId": "RecrutementController_deciderPoste",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionPosteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/postes/{id}/fermeture": {
+      "post": {
+        "operationId": "RecrutementController_fermerPoste",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/postes/{id}/candidats": {
+      "get": {
+        "operationId": "RecrutementController_candidats",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      },
+      "post": {
+        "operationId": "RecrutementController_ajouterCandidat",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NouveauCandidatDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/candidats/{id}/notes": {
+      "post": {
+        "operationId": "RecrutementController_noter",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteCandidatDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/candidats/{id}/decision": {
+      "post": {
+        "operationId": "RecrutementController_decider",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionEmbaucheDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
+    "/api/societes/{slug}/recrutement/candidats/{id}": {
+      "delete": {
+        "operationId": "RecrutementController_retirerCandidat",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Recrutement"
+        ]
+      }
+    },
     "/api/sante": {
       "get": {
         "operationId": "HealthController_etat",
@@ -17111,6 +17427,111 @@
           "titre",
           "contenu",
           "audience"
+        ]
+      },
+      "DemandePosteDto": {
+        "type": "object",
+        "properties": {
+          "intitule": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 3000
+          },
+          "celluleId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "intitule"
+        ]
+      },
+      "DecisionPosteDto": {
+        "type": "object",
+        "properties": {
+          "accepter": {
+            "type": "boolean"
+          },
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "accepter"
+        ]
+      },
+      "NouveauCandidatDto": {
+        "type": "object",
+        "properties": {
+          "prenom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "nom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 160,
+            "format": "email"
+          },
+          "telephone": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 3000
+          }
+        },
+        "required": [
+          "prenom",
+          "nom"
+        ]
+      },
+      "NoteCandidatDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 3000
+          },
+          "entretien": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "note"
+        ]
+      },
+      "DecisionEmbaucheDto": {
+        "type": "object",
+        "properties": {
+          "embaucher": {
+            "type": "boolean"
+          },
+          "dateEntree": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "embaucher"
         ]
       },
       "ClientErrorDto": {

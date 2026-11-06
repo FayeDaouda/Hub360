@@ -2,7 +2,7 @@
 
 import { use, useCallback, useEffect, useState, type FormEvent } from 'react';
 import { CalendarClock, ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
-import { addDays, formatDayLongMonth, formatTime, todayIso } from '@hub/domain';
+import { addDays, formatDayLongMonth, formatTime, formatWeekdayDayMonth, todayIso } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
 import {
   annulerRendezVous,
@@ -133,7 +133,7 @@ export default function AgendaPage(props: Props) {
             const du_jour = semaine.elements.filter((e) => e.jour === j);
             return (
               <section key={j} className={`agenda-jour${j === aujourdhui ? ' is-aujourdhui' : ''}`}>
-                <h3>{formatDayLongMonth(j)}</h3>
+                <h3>{formatWeekdayDayMonth(j)}</h3>
                 {du_jour.length === 0 ? (
                   <p className="agenda-vide">—</p>
                 ) : (

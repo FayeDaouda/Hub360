@@ -160,6 +160,21 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
   // la direction rédige, publie sans validation et retire.
   const redige = nomRole !== ROLE_EMPLOYEE;
   droits[ETAPE.annonces] = { lecture: true, ecriture: redige, validation: redige, suppression: redige };
+  // Recrutement (lot 13, migration 20261102070000_recrutement) : la RH et le
+  // Dir. GC (N+1) recrutent et décident l'embauche ; le CEO approuve les postes.
+  droits[ETAPE.recrutementPostes] = {
+    lecture: est(ROLE_HR, ROLE_DIR_GC, ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN),
+    ecriture: est(ROLE_HR, ROLE_DIR_GC, ROLE_COMPANY_ADMIN),
+    validation: est(ROLE_CEO, ROLE_COMPANY_ADMIN),
+    suppression: est(ROLE_HR, ROLE_COMPANY_ADMIN),
+  };
+  droits[ETAPE.recrutementCandidatures] = {
+    ...NO_RIGHTS,
+    lecture: est(ROLE_HR, ROLE_DIR_GC, ROLE_CEO, ROLE_COMPANY_ADMIN),
+    ecriture: est(ROLE_HR, ROLE_DIR_GC, ROLE_COMPANY_ADMIN),
+    suppression: est(ROLE_HR, ROLE_COMPANY_ADMIN),
+  };
+  droits[ETAPE.recrutementDecision] = { ...NO_RIGHTS, validation: est(ROLE_HR, ROLE_DIR_GC, ROLE_COMPANY_ADMIN) };
   return droits;
 }
 
@@ -213,6 +228,8 @@ export async function installerSocle(prisma: PrismaClient) {
     { nom: 'Agenda', cle: 'agenda' },
     // Lot 12 (01/11/2026).
     { nom: 'Annonces', cle: 'annonces' },
+    // Lot 13 (01/11/2026).
+    { nom: 'Recrutement', cle: 'recrutement' },
   ]) {
     await prisma.module.upsert({ where: { cle: m.cle }, update: {}, create: m });
   }
