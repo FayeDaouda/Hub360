@@ -35,13 +35,17 @@ function svc(
     lectureCanal: { findMany: jest.fn().mockResolvedValue([]) },
     utilisateurSocieteRole: { findMany: usrFindMany },
   } as unknown as PrismaService;
-  return { s: new ChatService(prisma, {} as ChatBus, {} as never), canalFindMany, usrFindMany };
+  return { s: new ChatService(prisma, {} as ChatBus, {} as never, {} as never), canalFindMany, usrFindMany };
 }
 
 const acteur = (role: string) => ({ userId: 'U1', societeId: 'S1', role });
 const typesDemandes = (m: jest.Mock) =>
   m.mock.calls[0][0].where.OR.map((c: { type: unknown; celluleId?: string }) =>
-    c.celluleId ? `cellule:${c.celluleId}` : String(c.type),
+    c.celluleId
+      ? `cellule:${c.celluleId}`
+      : typeof c.type === 'object' && c.type
+        ? (c.type as { in: string[] }).in.join('+')
+        : String(c.type),
   );
 
 describe('ChatService.listerCanaux', () => {
@@ -53,13 +57,13 @@ describe('ChatService.listerCanaux', () => {
   it('rôle de direction sans fiche → Général + DM + ses groupes, aucune cellule', async () => {
     const { s, canalFindMany } = svc({ collab: null });
     await expect(s.listerCanaux(acteur('CFO'))).resolves.toEqual([]);
-    expect(typesDemandes(canalFindMany)).toEqual(['general', 'direct', 'direct', 'groupe']);
+    expect(typesDemandes(canalFindMany)).toEqual(['general', 'direct', 'direct', 'groupe+projet']);
   });
 
   it('rôle de direction AVEC fiche → sa cellule en plus', async () => {
     const { s, canalFindMany } = svc({ collab: { celluleId: 'CEL1' } });
     await s.listerCanaux(acteur('Dir. GC'));
-    expect(typesDemandes(canalFindMany)).toEqual(['general', 'cellule:CEL1', 'direct', 'direct', 'groupe']);
+    expect(typesDemandes(canalFindMany)).toEqual(['general', 'cellule:CEL1', 'direct', 'direct', 'groupe+projet']);
   });
 
   it('holding_admin sans fiche → 403 (hors back-office, pas de chat)', async () => {
@@ -127,6 +131,7 @@ describe('ChatService · groupes et mentions', () => {
   const monter = () => {
     const bus = { publier: jest.fn() };
     const notifications = { envoyer: jest.fn() };
+    const push = { envoyer: jest.fn() };
     const auteur = { id: 'U1', prenom: 'Cheikh', nom: 'Fall', nomAffiche: null, photoCle: null };
     const prisma = {
       canal: {
@@ -140,6 +145,7 @@ describe('ChatService · groupes et mentions', () => {
             type: 'groupe',
             nom: 'Chantier Ouakam',
             creeParId: 'U1',
+            societe: { slug: 'gc' },
             celluleId: null,
             participant1Id: null,
             participant2Id: null,
@@ -168,6 +174,11 @@ describe('ChatService · groupes et mentions', () => {
             systeme: !!data.systeme,
             mentions: data.mentions ?? [],
             createdAt: new Date(),
+            modifieLe: null,
+            supprimeLe: null,
+            reponseA: null,
+            pieces: [],
+            reactions: [],
             auteur,
           }),
         ),
@@ -196,7 +207,7 @@ describe('ChatService · groupes et mentions', () => {
       },
     } as unknown as PrismaService;
     return {
-      s: new ChatService(prisma, bus as unknown as ChatBus, notifications as never),
+      s: new ChatService(prisma, bus as unknown as ChatBus, notifications as never, push as never),
       prisma,
       bus,
       notifications,

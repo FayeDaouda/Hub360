@@ -9,6 +9,8 @@ import { ROLE_COMPANY_ADMIN } from '@hub/domain';
 //   · direct  → l'un des deux participants
 //   · groupe  → un membre du groupe (01/11/2026) — personne d'autre, pas
 //               même l'administration : une conversation privée.
+//   · projet  → un membre de la conversation du projet (02/11/2026), tenue à
+//               jour automatiquement (équipes, assignés, direction).
 //   · cellule → membre de CETTE cellule, ou societe_admin (vue transverse).
 //               Un rôle de direction sans fiche n'a pas de cellule : refusé.
 // Un canal qu'on ne peut pas lire, on ne peut pas y écrire : la garde couvre
@@ -35,13 +37,15 @@ export class AccesCanalGuard implements CanActivate {
     if (!canal) throw new NotFoundException('Canal introuvable');
 
     if (canal.type === 'general') return true;
-    if (canal.type === 'groupe') {
+    if (canal.type === 'groupe' || canal.type === 'projet') {
       const membre = await this.prisma.membreCanal.findUnique({
         where: { canalId_utilisateurId: { canalId, utilisateurId: user.userId } },
         select: { canalId: true },
       });
       if (membre) return true;
-      throw new ForbiddenException("Vous n'êtes pas membre de ce groupe");
+      throw new ForbiddenException(
+        canal.type === 'projet' ? 'Vous ne faites pas partie de ce projet' : "Vous n'êtes pas membre de ce groupe",
+      );
     }
 
     if (canal.type === 'direct') {

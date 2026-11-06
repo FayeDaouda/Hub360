@@ -1,17 +1,20 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, Info, Plus, UsersRound, X } from 'lucide-react';
+import { Briefcase, ChevronLeft, Info, Plus, Search, UsersRound, X } from 'lucide-react';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
-import type { CanalChat, EtatFluxChat, MembreAnnuaire, MessageChat } from '@/lib/types';
+import type { EnvoiMessage } from '@/lib/chat';
+import type { CanalChat, EtatFluxChat, LectureChat, MembreAnnuaire, MessageChat } from '@/lib/types';
 import { PersonAvatar } from '@/components/ui/avatar';
 import { InfosGroupe, NouveauGroupe } from './groupe-chat';
-import { SaisieChat, TexteMessage } from './saisie-chat';
+import { FilMessages } from './fil-messages';
+import { RechercheChat } from './recherche-chat';
+import { SaisieChat } from './saisie-chat';
 
 // Vue du panneau : liste, nouvelle conversation (annuaire), nouveau groupe,
 // fiche du groupe ouvert (01/11/2026).
 export type VueChat = 'liste' | 'annuaire' | 'nouveau-groupe' | 'infos';
-import { addDays, formatDayLongMonth, formatTime, todayIso, toIsoDay } from '@hub/domain';
+import { formatTime } from '@hub/domain';
 
 type Props = {
   slug: string;
@@ -30,7 +33,7 @@ type Props = {
   onChoisirCanal: (id: string) => void;
   onRetourListe: () => void;
   onChargerPlus: () => void;
-  onEnvoyer: (texte: string, mentionIds: string[]) => void;
+  onEnvoyer: (envoi: EnvoiMessage) => Promise<boolean>;
   onOuvrirAnnuaire: () => void;
   onNouveauDm: (utilisateurId: string) => void;
   onVue: (v: VueChat) => void;
@@ -39,17 +42,22 @@ type Props = {
   onCanauxMaj: () => void;
   // Charge l'annuaire sans changer de vue (ajout de membres au groupe).
   onOuvrirAnnuaireSansVue: () => void;
+  // Messagerie, suite (02/11/2026).
+  ecrivent: string[];
+  lectures: LectureChat[];
+  messageCible: string | null;
+  onMessageMaj: (m: MessageChat) => void;
+  onOuvrirResultat: (canalId: string, messageId: string) => void;
 };
 
 const heure = formatTime;
-
-function jour(iso: string): string {
-  const d = toIsoDay(new Date(iso));
-  const auj = todayIso();
-  if (d === auj) return "Aujourd'hui";
-  if (d === addDays(auj, -1)) return 'Hier';
-  return formatDayLongMonth(iso);
-}
+// « Awa écrit… », « Awa et Moussa écrivent… ».
+const libelleFrappe = (noms: string[]) => {
+  const prenoms = [...new Set(noms.map((n) => n.split(' ')[0]))];
+  if (prenoms.length === 1) return `${prenoms[0]} écrit…`;
+  if (prenoms.length === 2) return `${prenoms[0]} et ${prenoms[1]} écrivent…`;
+  return `${prenoms.length} personnes écrivent…`;
+};
 
 const LIBELLE_ETAT: Record<EtatFluxChat, string> = {
   connexion: 'Connexion…',
@@ -82,9 +90,22 @@ export function PanneauChat({
   onGroupeQuitte,
   onCanauxMaj,
   onOuvrirAnnuaireSansVue,
+  ecrivent,
+  lectures,
+  messageCible,
+  onMessageMaj,
+  onOuvrirResultat,
 }: Props) {
   const vueAnnuaire = vue === 'annuaire';
   const [fiche, setFiche] = useState<string | null>(null);
+  const [reponse, setReponse] = useState<MessageChat | null>(null);
+  const [edition, setEdition] = useState<MessageChat | null>(null);
+  const [recherche, setRecherche] = useState('');
+  // Changer de conversation efface la réponse ou la modification en cours.
+  useEffect(() => {
+    setReponse(null);
+    setEdition(null);
+  }, [canalActif?.id]);
   const filRef = useRef<HTMLDivElement>(null);
   const presDuBas = useRef(true);
 
@@ -109,9 +130,9 @@ export function PanneauChat({
     presDuBas.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   }
 
-  function envoyer(texte: string, mentionIds: string[]) {
+  function envoyer(envoi: EnvoiMessage) {
     presDuBas.current = true;
-    onEnvoyer(texte, mentionIds);
+    return onEnvoyer(envoi);
   }
   const titre =
     vue === 'annuaire'
@@ -119,7 +140,9 @@ export function PanneauChat({
       : vue === 'nouveau-groupe'
         ? 'Nouveau groupe'
         : vue === 'infos'
-          ? 'Infos du groupe'
+          ? canalActif?.type === 'projet'
+            ? 'Discussion du projet'
+            : 'Infos du groupe'
           : canalActif
             ? canalActif.nom
             : 'Messages';
@@ -151,13 +174,13 @@ export function PanneauChat({
             {LIBELLE_ETAT[etatFlux]}
           </span>
         </div>
-        {canalActif?.type === 'groupe' && vue === 'liste' && (
+        {(canalActif?.type === 'groupe' || canalActif?.type === 'projet') && vue === 'liste' && (
           <button
             type="button"
             className="pchat-fermer"
             onClick={() => onVue('infos')}
             aria-label="Infos du groupe"
-            title={`Infos du groupe · ${canalActif.membres ?? ''} membres`}
+            title={`${canalActif.type === 'projet' ? 'Membres de la discussion' : 'Infos du groupe'} · ${canalActif.membres ?? ''} membres`}
           >
             <UsersRound size={18} />
           </button>
@@ -180,7 +203,7 @@ export function PanneauChat({
 
       {vue === 'nouveau-groupe' ? (
         <NouveauGroupe annuaire={annuaire} onCreer={onCreerGroupe} />
-      ) : vue === 'infos' && canalActif?.type === 'groupe' ? (
+      ) : vue === 'infos' && (canalActif?.type === 'groupe' || canalActif?.type === 'projet') ? (
         <InfosGroupe
           slug={slug}
           canal={canalActif}
@@ -236,24 +259,56 @@ export function PanneauChat({
           )}
         </ul>
       ) : !canalActif ? (
-        <ul className="pchat-liste">
-          {canaux.length === 0 ? (
-            <li className="pchat-vide">Aucun canal.</li>
+        <>
+          <div className="pchat-recherche-bloc">
+            <Search size={15} aria-hidden />
+            <input
+              className="pchat-recherche-champ"
+              type="search"
+              placeholder="Rechercher dans les messages…"
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              aria-label="Rechercher dans les messages"
+            />
+          </div>
+          {recherche.trim().length >= 2 ? (
+            <RechercheChat
+              slug={slug}
+              q={recherche}
+              onOuvrir={(canalId, messageId) => {
+                setRecherche('');
+                onOuvrirResultat(canalId, messageId);
+              }}
+            />
           ) : (
-            canaux.map((c) => (
-              <li key={c.id}>
-                <button type="button" className="pchat-canal" onClick={() => onChoisirCanal(c.id)}>
-                  <span className={`pchat-canal-pastille pchat-canal-pastille--${c.type}`} aria-hidden>
-                    {c.type === 'direct' ? c.nom.charAt(0) : c.type === 'groupe' ? <UsersRound size={15} /> : '#'}
-                  </span>
-                  <span className="pchat-canal-nom">{c.nom}</span>
-                  {c.dernierMessageLe && <span className="pchat-canal-quand">{heure(c.dernierMessageLe)}</span>}
-                  {c.nonLus > 0 && <span className="pchat-canal-badge">{c.nonLus}</span>}
-                </button>
-              </li>
-            ))
+            <ul className="pchat-liste">
+              {canaux.length === 0 ? (
+                <li className="pchat-vide">Aucun canal.</li>
+              ) : (
+                canaux.map((c) => (
+                  <li key={c.id}>
+                    <button type="button" className="pchat-canal" onClick={() => onChoisirCanal(c.id)}>
+                      <span className={`pchat-canal-pastille pchat-canal-pastille--${c.type}`} aria-hidden>
+                        {c.type === 'direct' ? (
+                          c.nom.charAt(0)
+                        ) : c.type === 'groupe' ? (
+                          <UsersRound size={15} />
+                        ) : c.type === 'projet' ? (
+                          <Briefcase size={15} />
+                        ) : (
+                          '#'
+                        )}
+                      </span>
+                      <span className="pchat-canal-nom">{c.nom}</span>
+                      {c.dernierMessageLe && <span className="pchat-canal-quand">{heure(c.dernierMessageLe)}</span>}
+                      {c.nonLus > 0 && <span className="pchat-canal-badge">{c.nonLus}</span>}
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
           )}
-        </ul>
+        </>
       ) : (
         <>
           <div className="pchat-fil" ref={filRef} onScroll={surScroll}>
@@ -265,47 +320,56 @@ export function PanneauChat({
             {messages.length === 0 && !chargement ? (
               <p className="pchat-vide">Aucun message. Lance la conversation.</p>
             ) : (
-              messages.map((m, i) => {
-                const prec = messages[i - 1];
-                const nouveauJour = !prec || jour(prec.envoyeLe) !== jour(m.envoyeLe);
-                const memeAuteur = prec && prec.auteur.id === m.auteur.id && !nouveauJour;
-                const mien = m.auteur.id === moiId;
-                const mentionne = !mien && !!m.mentions?.some((x) => x.id === moiId);
-                return (
-                  <div key={m.id}>
-                    {nouveauJour && <div className="pchat-jour">{jour(m.envoyeLe)}</div>}
-                    {m.systeme ? (
-                      <div className="pchat-systeme">
-                        {m.texte} · {heure(m.envoyeLe)}
-                      </div>
-                    ) : (
-                      <div
-                        className={`pchat-msg${mien ? ' pchat-msg--mien' : ''}${mentionne ? ' pchat-msg--mentionne' : ''}`}
-                      >
-                        {(!memeAuteur || prec?.systeme) && !mien && (
-                          <span className="pchat-msg-auteur">{m.auteur.nom}</span>
-                        )}
-                        <span className="pchat-msg-bulle">
-                          <TexteMessage texte={m.texte} mentions={m.mentions ?? []} moiId={moiId} />
-                          <span className="pchat-msg-heure">{heure(m.envoyeLe)}</span>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+              <FilMessages
+                slug={slug}
+                canalId={canalActif.id}
+                moiId={moiId}
+                messages={messages}
+                lectures={lectures}
+                messageCible={messageCible}
+                ecriture={ecriture}
+                onRepondre={(m) => {
+                  setEdition(null);
+                  setReponse(m);
+                }}
+                onModifier={(m) => {
+                  setReponse(null);
+                  setEdition(m);
+                }}
+                onMessageMaj={onMessageMaj}
+              />
             )}
           </div>
 
+          <p className="pchat-frappe" aria-live="polite">
+            {ecrivent.length > 0 && (
+              <>
+                <span className="pchat-frappe-points" aria-hidden>
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                {libelleFrappe(ecrivent)}
+              </>
+            )}
+          </p>
           {!ecriture ? (
             <p className="pchat-saisie pchat-saisie--lecture">Lecture seule</p>
           ) : (
             <SaisieChat
-              key={canalActif.id}
+              key={`${canalActif.id}:${edition?.id ?? ''}`}
               slug={slug}
-              canalId={canalActif.id}
+              canal={canalActif}
               moiId={moiId}
               envoiEnCours={envoiEnCours}
+              reponse={reponse}
+              edition={edition}
+              onAnnulerReponse={() => setReponse(null)}
+              onAnnulerEdition={() => setEdition(null)}
+              onEditionFaite={(m) => {
+                setEdition(null);
+                onMessageMaj(m);
+              }}
               onEnvoyer={envoyer}
             />
           )}

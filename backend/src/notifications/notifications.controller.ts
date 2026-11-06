@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { NotificationsService } from './notifications.service';
-import { LectureDto } from './notifications.dto';
+import { AbonnementPushDto, DesabonnementPushDto, LectureDto, PreferencesNotificationsDto } from './notifications.dto';
+import { PushService } from './push.service';
 
 type R = { user: { societeId: string; userId: string } };
 
@@ -12,7 +13,10 @@ type R = { user: { societeId: string; userId: string } };
 @Controller('societes/:slug/notifications')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)
 export class NotificationsController {
-  constructor(private notifications: NotificationsService) {}
+  constructor(
+    private notifications: NotificationsService,
+    private push: PushService,
+  ) {}
 
   @Get()
   flux(@Req() req: R) {
@@ -29,5 +33,34 @@ export class NotificationsController {
   @Get('non-lues-par-type')
   nonLuesParType(@Req() req: R) {
     return this.notifications.nonLuesParType(req.user.societeId, req.user.userId);
+  }
+
+  // Préférences de la personne (02/11/2026) : pop-up, son, notification
+  // système par catégorie, heures calmes — les mêmes sur tous ses appareils.
+  @Get('preferences')
+  preferences(@Req() req: R) {
+    return this.push.preferences(req.user.userId);
+  }
+
+  @Put('preferences')
+  majPreferences(@Req() req: R, @Body() dto: PreferencesNotificationsDto) {
+    return this.push.majPreferences(req.user.userId, dto);
+  }
+
+  // Notifications système : clé publique (null = désactivées sur ce serveur),
+  // abonnement et désabonnement de cet appareil.
+  @Get('push/cle')
+  clePush() {
+    return { cle: this.push.clePublique() };
+  }
+
+  @Post('push')
+  abonner(@Req() req: R, @Body() dto: AbonnementPushDto) {
+    return this.push.abonner(req.user.userId, { endpoint: dto.endpoint, ...dto.keys }, dto.appareil);
+  }
+
+  @Delete('push')
+  desabonner(@Req() req: R, @Body() dto: DesabonnementPushDto) {
+    return this.push.desabonner(req.user.userId, dto.endpoint);
   }
 }

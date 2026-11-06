@@ -1,12 +1,20 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
-import { CompteCommeLecture, PermissionSelonMethode } from '../commun/permission.decorator';
+import { CompteCommeLecture, PermissionSelonMethode, RequiertPermission } from '../commun/permission.decorator';
 import { PermissionGuard } from '../commun/permission.guard';
 import { AccesCanalGuard } from './acces-canal.guard';
 import { ChatService } from './chat.service';
 import { TicketStore } from './ticket.store';
-import { AjouterMembresDto, CreerGroupeDto, EnvoyerMessageDto, OuvrirDirectDto, RenommerGroupeDto } from './dto';
+import {
+  AjouterMembresDto,
+  CreerGroupeDto,
+  EnvoyerMessageDto,
+  ModifierMessageDto,
+  OuvrirDirectDto,
+  ReactionDto,
+  RenommerGroupeDto,
+} from './dto';
 
 type R = {
   user: {
@@ -45,7 +53,64 @@ export class ChatController {
   @Post('canaux/:id/messages')
   @UseGuards(AccesCanalGuard)
   envoyer(@Req() req: R, @Param('id') id: string, @Body() dto: EnvoyerMessageDto) {
-    return this.chat.envoyer(id, req.user.userId, dto.texte, dto.mentionIds ?? []);
+    return this.chat.envoyer(id, req.user.userId, dto.texte, dto.mentionIds ?? [], {
+      reponseAId: dto.reponseAId,
+      pieces: dto.pieces,
+      mentionTous: dto.mentionTous,
+    });
+  }
+
+  // Recherche dans ses conversations (02/11/2026).
+  @Get('canaux/recherche')
+  @CompteCommeLecture()
+  rechercher(@Req() req: R, @Query('q') q = '') {
+    return this.chat.rechercher(req.user, q);
+  }
+
+  // Son auteur modifie ou supprime un message pendant 15 minutes.
+  @Patch('canaux/:id/messages/:messageId')
+  @UseGuards(AccesCanalGuard)
+  modifier(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Param('messageId') messageId: string,
+    @Body() dto: ModifierMessageDto,
+  ) {
+    return this.chat.modifier(req.user, id, messageId, dto.texte);
+  }
+
+  // Supprimer son propre message : un acte d'écriture, pas la Suppression du module.
+  @Delete('canaux/:id/messages/:messageId')
+  @RequiertPermission('communication', 'ecriture')
+  @UseGuards(AccesCanalGuard)
+  supprimer(@Req() req: R, @Param('id') id: string, @Param('messageId') messageId: string) {
+    return this.chat.supprimer(req.user, id, messageId);
+  }
+
+  @Post('canaux/:id/messages/:messageId/reactions')
+  @UseGuards(AccesCanalGuard)
+  reagir(@Req() req: R, @Param('id') id: string, @Param('messageId') messageId: string, @Body() dto: ReactionDto) {
+    return this.chat.reagir(req.user, id, messageId, dto.emoji);
+  }
+
+  @Get('canaux/:id/messages/:messageId/pieces/:pieceId')
+  @UseGuards(AccesCanalGuard)
+  piece(@Param('id') id: string, @Param('messageId') messageId: string, @Param('pieceId') pieceId: string) {
+    return this.chat.piece(id, messageId, pieceId);
+  }
+
+  // « En train d'écrire… » et lectures (« vu par »).
+  @Post('canaux/:id/frappe')
+  @CompteCommeLecture()
+  @UseGuards(AccesCanalGuard)
+  frappe(@Req() req: R, @Param('id') id: string) {
+    return this.chat.frappe(req.user, id);
+  }
+
+  @Get('canaux/:id/lectures')
+  @UseGuards(AccesCanalGuard)
+  lectures(@Param('id') id: string) {
+    return this.chat.lectures(id);
   }
 
   // Personnes qu'on peut mentionner (@) dans cette conversation.

@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getNotifications, marquerLuesParId, marquerNotificationsLues } from './notifications';
+import { categorieNotification } from '@hub/domain';
 import { jouerSonNotification } from './notification-sound';
+import { popupPermis, sonPermis } from './preferences-notifications';
 import type { FluxNotifications, NotificationItem } from './types';
 
 // Fréquence de sondage — pas de websocket dans cette appli, un intervalle
@@ -70,10 +72,13 @@ export function useNotificationsPoll(slug: string) {
 
   // Montre la file : pop-ups (3 au plus) ou, au retour d'une absence, un résumé.
   const montrer = useCallback((auRetour: boolean) => {
-    const file = enAttente.current;
-    if (!file.length) return;
+    // Préférences (02/11/2026) : pop-up et son selon la catégorie, son coupé
+    // en heures calmes (le pop-up reste, silencieux).
+    const file = enAttente.current.filter((n) => popupPermis(categorieNotification(n.type, n.derivee)));
+    const sonnent = enAttente.current.some((n) => sonPermis(categorieNotification(n.type, n.derivee)));
     enAttente.current = [];
-    jouerSonNotification();
+    if (sonnent) jouerSonNotification();
+    if (!file.length) return;
     if (auRetour && file.length > POPUPS_MAX) {
       setResume({ total: file.length, elements: file.slice(-POPUPS_MAX).reverse() });
       return;

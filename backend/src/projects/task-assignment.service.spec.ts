@@ -3,6 +3,9 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TaskAssignmentService } from './task-assignment.service';
 
+// Conversation du projet : synchronisée après une assignation (sans effet ici).
+const CHAT = { synchroniserCanalProjet: jest.fn().mockResolvedValue(null) } as never;
+
 // Droits de départ du lot 5 (matrice, 31/10/2026), par rôle.
 const DG = {
   projets: 'LE',
@@ -46,7 +49,7 @@ describe('TaskAssignmentService.assign · CTO', () => {
       collaborateur: { findMany: jest.fn().mockResolvedValue([]) },
       tacheProjet: { findFirst: jest.fn().mockResolvedValue(null) },
     } as unknown as PrismaService;
-    return new TaskAssignmentService(prisma, {} as NotificationsService);
+    return new TaskAssignmentService(prisma, {} as NotificationsService, CHAT);
   }
   const cto = { userId: 'CTO', role: 'CTO (transverse)', permissions: CTO_P };
 
@@ -98,6 +101,7 @@ describe('TaskAssignmentService · chef d’équipe', () => {
       s: new TaskAssignmentService(
         prisma as unknown as PrismaService,
         notifications as unknown as NotificationsService,
+        CHAT,
       ),
     };
   }
@@ -155,6 +159,7 @@ describe('TaskAssignmentService.assignCard', () => {
       s: new TaskAssignmentService(
         prisma as unknown as PrismaService,
         notifications as unknown as NotificationsService,
+        CHAT,
       ),
     };
   }

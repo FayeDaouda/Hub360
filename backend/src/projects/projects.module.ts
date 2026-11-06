@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ChatModule } from '../chat/chat.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ReglagesModule } from '../reglages/reglages.module';
 import { OpenProjectsController } from './open-projects.controller';
@@ -30,7 +31,7 @@ import { TsElementsService } from './ts-elements.service';
 // TS) ; ProjectOpeningService sert la facturation (ouverture à l'émission de F1).
 // ProjectTeamsService : équipes d'un projet, affectées par le Dir. GC.
 @Module({
-  imports: [ReglagesModule, NotificationsModule],
+  imports: [ReglagesModule, NotificationsModule, ChatModule], // ChatModule : conversation de chaque projet
   controllers: [OpenProjectsController, ProjectTeamsController],
   providers: [
     ProjectStatesService,

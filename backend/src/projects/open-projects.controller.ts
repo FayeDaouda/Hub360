@@ -23,6 +23,7 @@ import {
   AssignableEmployeeDto,
   AssignmentResultDto,
   CommentRefDto,
+  ConversationProjetDto,
   CustomizationResultDto,
   ExtensionDecisionResultDto,
   ExtensionRequestResultDto,
@@ -42,6 +43,7 @@ import {
   VisaResultDto,
 } from './open-projects-view.dto';
 import { ProductionViewDto } from './production-view.dto';
+import { ChatService } from '../chat/chat.service';
 import { ProductionService } from './production.service';
 import { ProjectCustomizationService } from './project-customization.service';
 import { ProjectFileService } from './project-file.service';
@@ -72,6 +74,7 @@ export class OpenProjectsController {
     private extension: TaskExtensionService,
     private threads: ProjectThreadsService,
     private customization: ProjectCustomizationService,
+    private chat: ChatService,
   ) {}
 
   @Get()
@@ -282,6 +285,14 @@ export class OpenProjectsController {
     @Body() dto: DecideTaskDto,
   ): Promise<ReviewDecisionResultDto> {
     return this.review.decide(req.user.societeId, req.user, projectId, taskId, dto.decision, dto.motif);
+  }
+
+  // Discussion du projet (02/11/2026) : sa conversation, tenue à jour
+  // automatiquement (équipes, assignés, direction), ouverte pour ses membres.
+  @Post(':id/conversation')
+  @RequiertPermission('projets', 'lecture')
+  conversation(@Req() req: R, @Param('id') projectId: string): Promise<ConversationProjetDto> {
+    return this.chat.ouvrirCanalProjet(req.user, projectId);
   }
 
   // Personnalisation d'un projet (01/11/2026) : ligne ajoutée en fin de

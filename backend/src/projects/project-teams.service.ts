@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ChatService } from '../chat/chat.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { fullName } from './project-query';
 import type { ProjectTeamsDto } from './project-teams.dto';
@@ -18,7 +19,10 @@ const toTeam = (c: Team) => ({ id: c.id, code: c.code, nom: c.nom, chef: fullNam
 // équipe y assigne le travail à ses membres ; les membres voient le projet.
 @Injectable()
 export class ProjectTeamsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private chat: ChatService,
+  ) {}
 
   async teams(companyId: string, projectId: string): Promise<ProjectTeamsDto> {
     const [project, available] = await Promise.all([
@@ -55,6 +59,8 @@ export class ProjectTeamsService {
         skipDuplicates: true,
       });
     });
+    // La conversation du projet suit ses équipes.
+    await this.chat.synchroniserCanalProjet(projectId).catch(() => null);
     return this.teams(companyId, projectId);
   }
 }

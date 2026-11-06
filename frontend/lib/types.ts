@@ -490,7 +490,7 @@ export type FluxNotifications = {
 // Contrat renvoyé par l'API NestJS (src/chat). Le back pré-rend `nom` (nom de
 // cellule / « Général » / nom de l'autre participant) et le nom d'auteur.
 
-export type TypeCanal = 'cellule' | 'general' | 'direct' | 'groupe';
+export type TypeCanal = 'cellule' | 'general' | 'direct' | 'groupe' | 'projet';
 
 export type CanalChat = {
   id: string;
@@ -513,6 +513,23 @@ export type MessageChat = {
   systeme?: boolean;
   // Personnes mentionnées (@), pour les surligner.
   mentions?: { id: string; nom: string }[];
+  // Réponse, pièces jointes, réactions, modification (02/11/2026).
+  reponseA?: { id: string; auteur: string; extrait: string } | null;
+  pieces?: PieceMessageChat[];
+  reactions?: ReactionChat[];
+  modifieLe?: string | null;
+  supprime?: boolean;
+};
+export type PieceMessageChat = { id: string; nom: string; taille: number; type: string };
+export type ReactionChat = { emoji: string; ids: string[]; noms: string[] };
+export type LectureChat = { utilisateurId: string; nom: string; luLe: string };
+export type ResultatRechercheChat = {
+  id: string;
+  canalId: string;
+  canal: string;
+  auteur: string;
+  texte: string;
+  envoyeLe: string;
 };
 
 // Personne d'une conversation : mentionnable (@) ou membre d'un groupe.
@@ -525,7 +542,13 @@ export type PageMessagesChat = {
 
 // Événements poussés par le flux SSE (réception seule ; l'envoi passe par REST).
 export type EvenementChat =
-  { type: 'message'; canalId: string; message: MessageChat } | { type: 'non_lus'; canalId: string; nonLus: number };
+  | { type: 'message'; canalId: string; message: MessageChat }
+  | { type: 'non_lus'; canalId: string; nonLus: number }
+  // Messagerie, suite (02/11/2026).
+  | { type: 'message_modifie'; canalId: string; message: MessageChat }
+  | { type: 'reactions'; canalId: string; messageId: string; reactions: ReactionChat[] }
+  | { type: 'frappe'; canalId: string; utilisateurId: string; nom: string }
+  | { type: 'lecture'; canalId: string; utilisateurId: string; nom: string; luLe: string };
 
 export type EtatFluxChat = 'connexion' | 'ouvert' | 'reconnexion';
 

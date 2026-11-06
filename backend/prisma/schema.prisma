@@ -136,30 +136,34 @@ model Utilisateur {
   desactiveParId        String?   @map("desactive_par_id") // utilisateurId de l'admin (audit, pas de FK)
   createdAt             DateTime  @default(now()) @map("created_at")
 
-  roles                  UtilisateurSocieteRole[]
-  rolesSupprimes         Role[]                   @relation("RoleSupprPar")
-  collaborations         Collaborateur[]
-  dossierPersonnel       DossierPersonnel?
-  blocsEtudeSupprimes    BlocEtude[]              @relation("BlocEtudeSupprPar")
-  invitations            Invitation[]
-  notifications          Notification[]
-  evenementsCompte       EvenementCompte[]
-  messages               Message[]
-  canauxDmP1             Canal[]                  @relation("CanalDmP1")
-  membresCanal           MembreCanal[]
-  canauxDmP2             Canal[]                  @relation("CanalDmP2")
-  lecturesCanal          LectureCanal[]
-  dossiersCrees          DossierCrm[]             @relation("DossierCreePar")
-  dossiersApportes       DossierCrm[]             @relation("DossierApporteur")
-  dossiersPossedes       DossierCrm[]             @relation("DossierProprietaire")
-  dossiersArchives       DossierCrm[]             @relation("DossierArchivePar")
-  tachesProjetValidees   TacheProjet[]            @relation("TacheProjetValideePar")
-  evenementsTachesProjet EvenementTacheProjet[]   @relation("EvenementTacheProjetPar")
-  commentairesProjet     CommentaireProjet[]      @relation("CommentaireProjetAuteur")
-  mentionsProjet         CommentaireProjet[]      @relation("CommentaireProjetMentionne")
-  transitionsDossier     DossierCrmTransition[]   @relation("TransitionDossierPar")
-  signalements           Signalement[]            @relation("SignalementAuteur")
-  avisDroits             RightsNotice[]
+  roles                    UtilisateurSocieteRole[]
+  rolesSupprimes           Role[]                   @relation("RoleSupprPar")
+  collaborations           Collaborateur[]
+  dossierPersonnel         DossierPersonnel?
+  blocsEtudeSupprimes      BlocEtude[]              @relation("BlocEtudeSupprPar")
+  invitations              Invitation[]
+  notifications            Notification[]
+  evenementsCompte         EvenementCompte[]
+  messages                 Message[]
+  canauxDmP1               Canal[]                  @relation("CanalDmP1")
+  membresCanal             MembreCanal[]
+  reactionsMessage         ReactionMessage[]
+  abonnementsPush          AbonnementPush[]
+  // Préférences de notification (catégories, heures calmes) — @hub/domain.
+  preferencesNotifications Json?                    @map("preferences_notifications")
+  canauxDmP2               Canal[]                  @relation("CanalDmP2")
+  lecturesCanal            LectureCanal[]
+  dossiersCrees            DossierCrm[]             @relation("DossierCreePar")
+  dossiersApportes         DossierCrm[]             @relation("DossierApporteur")
+  dossiersPossedes         DossierCrm[]             @relation("DossierProprietaire")
+  dossiersArchives         DossierCrm[]             @relation("DossierArchivePar")
+  tachesProjetValidees     TacheProjet[]            @relation("TacheProjetValideePar")
+  evenementsTachesProjet   EvenementTacheProjet[]   @relation("EvenementTacheProjetPar")
+  commentairesProjet       CommentaireProjet[]      @relation("CommentaireProjetAuteur")
+  mentionsProjet           CommentaireProjet[]      @relation("CommentaireProjetMentionne")
+  transitionsDossier       DossierCrmTransition[]   @relation("TransitionDossierPar")
+  signalements             Signalement[]            @relation("SignalementAuteur")
+  avisDroits               RightsNotice[]
 
   @@map("utilisateurs")
 }
@@ -327,6 +331,7 @@ model Notification {
   dossierCrmId   String?          @map("dossier_crm_id") // contexte cliquable (cycle CRM)
   factureId      String?          @map("facture_id") // contexte cliquable (facture à valider)
   canalId        String?          @map("canal_id") // contexte cliquable (conversation : mention, groupe)
+  pousseeLe      DateTime?        @map("poussee_le") // notification système envoyée (Web Push)
   titre          String // texte pré-rendu par le service
   parId          String?          @map("par_id") // qui a déclenché (audit, pas de FK)
   luLe           DateTime?        @map("lu_le")
@@ -339,6 +344,7 @@ model Notification {
   canal        Canal?      @relation(fields: [canalId], references: [id], onDelete: SetNull)
 
   @@index([destinataireId, luLe])
+  @@index([pousseeLe, createdAt])
   @@map("notifications")
 }
 
@@ -1063,6 +1069,8 @@ model Projet {
 
   modifications ModificationProjet[]
 
+  canal Canal?
+
   @@map("projets")
 }
 
@@ -1340,6 +1348,7 @@ enum TypeCanal {
   general
   direct
   groupe // groupe de discussion : nom et membres choisis (01/11/2026)
+  projet // conversation d'un projet, membres tenus à jour automatiquement (02/11/2026)
 }
 
 model Canal {
@@ -1355,6 +1364,8 @@ model Canal {
   // type = groupe : nom et créateur (il gère les membres).
   nom            String?
   creeParId      String?   @map("cree_par_id")
+  // type = projet : le projet (une conversation par projet).
+  projetId       String?   @unique @map("projet_id")
   createdAt      DateTime  @default(now()) @map("created_at")
 
   societe       Societe        @relation(fields: [societeId], references: [id], onDelete: Cascade)
@@ -1365,6 +1376,7 @@ model Canal {
   lectures      LectureCanal[]
   membres       MembreCanal[]
   notifications Notification[]
+  projet        Projet?        @relation(fields: [projetId], references: [id], onDelete: Cascade)
 
   @@unique([participant1Id, participant2Id])
   // Unicité du Général par société : index partiel posé en SQL brut dans la
@@ -1373,20 +1385,28 @@ model Canal {
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  canalId   String   @map("canal_id")
+  id         String    @id @default(uuid())
+  canalId    String    @map("canal_id")
   // FK sans onDelete → Restrict par défaut : on ne supprime pas un compte qui a
   // écrit (convention « on désactive, on ne supprime pas », cf. Utilisateur.desactiveLe).
-  auteurId  String   @map("auteur_id")
-  texte     String // plafonné à ~4000 au DTO
+  auteurId   String    @map("auteur_id")
+  texte      String // plafonné à ~4000 au DTO
   // Ligne d'information d'un groupe (« X a ajouté Y »), pas un message.
-  systeme   Boolean  @default(false)
+  systeme    Boolean   @default(false)
   // Personnes mentionnées (@) : identifiants de compte.
-  mentions  String[] @default([])
-  createdAt DateTime @default(now()) @map("created_at")
+  mentions   String[]  @default([])
+  // Réponse à un message ; modifié ou supprimé par son auteur (15 min).
+  reponseAId String?   @map("reponse_a_id")
+  modifieLe  DateTime? @map("modifie_le")
+  supprimeLe DateTime? @map("supprime_le")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
-  canal  Canal       @relation(fields: [canalId], references: [id], onDelete: Cascade)
-  auteur Utilisateur @relation(fields: [auteurId], references: [id])
+  canal     Canal             @relation(fields: [canalId], references: [id], onDelete: Cascade)
+  auteur    Utilisateur       @relation(fields: [auteurId], references: [id])
+  reponseA  Message?          @relation("ReponseMessage", fields: [reponseAId], references: [id], onDelete: SetNull)
+  reponses  Message[]         @relation("ReponseMessage")
+  pieces    PieceMessage[]
+  reactions ReactionMessage[]
 
   @@index([canalId, createdAt])
   @@map("messages")
@@ -3195,4 +3215,49 @@ model MembreCanal {
   @@id([canalId, utilisateurId])
   @@index([utilisateurId])
   @@map("membres_canal")
+}
+
+// Abonnement d'un appareil aux notifications système (Web Push, 02/11/2026).
+model AbonnementPush {
+  id            String   @id @default(uuid())
+  utilisateurId String   @map("utilisateur_id")
+  endpoint      String   @unique
+  p256dh        String
+  auth          String
+  appareil      String? // navigateur, pour s'y retrouver
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@index([utilisateurId])
+  @@map("abonnements_push")
+}
+
+// Pièce jointe d'un message (photo, PDF…) : data URI, comme les autres fichiers joints.
+model PieceMessage {
+  id        String @id @default(uuid())
+  messageId String @map("message_id")
+  nom       String
+  url       String
+  taille    Int
+  type      String // type MIME
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("pieces_message")
+}
+
+// Réaction à un message (une par personne et par emoji).
+model ReactionMessage {
+  messageId     String   @map("message_id")
+  utilisateurId String   @map("utilisateur_id")
+  emoji         String
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  message     Message     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, utilisateurId, emoji])
+  @@map("reactions_message")
 }

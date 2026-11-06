@@ -495,6 +495,157 @@
         ]
       }
     },
+    "/api/societes/{slug}/notifications/preferences": {
+      "get": {
+        "operationId": "NotificationsController_preferences",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      },
+      "put": {
+        "operationId": "NotificationsController_majPreferences",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesNotificationsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/societes/{slug}/notifications/push/cle": {
+      "get": {
+        "operationId": "NotificationsController_clePush",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/societes/{slug}/notifications/push": {
+      "post": {
+        "operationId": "NotificationsController_abonner",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbonnementPushDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      },
+      "delete": {
+        "operationId": "NotificationsController_desabonner",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesabonnementPushDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
     "/api/societes/{slug}/reglages": {
       "get": {
         "operationId": "ReglagesController_lire",
@@ -3988,6 +4139,44 @@
         ]
       }
     },
+    "/api/societes/{slug}/projets-ouverts/{id}/conversation": {
+      "post": {
+        "operationId": "OpenProjectsController_conversation",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationProjetDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
     "/api/societes/{slug}/projets-ouverts/{id}/cartes/{carteId}/lignes": {
       "post": {
         "operationId": "OpenProjectsController_addLine",
@@ -4430,6 +4619,765 @@
         },
         "tags": [
           "ProjectTeams"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux": {
+      "get": {
+        "operationId": "ChatController_canaux",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {}
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/messages": {
+      "get": {
+        "operationId": "ChatController_messages",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "curseur",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      },
+      "post": {
+        "operationId": "ChatController_envoyer",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvoyerMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/recherche": {
+      "get": {
+        "operationId": "ChatController_rechercher",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/messages/{messageId}": {
+      "patch": {
+        "operationId": "ChatController_modifier",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifierMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      },
+      "delete": {
+        "operationId": "ChatController_supprimer",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/messages/{messageId}/reactions": {
+      "post": {
+        "operationId": "ChatController_reagir",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/messages/{messageId}/pieces/{pieceId}": {
+      "get": {
+        "operationId": "ChatController_piece",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pieceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/frappe": {
+      "post": {
+        "operationId": "ChatController_frappe",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/lectures": {
+      "get": {
+        "operationId": "ChatController_lectures",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/mentionnables": {
+      "get": {
+        "operationId": "ChatController_mentionnables",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/groupes": {
+      "post": {
+        "operationId": "ChatController_creerGroupe",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreerGroupeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/membres": {
+      "get": {
+        "operationId": "ChatController_membres",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      },
+      "post": {
+        "operationId": "ChatController_ajouterMembres",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AjouterMembresDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/membres/{utilisateurId}": {
+      "delete": {
+        "operationId": "ChatController_retirerMembre",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "utilisateurId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}": {
+      "patch": {
+        "operationId": "ChatController_renommer",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenommerGroupeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/{id}/lecture": {
+      "patch": {
+        "operationId": "ChatController_lecture",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/annuaire": {
+      "get": {
+        "operationId": "ChatController_annuaire",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/canaux/direct": {
+      "post": {
+        "operationId": "ChatController_ouvrirDirect",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OuvrirDirectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/chat/ticket": {
+      "post": {
+        "operationId": "ChatController_ticket",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/societes/{slug}/chat/flux": {
+      "get": {
+        "operationId": "ChatFluxController_flux",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "ChatFlux"
         ]
       }
     },
@@ -5265,482 +6213,6 @@
         },
         "tags": [
           "MySpace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux": {
-      "get": {
-        "operationId": "ChatController_canaux",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {}
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux/{id}/messages": {
-      "get": {
-        "operationId": "ChatController_messages",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "curseur",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      },
-      "post": {
-        "operationId": "ChatController_envoyer",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EnvoyerMessageDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux/{id}/mentionnables": {
-      "get": {
-        "operationId": "ChatController_mentionnables",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux/groupes": {
-      "post": {
-        "operationId": "ChatController_creerGroupe",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreerGroupeDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux/{id}/membres": {
-      "get": {
-        "operationId": "ChatController_membres",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      },
-      "post": {
-        "operationId": "ChatController_ajouterMembres",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AjouterMembresDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux/{id}/membres/{utilisateurId}": {
-      "delete": {
-        "operationId": "ChatController_retirerMembre",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "utilisateurId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux/{id}": {
-      "patch": {
-        "operationId": "ChatController_renommer",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RenommerGroupeDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux/{id}/lecture": {
-      "patch": {
-        "operationId": "ChatController_lecture",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/annuaire": {
-      "get": {
-        "operationId": "ChatController_annuaire",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/canaux/direct": {
-      "post": {
-        "operationId": "ChatController_ouvrirDirect",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OuvrirDirectDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/chat/ticket": {
-      "post": {
-        "operationId": "ChatController_ticket",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/societes/{slug}/chat/flux": {
-      "get": {
-        "operationId": "ChatFluxController_flux",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "tags": [
-          "ChatFlux"
         ]
       }
     },
@@ -11050,6 +11522,8 @@
               "enum": [
                 "absence_a_decider",
                 "absence_decidee",
+                "annonce_a_valider",
+                "annonce_importante",
                 "arrivant_a_affecter",
                 "attente_ceo",
                 "attestation_delivree",
@@ -11058,6 +11532,8 @@
                 "avoir_decide",
                 "avoir_emis",
                 "bulletin_depose",
+                "candidat_decide",
+                "candidature_recue",
                 "checklist_assignee",
                 "cloture_a_faire",
                 "commission_a_payer",
@@ -11079,15 +11555,23 @@
                 "droits_modifies",
                 "ecart_temps_signale",
                 "ecart_temps_traite",
+                "embauche_decidee",
+                "entretien_planifie",
                 "facture_a_valider",
                 "facture_emise",
                 "facture_payee",
+                "groupe_chat",
+                "mention_chat",
                 "mention_projet",
                 "offre_acceptee",
                 "offre_envoyee",
                 "offre_expiree",
                 "offre_refusee",
+                "own_rights_changed",
                 "phase_changee",
+                "poste_a_approuver",
+                "poste_decide",
+                "poste_ouvert",
                 "projet_assigne",
                 "prolongation_decidee",
                 "prolongation_demandee",
@@ -11096,6 +11580,8 @@
                 "rappel_facture",
                 "rappel_offre",
                 "rappel_tache",
+                "rdv_annule",
+                "rdv_invitation",
                 "reglage_gouvernance_modifie",
                 "remboursement_a_traiter",
                 "remboursement_traite",
@@ -11127,6 +11613,84 @@
             }
           }
         }
+      },
+      "PreferencesNotificationsDto": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "calme": {
+            "type": "object",
+            "properties": {
+              "actif": {
+                "type": "boolean"
+              },
+              "debut": {
+                "type": "string"
+              },
+              "fin": {
+                "type": "string"
+              }
+            },
+            "required": []
+          }
+        },
+        "required": [
+          "categories",
+          "calme"
+        ]
+      },
+      "ClesPushDto": {
+        "type": "object",
+        "properties": {
+          "p256dh": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "auth": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "p256dh",
+          "auth"
+        ]
+      },
+      "AbonnementPushDto": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 1000,
+            "format": "uri"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/ClesPushDto"
+          },
+          "appareil": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ]
+      },
+      "DesabonnementPushDto": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "endpoint"
+        ]
       },
       "ChangementDto": {
         "type": "object",
@@ -14778,6 +15342,17 @@
           "statut"
         ]
       },
+      "ConversationProjetDto": {
+        "type": "object",
+        "properties": {
+          "canalId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "canalId"
+        ]
+      },
       "CustomLineDto": {
         "type": "object",
         "properties": {
@@ -15117,6 +15692,153 @@
         },
         "required": [
           "celluleIds"
+        ]
+      },
+      "PieceMessageDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nom",
+          "url"
+        ]
+      },
+      "EnvoyerMessageDto": {
+        "type": "object",
+        "properties": {
+          "texte": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "mentionIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "mentionTous": {
+            "type": "boolean"
+          },
+          "reponseAId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieces": {
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PieceMessageDto"
+            }
+          }
+        },
+        "required": [
+          "texte"
+        ]
+      },
+      "ModifierMessageDto": {
+        "type": "object",
+        "properties": {
+          "texte": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "texte"
+        ]
+      },
+      "ReactionDto": {
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string",
+            "enum": [
+              "✅",
+              "❤️",
+              "🎉",
+              "👀",
+              "👍",
+              "😂"
+            ]
+          }
+        },
+        "required": [
+          "emoji"
+        ]
+      },
+      "CreerGroupeDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "membreIds": {
+            "minItems": 1,
+            "maxItems": 49,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "nom",
+          "membreIds"
+        ]
+      },
+      "AjouterMembresDto": {
+        "type": "object",
+        "properties": {
+          "membreIds": {
+            "minItems": 1,
+            "maxItems": 49,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "membreIds"
+        ]
+      },
+      "RenommerGroupeDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "nom"
+        ]
+      },
+      "OuvrirDirectDto": {
+        "type": "object",
+        "properties": {
+          "avecUtilisateurId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "avecUtilisateurId"
         ]
       },
       "CreateCellDto": {
@@ -16589,91 +17311,6 @@
         "required": [
           "cellule",
           "stats"
-        ]
-      },
-      "EnvoyerMessageDto": {
-        "type": "object",
-        "properties": {
-          "texte": {
-            "type": "string",
-            "maxLength": 4000
-          },
-          "mentionIds": {
-            "maxItems": 20,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": [
-          "texte"
-        ]
-      },
-      "CreerGroupeDto": {
-        "type": "object",
-        "properties": {
-          "nom": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 80
-          },
-          "membreIds": {
-            "minItems": 1,
-            "maxItems": 49,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": [
-          "nom",
-          "membreIds"
-        ]
-      },
-      "AjouterMembresDto": {
-        "type": "object",
-        "properties": {
-          "membreIds": {
-            "minItems": 1,
-            "maxItems": 49,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": [
-          "membreIds"
-        ]
-      },
-      "RenommerGroupeDto": {
-        "type": "object",
-        "properties": {
-          "nom": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 80
-          }
-        },
-        "required": [
-          "nom"
-        ]
-      },
-      "OuvrirDirectDto": {
-        "type": "object",
-        "properties": {
-          "avecUtilisateurId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "avecUtilisateurId"
         ]
       },
       "ParametreDto": {

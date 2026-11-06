@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { MessagesSquare } from 'lucide-react';
+import { ouvrirConversation, ouvrirConversationProjet } from '@/lib/chat';
 import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
 import { SidePanel } from './side-panel';
 import { Pill } from '@/components/ui/pill';
@@ -76,6 +78,16 @@ export function ProjectFile({
   const [customizing, setCustomizing] = useState(false);
   const [lineDialog, setLineDialog] = useState<{ card: ProjectCard; task?: ProjectTask } | null>(null);
   const [customizeError, setCustomizeError] = useState<string | null>(null);
+  // Discussion du projet (02/11/2026) : sa conversation, tenue à jour
+  // automatiquement, s'ouvre dans la messagerie.
+  async function ouvrirDiscussion() {
+    setCustomizeError(null);
+    try {
+      ouvrirConversation((await ouvrirConversationProjet(slug, d.id)).canalId);
+    } catch (e) {
+      setCustomizeError(e instanceof ApiError ? e.message : 'Discussion indisponible.');
+    }
+  }
   async function removeLine(card: ProjectCard, task: ProjectTask) {
     const ok = await confirmer({
       titre: `Retirer « ${task.libelle} » ?`,
@@ -116,6 +128,14 @@ export function ProjectFile({
           <p className="po-kicker">Dossier projet</p>
           <h2 className="po-dossier-titre">
             <span className="po-code po-code--grand">{d.code}</span> {d.client.nom}
+            <button
+              type="button"
+              className="po-discussion"
+              onClick={() => void ouvrirDiscussion()}
+              title="Équipes du projet, personnes assignées et direction"
+            >
+              <MessagesSquare size={15} aria-hidden /> Discussion du projet
+            </button>
           </h2>
           {employee ? (
             // Revue Salarié : l'essentiel, sans le vocabulaire de direction.

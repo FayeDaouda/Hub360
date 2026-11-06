@@ -1776,3 +1776,108 @@ tr.is-demandeur .cal-nom {
 .dmd-a-decider {
   margin: 0 0 1rem;
 }
+
+/* Mes réglages › Notifications (02/11/2026) : appareil, catégories, heures
+   calmes. Le bloc prend deux colonnes de la page quand il y a la place. */
+.rg-bloc:has(.rgn) {
+  grid-column: 1 / -1;
+}
+@media (min-width: 1100px) {
+  .rg-bloc:has(.rgn) {
+    grid-column: span 2;
+  }
+}
+.rgn {
+  display: grid;
+  gap: 0.85rem;
+  container-type: inline-size;
+}
+.rgn-appareil {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.rgn-appareil > div {
+  display: grid;
+  gap: 0.15rem;
+}
+.rgn-grille {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.rgn-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 5.5rem);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.rgn-ligne:first-child {
+  border-top: none;
+}
+.rgn-ligne > span:first-child {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.rgn-ligne--tete {
+  background: color-mix(in oklch, var(--text-muted) 8%, transparent);
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.rgn-ligne--tete > span:not(:first-child),
+.rgn-case {
+  text-align: center;
+}
+.rgn-case input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--action);
+}
+.rgn-calme {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.rgn-heures {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.rgn-heures .field-input {
+  width: 8.5rem;
+}
+.rgn-statut {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+/* Étroit : colonnes de cases resserrées, sans les explications. */
+@container (max-width: 480px) {
+  .rgn-ligne {
+    grid-template-columns: minmax(0, 1fr) repeat(3, 3.4rem);
+    padding: 0.5rem 0.6rem;
+  }
+  .rgn-ligne .po-aide {
+    display: none;
+  }
+  .rgn-ligne--tete {
+    font-size: 0.62rem;
+    letter-spacing: 0.02em;
+  }
+}

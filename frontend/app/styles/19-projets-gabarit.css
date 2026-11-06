@@ -1160,3 +1160,27 @@
     grid-column: 2;
   }
 }
+
+/* Discussion du projet (02/11/2026), à côté du titre du dossier. */
+.po-discussion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.75rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid color-mix(in oklch, var(--jade) 45%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--jade) 10%, transparent);
+  color: color-mix(in oklch, var(--jade) 85%, var(--text));
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  vertical-align: middle;
+  cursor: pointer;
+}
+:root[data-theme='dark'] .po-discussion {
+  color: color-mix(in oklch, var(--jade) 45%, white);
+}
+.po-discussion:hover {
+  background: color-mix(in oklch, var(--jade) 18%, transparent);
+}
