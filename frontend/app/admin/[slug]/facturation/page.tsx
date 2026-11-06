@@ -30,7 +30,7 @@ import {
   type Projet,
   type ProjetRef,
 } from '@/lib/types';
-import { formatCompactAmount, formatLongDate, ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN } from '@hub/domain';
+import { ETAPE, formatCompactAmount, formatLongDate, ROLE_CFO } from '@hub/domain';
 import { KpiStrip } from '@/components/ui/kpi';
 import { etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
@@ -70,20 +70,20 @@ export default function FinancesPage(props: Props) {
   const societe = useSocieteCourante();
   const session = useSessionCourante();
   // Droits par la matrice — affichage seulement, le serveur revérifie.
-  // Catalogue : gestion confiée au CEO (14/10/2026) ; le compte de secours la garde.
   const droits = {
     devisEcriture: niveauSuffisant(session, 'finances_devis', 'ecriture'),
     devisValidation: niveauSuffisant(session, 'finances_devis', 'validation'),
     facturesEcriture: niveauSuffisant(session, 'finances_factures', 'ecriture'),
     facturesValidation: niveauSuffisant(session, 'finances_factures', 'validation'),
-    catalogue: session.role === ROLE_CEO || session.role === ROLE_COMPANY_ADMIN,
+    // Catalogue : l'Écriture de son étape (au départ le CEO et l'administration).
+    catalogue: niveauSuffisant(session, ETAPE.financesCatalogue, 'ecriture'),
     // Bureaux d'études à régler : donnée de charges (CFO).
     charges: niveauSuffisant(session, 'finances_charges', 'lecture'),
     // Tableau de bord et rentabilité : CFO, CEO, CTO, CIO (sous-titre de la maquette).
     tableauDeBord: niveauSuffisant(session, 'finances_marges', 'lecture'),
     // Rentabilité par projet (lot 7, décision 8) : CFO, CEO (montants), CTO (taux).
     // La matrice fait foi (revue CIO) : marges en lecture = Rentabilité (montants au CFO et au CEO, taux aux autres).
-    rentabilite: niveauSuffisant(session, 'finances_marges', 'lecture') && session.role !== ROLE_COMPANY_ADMIN,
+    rentabilite: niveauSuffisant(session, 'finances_marges', 'lecture'),
   };
   const validateur = droits.devisValidation || droits.facturesValidation;
   // CEO : validation des seules affaires au-delà du seuil de contresignature.
@@ -423,7 +423,8 @@ export default function FinancesPage(props: Props) {
       {clotures && (
         <Clotures
           slug={params.slug}
-          estCeo={session.role === ROLE_CEO}
+          peutCloturer={niveauSuffisant(session, ETAPE.financesCloture, 'validation')}
+          peutRouvrir={niveauSuffisant(session, ETAPE.financesCloture, 'suppression')}
           onClose={() => {
             setClotures(false);
             setVersionControle((v) => v + 1);
@@ -713,6 +714,9 @@ export default function FinancesPage(props: Props) {
             validation: droits.facturesValidation && valideAffaire(session, seuilCeo, facturePanneau.affaireTtc),
             emission:
               droits.facturesValidation && contresigneAffaire(session, contresignature, facturePanneau.affaireTtc),
+            encaissement:
+              niveauSuffisant(session, ETAPE.financesEncaissements, 'validation') &&
+              valideAffaire(session, seuilCeo, facturePanneau.affaireTtc),
           }}
           onMaj={(maj) => setFactures((l) => (l ?? []).map((x) => (x.id === maj.id ? maj : x)))}
           onSupprimee={() => {

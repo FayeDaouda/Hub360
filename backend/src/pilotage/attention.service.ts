@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { JalonFacture } from '@prisma/client';
 import type { Right } from '@hub/domain';
 import { aLaPermission } from '../commun/permission.guard';
+import { estContresignataire } from '../commun/delegation-ceo';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { refFacture } from '../projets/domaine/config';
@@ -89,7 +90,7 @@ export class AttentionService {
             },
           })
         : [],
-      a.role === ROLE_CEO ? this.seuilCeo.seuil(a.societeId) : null,
+      estContresignataire(a) ? this.seuilCeo.seuil(a.societeId) : null,
     ]);
     const affaires = await this.seuilCeo.montantsAffaire(brouillons);
     const ttc = new Map(

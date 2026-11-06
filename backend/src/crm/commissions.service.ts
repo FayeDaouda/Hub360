@@ -16,16 +16,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { commissionsAttendues, modeA, type EncaissementHonoraires } from './commissions';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
-import {
-  formatAmount,
-  formatDayMonth,
-  ROLE_CEO,
-  ROLE_CFO,
-  ROLE_COMPANY_ADMIN,
-  ROLE_COO,
-  todayIso,
-  toIsoDay,
-} from '@hub/domain';
+import { formatAmount, formatDayMonth, ETAPE, ROLE_CEO, ROLE_CFO, ROLE_COO, todayIso, toIsoDay } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 
@@ -61,19 +52,20 @@ export class CommissionsService {
     private confirmation: ConfirmationIdentiteService,
   ) {}
 
-  // Qui voit les commissions : le COO (il suit), le CFO (il paie), le CEO
-  // et l'administration (finances_charges en lecture).
+  // Qui voit les commissions : la Lecture de « Commissions des apporteurs »
+  // (matrice, 31/10/2026 ; au départ COO, CFO, CEO, CTO et l'administration).
   voit(a: Acteur) {
-    return (
-      a.role === ROLE_COO ||
-      a.role === ROLE_CFO ||
-      a.role === ROLE_COMPANY_ADMIN ||
-      aLaPermission(a.permissions, 'finances_charges', 'lecture')
-    );
+    return aLaPermission(a.permissions, ETAPE.financesCommissions, 'lecture');
   }
   // Les coordonnées de paiement : celui qui les saisit et celui qui paie.
   private voitCoordonnees(a: Acteur) {
-    return a.role === ROLE_COO || a.role === ROLE_CFO || a.role === ROLE_COMPANY_ADMIN;
+    return this.saisit(a) || this.paie(a);
+  }
+  private saisit(a: Acteur) {
+    return aLaPermission(a.permissions, ETAPE.financesCommissions, 'ecriture');
+  }
+  private paie(a: Acteur) {
+    return aLaPermission(a.permissions, ETAPE.financesCommissions, 'validation');
   }
 
   @Cron('5 7 * * *', { timeZone: 'UTC' })
@@ -248,7 +240,7 @@ export class CommissionsService {
     });
     const nomPayeur = new Map(payeurs.map((u) => [u.id, `${u.prenom} ${u.nom}`]));
     return {
-      peutPayer: a.role === ROLE_CFO || a.role === ROLE_COMPANY_ADMIN,
+      peutPayer: this.paie(a),
       lignes: lignes.map((l) => ({
         id: l.id,
         dossierId: l.dossierCrmId,
@@ -272,10 +264,11 @@ export class CommissionsService {
     };
   }
 
-  // Le CFO règle une commission : date, mode, référence. Le COO est prévenu.
+  // Payer une commission (Validation de l'étape ; au départ le CFO) : date,
+  // mode, référence. Le COO est prévenu.
   async payer(a: Acteur, id: string, dto: { date: string; mode: ModePaiement; reference?: string }) {
-    if (a.role !== ROLE_CFO && a.role !== ROLE_COMPANY_ADMIN)
-      throw new ForbiddenException('Seul le CFO paie les commissions des apporteurs.');
+    if (!this.paie(a))
+      throw new ForbiddenException('Payer une commission demande la Validation de « Commissions des apporteurs ».');
     const c = await this.prisma.commissionApporteur.findFirst({
       where: { id, societeId: a.societeId },
       include: {
@@ -318,7 +311,8 @@ export class CommissionsService {
   // (il tient la fiche apporteur) ; identité confirmée à chaque changement,
   // CFO et CEO prévenus sans les numéros — comme celles de la société.
   async lireCoordonnees(a: Acteur, dossierId: string) {
-    if (!this.voitCoordonnees(a)) throw new ForbiddenException('Coordonnées de paiement réservées au COO et au CFO.');
+    if (!this.voitCoordonnees(a))
+      throw new ForbiddenException('Coordonnées de paiement réservées à qui les saisit ou paie la commission.');
     await this.exigerDossier(a.societeId, dossierId);
     return {
       coordonnees: (await this.coordonneesActuelles([dossierId])).get(dossierId) ?? {
@@ -328,13 +322,13 @@ export class CommissionsService {
         orangeMoney: '',
       },
       confirmation: await this.confirmation.mode(a.userId),
-      peutModifier: a.role === ROLE_COO,
+      peutModifier: this.saisit(a),
     };
   }
 
   async modifierCoordonnees(a: Acteur, dossierId: string, dto: Partial<Coordonnees> & { confirmation?: string }) {
-    if (a.role !== ROLE_COO)
-      throw new ForbiddenException('Seul le COO saisit les coordonnées de paiement d’un apporteur.');
+    if (!this.saisit(a))
+      throw new ForbiddenException('Saisir les coordonnées demande l’Écriture de « Commissions des apporteurs ».');
     const d = await this.exigerDossier(a.societeId, dossierId);
     const avant = (await this.coordonneesActuelles([dossierId])).get(dossierId) ?? {
       banque: '',

@@ -5,9 +5,10 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { PrismaService } from '../../prisma/prisma.service';
 import { formaterNumero, PREFIXE_TEST, refusFormat, type FormatNumero } from './numerotation';
 import { formatEnVigueur, prochainNumeroLegal } from './numerotation-base';
-import { ROLE_CEO, ROLE_CFO } from '@hub/domain';
+import { ETAPE, ROLE_CEO } from '@hub/domain';
+import { aLaPermission } from '../../commun/permission.guard';
 
-type Acteur = { userId: string; societeId: string; role: string };
+type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 
 export type Profil = {
   raisonSociale: string;
@@ -93,7 +94,7 @@ export class ParametresFacturationService {
     });
     const noms = new Map(auteurs.map((u) => [u.id, nomDe(u)]));
     return {
-      peutModifier: a.role === ROLE_CFO,
+      peutModifier: aLaPermission(a.permissions, ETAPE.financesParametres, 'ecriture'),
       // Ce que l'écran demande pour confirmer un changement de coordonnées de paiement.
       confirmation: modeConfirmation,
       annee,
@@ -145,7 +146,6 @@ export class ParametresFacturationService {
   }
 
   async modifierFormat(a: Acteur, f: FormatNumero & { motif: string }) {
-    if (a.role !== ROLE_CFO) throw new ForbiddenException('Seul le CFO règle la numérotation des factures.');
     if (f.motif.trim().length < 3) throw new BadRequestException('Le motif est obligatoire.');
     const annee = new Date().getUTCFullYear();
     const vraies = await this.prisma.facture.count({
@@ -175,7 +175,6 @@ export class ParametresFacturationService {
       confirmation?: string;
     },
   ) {
-    if (a.role !== ROLE_CFO) throw new ForbiddenException('Seul le CFO règle le profil de facturation.');
     if (!p.raisonSociale?.trim()) throw new BadRequestException('La raison sociale est obligatoire.');
     if (p.logoDocument && (!LOGO.test(p.logoDocument) || p.logoDocument.length > LOGO_MAX * 1.37)) {
       throw new BadRequestException('Logo : un fichier SVG ou PNG de 600 Ko au plus.');

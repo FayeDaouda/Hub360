@@ -17,6 +17,7 @@ import {
 } from './dto';
 import { ParametresFacturationService } from './parametres-facturation.service';
 import { ControleInterneService } from './controle-interne.service';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { societeId: string; userId: string; role: string } };
 
@@ -62,13 +63,13 @@ export class FacturationCentraleController {
   // --- Paramètres de facturation (lot 6) : numérotation, profil imprimé ---
   // Lecture pour qui lit les factures ; le CFO seul modifie (vérifié par le service).
   @Get('parametres')
-  @RequiertPermission('finances_factures', 'lecture')
+  @RequiertPermission(ETAPE.financesParametres, 'lecture')
   lireParametres(@Req() req: R) {
     return this.parametres.lire(req.user);
   }
 
   @Post('parametres/numerotation')
-  @RequiertPermission('finances_factures', 'lecture')
+  @RequiertPermission(ETAPE.financesParametres, 'ecriture')
   numerotation(@Req() req: R, @Body() dto: FormatNumerotationDto) {
     return this.parametres.modifierFormat(req.user, dto);
   }
@@ -76,7 +77,7 @@ export class FacturationCentraleController {
   // Coordonnées de paiement : mot de passe ou code exigé (service) ; tentatives
   // limitées pour qu'une session volée ne puisse pas deviner le mot de passe.
   @Post('parametres/profil')
-  @RequiertPermission('finances_factures', 'lecture')
+  @RequiertPermission(ETAPE.financesParametres, 'ecriture')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   profil(@Req() req: R, @Body() dto: ProfilFacturationDto) {
@@ -85,33 +86,34 @@ export class FacturationCentraleController {
 
   // --- Contrôle interne (revue CFO 20/10/2026) : avoirs, clôture mensuelle ---
   // Avoirs au-delà du seuil : le CEO décide (vérifié par le service).
+  // Contresignature ou délégation du CEO : tranché par le service.
   @Get('avoirs/a-valider')
-  @RequiertPermission('finances_factures', 'lecture')
+  @RequiertPermission(ETAPE.financesFactures, 'lecture')
   avoirsAValider(@Req() req: R) {
     return this.controle.avoirsAValider(req.user.societeId, req.user);
   }
 
   @Post('avoirs/:demandeId/decision')
-  @RequiertPermission('finances_factures', 'lecture')
+  @RequiertPermission(ETAPE.financesFactures, 'lecture')
   deciderAvoir(@Req() req: R, @Param('demandeId', ParseUUIDPipe) demandeId: string, @Body() dto: DecisionAvoirDto) {
     return this.controle.deciderAvoir(req.user.societeId, demandeId, req.user, dto.valide, dto.motifRefus);
   }
 
   @Get('clotures')
-  @RequiertPermission('finances_factures', 'lecture')
+  @RequiertPermission(ETAPE.financesCloture, 'lecture')
   clotures(@Req() req: R) {
     return this.controle.clotures(req.user.societeId);
   }
 
   // Clôturer : qui enregistre les paiements (CFO) ; rouvrir : le CEO seul.
   @Post('clotures/:mois')
-  @RequiertPermission('finances_factures', 'validation')
+  @RequiertPermission(ETAPE.financesCloture, 'validation')
   cloturer(@Req() req: R, @Param('mois') mois: string) {
     return this.controle.cloturer(req.user.societeId, mois, req.user);
   }
 
   @Post('clotures/:mois/reouverture')
-  @RequiertPermission('finances_factures', 'lecture')
+  @RequiertPermission(ETAPE.financesCloture, 'suppression')
   rouvrir(@Req() req: R, @Param('mois') mois: string, @Body() dto: ReouvertureDto) {
     return this.controle.rouvrir(req.user.societeId, mois, req.user, dto.motif);
   }
@@ -146,13 +148,13 @@ export class FacturationCentraleController {
   }
 
   @Delete(':id')
-  @RequiertPermission('finances_factures', 'ecriture')
+  @RequiertPermission(ETAPE.financesFactures, 'suppression')
   supprimer(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
     return this.facturation.supprimerParId(req.user.societeId, id);
   }
 
   @Post(':id/paiements')
-  @RequiertPermission('finances_factures', 'validation')
+  @RequiertPermission(ETAPE.financesEncaissements, 'validation')
   @ValidationCeoAuDelaDuSeuil('facture', 'id')
   paiement(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AjouterPaiementDto) {
     return this.facturation.ajouterPaiementParId(req.user.societeId, id, dto, req.user.userId);

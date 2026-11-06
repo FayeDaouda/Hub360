@@ -13,7 +13,7 @@ import { refFacture } from '../domaine/config';
 import { ventilationTva } from '../domaine/gardes';
 import { moisClos } from './cloture';
 import { FacturationService } from './facturation.service';
-import { agitPourCeo, avecDelegataire } from '../../commun/delegation-ceo';
+import { avecDelegataire, contresigne } from '../../commun/delegation-ceo';
 import { formatAmount, formatMonthYear, ROLE_CEO, ROLE_CFO } from '@hub/domain';
 
 export const LIBELLE_MOTIF_AVOIR: Record<MotifAvoir, string> = {
@@ -27,7 +27,7 @@ export const LIBELLE_MOTIF_AVOIR: Record<MotifAvoir, string> = {
 const moisDe = (d: Date) => d.toISOString().slice(0, 7);
 const nomDe = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`.trim();
 
-type Acteur = { userId: string; role: string };
+type Acteur = { userId: string; role: string; permissions?: Record<string, string>; fullAccess?: boolean };
 
 // Contrôle interne (revue CFO validée 20/10/2026) : avoirs motivés et
 // contrôlés par le CEO, clôture mensuelle des paiements.
@@ -133,7 +133,7 @@ export class ControleInterneService {
   // Avoirs au-delà du seuil en attente : le CEO seulement.
   async avoirsAValider(societeId: string, acteur: Acteur) {
     // Le CEO, ou son délégataire en fonction (revue CEO) — jamais sa propre demande.
-    if (!(await agitPourCeo(this.prisma, { ...acteur, societeId }))) return [];
+    if (!(await contresigne(this.prisma, { ...acteur, societeId }))) return [];
     const demandes = await this.prisma.demandeAvoir.findMany({
       where: { societeId, statut: 'a_valider', OR: [{ demandeParId: null }, { demandeParId: { not: acteur.userId } }] },
       orderBy: { demandeLe: 'asc' },
@@ -170,7 +170,7 @@ export class ControleInterneService {
   }
 
   async deciderAvoir(societeId: string, demandeId: string, acteur: Acteur, valide: boolean, motifRefus?: string) {
-    if (!(await agitPourCeo(this.prisma, { ...acteur, societeId })))
+    if (!(await contresigne(this.prisma, { ...acteur, societeId })))
       throw new ForbiddenException('Un avoir au-delà du seuil est validé par le CEO (ou son délégataire).');
     const d = await this.prisma.demandeAvoir.findFirst({
       where: { id: demandeId, societeId },
@@ -286,9 +286,9 @@ export class ControleInterneService {
     return this.clotures(societeId);
   }
 
-  // Réouverture : le CEO seulement, motif obligatoire ; le CFO est prévenu.
+  // Réouverture : la Suppression de « Clôture du mois » (route ; au départ le
+  // CEO seul), motif obligatoire ; le CFO est prévenu.
   async rouvrir(societeId: string, mois: string, acteur: Acteur, motif: string) {
-    if (acteur.role !== ROLE_CEO) throw new ForbiddenException('Seul le CEO rouvre un mois clôturé.');
     if (motif.trim().length < 5)
       throw new BadRequestException('Le motif de la réouverture est obligatoire (5 caractères au moins).');
     if (!(await moisClos(this.prisma, societeId)).has(mois))

@@ -63,7 +63,7 @@ describe('SeuilCeoService.montantsAffaire', () => {
   });
 });
 
-const CEO = { userId: 'CEO1', role: ROLE_CEO };
+const CEO = { userId: 'CEO1', role: ROLE_CEO, permissions: { 'finances.contresignature': 'V' } };
 const CFO = { userId: 'CFO1', role: 'CFO' };
 
 describe('SeuilCeoService · contrôles', () => {

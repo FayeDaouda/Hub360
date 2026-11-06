@@ -1,5 +1,5 @@
 import type { PrismaService } from '../prisma/prisma.service';
-import { ROLE_CEO, ROLE_CFO, ROLE_CTO, todayIso } from '@hub/domain';
+import { ETAPE, hasRight, ROLE_CEO, ROLE_CFO, ROLE_CTO, todayIso } from '@hub/domain';
 
 // Délégation du CEO (revue CEO, 22/10/2026) — lecture commune à tous les
 // modules (fonction, pas de service : aucun cycle de modules). Délégués :
@@ -43,3 +43,26 @@ export async function avecDelegataire(
   const d = await delegataireCeo(prisma, societeId);
   return d && d !== demandeurId && !ceo.includes(d) ? [...ceo, d] : ceo;
 }
+
+// Contresignature des affaires au-delà du seuil (matrice, 31/10/2026) : la
+// Validation de l'étape « Contresignature », la carte blanche, ou le
+// délégataire du CEO en fonction.
+export async function contresigne(
+  prisma: PrismaService,
+  acteur: {
+    userId: string;
+    societeId: string;
+    role: string;
+    permissions?: Record<string, string>;
+    fullAccess?: boolean;
+  },
+): Promise<boolean> {
+  if (acteur.fullAccess || estContresignataire(acteur)) return true;
+  if (!ROLES_DELEGATAIRES.has(acteur.role)) return false;
+  return (await delegataireCeo(prisma, acteur.societeId)) === acteur.userId;
+}
+
+// Titulaire de la contresignature (hors carte blanche) : il ne valide QUE
+// les affaires au-delà du seuil (cf. SeuilCeoService).
+export const estContresignataire = (a: { permissions?: Record<string, string>; fullAccess?: boolean }) =>
+  !a.fullAccess && hasRight(a.permissions, ETAPE.financesContresignature, 'validation');

@@ -14,7 +14,19 @@ const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.messag
 // Clôture mensuelle (contrôle interne, revue CFO 20/10/2026) : le CFO fige un
 // mois terminé après en avoir relu les chiffres ; plus aucun paiement daté de
 // ce mois ne s'ajoute ni ne se supprime. Seul le CEO rouvre, avec un motif.
-export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: boolean; onClose: () => void }) {
+// Clôturer : Validation de « Clôture du mois » ; rouvrir : sa Suppression
+// (matrice, 31/10/2026 ; au départ le CFO clôture, le CEO rouvre).
+export function Clotures({
+  slug,
+  peutCloturer,
+  peutRouvrir,
+  onClose,
+}: {
+  slug: string;
+  peutCloturer: boolean;
+  peutRouvrir: boolean;
+  onClose: () => void;
+}) {
   const [mois, setMois] = useState<MoisCloture[] | null>(null);
   const [confirmer, setConfirmer] = useState<string | null>(null);
   const [rouvrir, setRouvrir] = useState<{ mois: string; motif: string } | null>(null);
@@ -76,7 +88,7 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                 <p className="cell-sub">Motif de la réouverture : {m.derniereReouverture}</p>
               )}
 
-              {!m.clos && !estCeo && confirmer !== m.mois && (
+              {!m.clos && peutCloturer && confirmer !== m.mois && (
                 <button
                   type="button"
                   className="btn-ghost btn-ghost--sm"
@@ -107,7 +119,7 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                 </div>
               )}
 
-              {m.clos && estCeo && rouvrir?.mois !== m.mois && (
+              {m.clos && peutRouvrir && rouvrir?.mois !== m.mois && (
                 <button
                   type="button"
                   className="btn-ghost btn-ghost--sm"

@@ -97,4 +97,17 @@ export const ETAPE = {
   crmProprietaire: 'crm.proprietaire',
   crmApporteur: 'crm.apporteur',
   crmTotaux: 'crm.totaux',
+  // Finances (lot 3) : les quatre clés historiques restent les étapes
+  // principales (Offres, Factures, Marges et rentabilité, Charges).
+  financesOffres: 'finances_devis',
+  financesContresignature: 'finances.contresignature',
+  financesCatalogue: 'finances.catalogue',
+  financesFactures: 'finances_factures',
+  financesEncaissements: 'finances.encaissements',
+  financesCloture: 'finances.cloture',
+  financesParametres: 'finances.parametres',
+  financesMarges: 'finances_marges',
+  financesRentabiliteDetail: 'finances.rentabilite_detail',
+  financesCharges: 'finances_charges',
+  financesCommissions: 'finances.commissions',
 } as const;
