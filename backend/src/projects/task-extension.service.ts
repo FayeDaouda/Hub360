@@ -8,7 +8,7 @@ import {
 import { formatDate, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { decisionContext } from './decision-context';
-import { assertInCircuit, canQualify, employeeOfAccount } from './review-rules';
+import { canQualify, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, type Actor } from './project-query';
 import { ReviewCircuitService } from './review-circuit.service';
 import type { ExtensionDecisionResultDto } from './open-projects-view.dto';
@@ -26,7 +26,6 @@ export class TaskExtensionService {
   // figée (choix du 06/10/2026) : accordée, la prolongation qualifie le retard
   // jusqu'à cette date.
   async request(companyId: string, actor: Actor, projectId: string, taskId: string, until: string, reason: string) {
-    assertInCircuit(actor.role);
     const task = await this.load(companyId, projectId, taskId);
     const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
     if (!employeeId || employeeId !== task.assigneId)
@@ -81,7 +80,6 @@ export class TaskExtensionService {
     taskId: string,
     grant: boolean,
   ): Promise<ExtensionDecisionResultDto> {
-    assertInCircuit(actor.role);
     const task = await this.load(companyId, projectId, taskId);
     const pending = task.prolongations.find((p) => p.decision === null);
     if (!pending) throw new ConflictException('Aucune demande de prolongation en attente.');
@@ -91,7 +89,7 @@ export class TaskExtensionService {
     const pushesBack = await this.circuit.pushesBackDelivery(companyId, task.projet, pending.jusquau);
     if (
       !canQualify(
-        { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn },
+        { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn, permissions: actor.permissions },
         { assigneId: task.assigneId, assigneeIsDplg },
         chiefOf(task.projet),
         pushesBack,

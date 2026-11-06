@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { KpiStrip } from '@/components/ui/kpi';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
-import { consultationEtCommentaires, sectionAccessible } from '@/lib/acces-back-office';
+import { sectionAccessible } from '@/lib/acces-back-office';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { HOURS_PER_DAY } from './labels';
@@ -13,7 +13,7 @@ import { ProjectFile } from './project-file';
 import { ProjectPicker } from './project-picker';
 import { boardTiles, employeeTiles } from './project-tiles';
 import { useOpenProjects } from './use-open-projects';
-import { ROLE_DIR_GC, ROLE_EMPLOYEE } from '@hub/domain';
+import { ETAPE, ROLE_DIR_GC, ROLE_EMPLOYEE } from '@hub/domain';
 
 // Projets · gabarit (maquette « Projets » du boss, vue CIO) : tuiles, projets
 // ouverts, et le dossier du projet choisi — étapes, cartes, tâches.
@@ -30,19 +30,20 @@ export function OpenProjects({ slug }: { slug: string }) {
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
-  // « Lecture et assignation » : la liste n'est chargée que pour qui assigne.
-  const canAssign = niveauSuffisant(session, 'projets', 'ecriture');
+  // « Lecture et assignation » : la liste n'est chargée que pour qui assigne
+  // (Écriture de « Assignation des tâches », matrice du 31/10/2026).
+  const canAssign = niveauSuffisant(session, ETAPE.projetsAssignation, 'ecriture');
   const dplg = session.role === ROLE_DIR_GC;
   const employee = session.role === ROLE_EMPLOYEE;
   // « Seulement mes tâches » : proposé à quiconque a une tâche dans le
   // projet ; décoché d'office — chacun voit d'abord tout le projet
   // (décision du 29/10/2026, remplace la revue Salarié du 19/10).
   const [onlyMine, setOnlyMine] = useState(false);
-  // CEO, CFO : lecture, et les fils en écriture (exception ciblée, revérifiée
-  // par le serveur) ; aucune action de circuit.
-  const readAndComment = consultationEtCommentaires(session);
-  // Fil en écriture : qui écrit sur Projets, le Salarié sur ses projets, CEO et CFO.
-  const canWriteThreads = canAssign || employee || readAndComment;
+  // Fil en écriture : l'Écriture de « Fils de discussion » (le Salarié, sur
+  // ses projets — revérifié par le serveur).
+  const canWriteThreads = niveauSuffisant(session, ETAPE.projetsFils, 'ecriture');
+  // Lecture et fils, sans aucun geste du circuit (au départ : CEO, CFO).
+  const readAndComment = canWriteThreads && !canAssign && !employee && !dplg;
   const p = useOpenProjects(slug, { canWriteThreads, employee });
   const { board } = p;
 

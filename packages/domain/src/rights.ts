@@ -106,8 +106,18 @@ export const ETAPE = {
   financesEncaissements: 'finances.encaissements',
   financesCloture: 'finances.cloture',
   financesParametres: 'finances.parametres',
+  financesGroupe: 'finances.groupe',
   financesMarges: 'finances_marges',
   financesRentabiliteDetail: 'finances.rentabilite_detail',
   financesCharges: 'finances_charges',
   financesCommissions: 'finances.commissions',
+  // Projets (lot 5) : « projets » reste l'étape principale.
+  projets: 'projets',
+  projetsAssignation: 'projets.assignation',
+  projetsValidation: 'projets.validation',
+  projetsVisa: 'projets.visa',
+  projetsProlongations: 'projets.prolongations',
+  projetsTs: 'projets.ts',
+  projetsFils: 'projets.fils',
+  projetsProduction: 'projets.production',
 } as const;

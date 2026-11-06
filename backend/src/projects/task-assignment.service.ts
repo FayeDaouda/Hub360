@@ -1,11 +1,11 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { ROLE_CTO, todayIso } from '@hub/domain';
+import { ETAPE, ROLE_CTO, todayIso } from '@hub/domain';
 import { aLaPermission } from '../commun/permission.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { tasksToAssign, unassignableReason } from './assignment-rules';
 import { decisionContext } from './decision-context';
-import { assertInCircuit, employeeOfAccount } from './review-rules';
+import { employeeOfAccount } from './review-rules';
 import { fullName, type Actor } from './project-query';
 
 // Assignation des tâches d'un projet ouvert (maquette « Projets ») : à la
@@ -26,7 +26,10 @@ export class TaskAssignmentService {
 
   // Périmètre d'assignation de l'acteur sur ce projet ; null = aucun.
   async scope(companyId: string, actor: AssignActor, projectId: string): Promise<AssignScope | null> {
-    if (aLaPermission(actor.permissions, 'projets', 'ecriture')) {
+    // Écriture de l'étape « Assignation » (matrice, 31/10/2026) ; circuit : le
+    // CTO seulement en suppléance d'un Dir. GC absent ; le chef d'équipe sur
+    // ses équipes, sans case.
+    if (aLaPermission(actor.permissions, ETAPE.projetsAssignation, 'ecriture')) {
       if (actor.role !== ROLE_CTO) return 'all';
       return (await decisionContext(this.prisma, companyId, todayIso())).ctoStandsIn ? 'all' : null;
     }
@@ -40,13 +43,12 @@ export class TaskAssignmentService {
   }
 
   async scopeOrThrow(companyId: string, actor: AssignActor, projectId: string): Promise<AssignScope> {
-    assertInCircuit(actor.role);
     const scope = await this.scope(companyId, actor, projectId);
     if (scope) return scope;
     throw new ForbiddenException(
       actor.role === ROLE_CTO
         ? 'Le CTO n’assigne les tâches qu’en suppléance d’un Dir. GC absent.'
-        : 'Assigner le travail de ce projet est réservé au Dir. GC et aux chefs de ses équipes.',
+        : 'Assigner le travail de ce projet demande l’Écriture de « Assignation », ou d’être chef d’une de ses équipes.',
     );
   }
 

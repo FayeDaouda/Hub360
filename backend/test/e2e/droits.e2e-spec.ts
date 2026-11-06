@@ -182,3 +182,52 @@ describe('Matrice des droits · Finances', () => {
     await api(app, cfo).post('/factures/parametres/numerotation', {}).expect(403);
   });
 });
+
+// Lot 4 : finances consolidées du groupe, ouvertes par une étape de la matrice.
+describe('Finances du groupe', () => {
+  let app: INestApplication;
+  beforeAll(async () => {
+    app = await demarrer();
+  });
+  afterAll(() => app.close());
+
+  it('le CFO voit chaque société et le total ; le Dir. GC n’y a pas accès', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    const r = (await api(app, cfo).get('/factures/groupe').expect(200)).body as {
+      societes: { societe: { nom: string }; facture: number }[];
+      total: { facture: number };
+    };
+    expect(r.societes.map((s) => s.societe.nom)).toContain('Grey Concrete');
+    expect(r.total.facture).toBe(r.societes.reduce((t, s) => t + s.facture, 0));
+    await api(app, await connecter(app, COMPTES.dirgc))
+      .get('/factures/groupe')
+      .expect(403);
+  });
+});
+
+// Lot 5 (Projets) : le tableau de production suit sa case.
+describe('Matrice des droits · Projets', () => {
+  let app: INestApplication;
+  let cio: string;
+  const roles: Record<string, string> = {};
+  beforeAll(async () => {
+    app = await demarrer();
+    cio = await connecter(app, COMPTES.cio);
+    for (const r of ((await api(app, cio).get('/roles').expect(200)).body as Matrice).roles) roles[r.nom] = r.id;
+  });
+  const regler = (role: string, droits: Record<string, boolean>) =>
+    api(app, cio)
+      .put('/roles/droits', { changements: [{ roleId: roles[role], etapeCle: 'projets.production', droits }] })
+      .expect(200);
+  afterAll(async () => {
+    await regler('CFO', AUCUN);
+    await app.close();
+  });
+
+  it('tableau de production : refusé au CFO, puis ouvert par la case', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    await api(app, cfo).get('/projets-ouverts/production').expect(403);
+    await regler('CFO', { ...AUCUN, lecture: true });
+    await api(app, cfo).get('/projets-ouverts/production').expect(200);
+  });
+});

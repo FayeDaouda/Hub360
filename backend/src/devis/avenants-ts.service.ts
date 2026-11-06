@@ -16,7 +16,7 @@ import { tsRight } from '../projects/review-rules';
 import type { AddTsElementDto } from '../projects/open-projects.dto';
 import { DevisService } from './devis.service';
 import type { LigneDevisDto } from './dto';
-import { formatAmount, ROLE_CFO, ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
+import { ETAPE, formatAmount, hasRight, ROLE_CFO, ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
 
 const PRODUIT_TS = { mineure: 'TS-MIN', majeure: 'TS-MAJ' } as const;
 const OBJET_AVENANT = 'Avenant · travaux supplémentaires';
@@ -40,12 +40,21 @@ export class AvenantsTsService {
 
   // Seuil des Réglages (revue Dir. GC, 21/10/2026) : jusqu'au seuil, le Dir. GC
   // ajoute le TS ; au-delà, il le demande et le CTO le valide (ou l'ajoute).
-  async ajouterTs(societeId: string, acteur: { userId: string; role: string }, projetId: string, dto: AddTsElementDto) {
+  async ajouterTs(
+    societeId: string,
+    acteur: { userId: string; role: string; permissions?: Record<string, string> },
+    projetId: string,
+    dto: AddTsElementDto,
+  ) {
     const { ligne } = await this.chiffrer(societeId, projetId, dto);
     const montantHt = Math.round(ligne.quantite * ligne.prixUnitaire);
     const seuil = await this.reglages.regle<number>(societeId, 'seuil_ts_cto_ht');
     const ctx = await decisionContext(this.prisma, societeId, todayIso());
-    const droit = tsRight({ role: acteur.role, employeeId: null, ctoStandsIn: ctx.ctoStandsIn }, montantHt, seuil);
+    const droit = tsRight(
+      { role: acteur.role, employeeId: null, ctoStandsIn: ctx.ctoStandsIn, permissions: acteur.permissions },
+      montantHt,
+      seuil,
+    );
     if (!droit) throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG (ou au CTO).');
     if (droit === 'ajouter') return this.creer(societeId, acteur, projetId, dto);
 
@@ -81,14 +90,14 @@ export class AvenantsTsService {
   // + avenant) ; refusé, avec un motif. Le demandeur est prévenu.
   async deciderDemande(
     societeId: string,
-    acteur: { userId: string; role: string },
+    acteur: { userId: string; role: string; permissions?: Record<string, string> },
     projetId: string,
     demandeId: string,
     accepter: boolean,
     motif?: string,
   ) {
-    if (acteur.role !== ROLE_CTO && acteur.role !== ROLE_COMPANY_ADMIN)
-      throw new ForbiddenException('Un TS au-delà du seuil est validé par le CTO.');
+    if (!hasRight(acteur.permissions, ETAPE.projetsTs, 'validation'))
+      throw new ForbiddenException('Un TS au-delà du seuil demande la Validation de « Travaux supplémentaires ».');
     const d = await this.prisma.demandeTs.findFirst({
       where: { id: demandeId, projetId, societeId },
       include: { projet: { select: { code: true } } },
@@ -165,7 +174,7 @@ export class AvenantsTsService {
 
   private async creer(
     societeId: string,
-    acteur: { userId: string; role: string },
+    acteur: { userId: string; role: string; permissions?: Record<string, string> },
     projetId: string,
     dto: AddTsElementDto,
   ) {

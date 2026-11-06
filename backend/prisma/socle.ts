@@ -86,6 +86,7 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
     suppression: est(ROLE_CEO),
   };
   droits[ETAPE.financesParametres] = { ...NO_RIGHTS, lecture: factures.lecture, ecriture: est(ROLE_CFO) };
+  droits[ETAPE.financesGroupe] = { ...NO_RIGHTS, lecture: factures.lecture && est(ROLE_CEO, ROLE_CFO, ROLE_CTO) };
   droits[ETAPE.financesRentabiliteDetail] = {
     ...NO_RIGHTS,
     lecture: marges.lecture && est(ROLE_CFO, ROLE_CEO),
@@ -97,6 +98,20 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
     ecriture: est(ROLE_COO),
     validation: est(ROLE_CFO, ROLE_COMPANY_ADMIN),
   };
+  // Projets (lot 5, migration 20261101180000_projets_etapes) : mêmes règles.
+  const projets = versDroits(niveaux.projets);
+  droits[ETAPE.projets] = { ...NO_RIGHTS, lecture: projets.lecture, ecriture: projets.ecriture };
+  droits[ETAPE.projetsAssignation] = { ...NO_RIGHTS, ecriture: projets.ecriture };
+  droits[ETAPE.projetsValidation] = { ...NO_RIGHTS, validation: est(ROLE_DIR_GC, ROLE_CTO, ROLE_COMPANY_ADMIN) };
+  droits[ETAPE.projetsVisa] = { ...NO_RIGHTS, validation: est(ROLE_DIR_GC, ROLE_COMPANY_ADMIN) };
+  droits[ETAPE.projetsProlongations] = { ...NO_RIGHTS, validation: est(ROLE_DIR_GC, ROLE_CTO, ROLE_COMPANY_ADMIN) };
+  droits[ETAPE.projetsTs] = {
+    ...NO_RIGHTS,
+    ecriture: est(ROLE_DIR_GC, ROLE_CTO, ROLE_COMPANY_ADMIN),
+    validation: est(ROLE_CTO, ROLE_COMPANY_ADMIN),
+  };
+  droits[ETAPE.projetsFils] = { ...NO_RIGHTS, ecriture: projets.ecriture || est(ROLE_CEO, ROLE_CFO, ROLE_EMPLOYEE) };
+  droits[ETAPE.projetsProduction] = { ...NO_RIGHTS, lecture: est(ROLE_DIR_GC, ROLE_CTO, ROLE_CEO, ROLE_COMPANY_ADMIN) };
   return droits;
 }
 
@@ -278,7 +293,8 @@ export async function installerSocle(prisma: PrismaClient) {
       },
     },
     [ROLE_CFO]: {
-      transverse: false,
+      // transverse (31/10/2026, lot 4) : le CFO travaille pour toutes les sociétés.
+      transverse: true,
       permissions: {
         crm: 'lecture',
         projets: 'lecture',

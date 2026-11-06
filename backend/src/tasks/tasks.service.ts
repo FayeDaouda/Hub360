@@ -29,7 +29,7 @@ import { submissionBaseName } from '../projects/submission-file-name';
 import type { TaskToReviewDto } from './task-review.dto';
 import { todayIso } from '@hub/domain';
 
-type Actor = { userId: string; societeId: string; role: string };
+type Actor = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 
 const fullName = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`.trim();
 
@@ -194,7 +194,7 @@ export class TasksService {
     return submissions
       .filter((t) =>
         canDecide(
-          { role: a.role, employeeId, ctoStandsIn: ctx.ctoStandsIn },
+          { role: a.role, employeeId, ctoStandsIn: ctx.ctoStandsIn, permissions: a.permissions },
           { ...t, assigneeIsDplg: !!t.assigneId && ctx.dplgEmployees.has(t.assigneId) },
           chiefOf(t.projet),
         ),

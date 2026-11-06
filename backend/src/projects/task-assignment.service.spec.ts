@@ -3,6 +3,29 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TaskAssignmentService } from './task-assignment.service';
 
+// Droits de départ du lot 5 (matrice, 31/10/2026), par rôle.
+const DG = {
+  projets: 'LE',
+  'projets.assignation': 'E',
+  'projets.validation': 'V',
+  'projets.visa': 'V',
+  'projets.prolongations': 'V',
+  'projets.ts': 'E',
+  'projets.fils': 'E',
+  'projets.production': 'L',
+};
+const CTO_P = {
+  projets: 'LE',
+  'projets.assignation': 'E',
+  'projets.validation': 'V',
+  'projets.prolongations': 'V',
+  'projets.ts': 'EV',
+  'projets.fils': 'E',
+  'projets.production': 'L',
+};
+const CEO_P = { projets: 'L', 'projets.fils': 'E', 'projets.production': 'L' };
+const SAL = { projets: 'L', 'projets.fils': 'E' };
+
 // Revue CTO (21/10/2026) : assigner, c'est organiser le travail — le CTO
 // n'assigne qu'en suppléance d'un Dir. GC absent.
 describe('TaskAssignmentService.assign · CTO', () => {
@@ -25,7 +48,7 @@ describe('TaskAssignmentService.assign · CTO', () => {
     } as unknown as PrismaService;
     return new TaskAssignmentService(prisma, {} as NotificationsService);
   }
-  const cto = { userId: 'CTO', role: 'CTO (transverse)', permissions: { projets: 'validation' as const } };
+  const cto = { userId: 'CTO', role: 'CTO (transverse)', permissions: CTO_P };
 
   it('Dir. GC présent : le CTO n’assigne pas', async () => {
     await expect(svc(false).assign('S1', cto, 'P1', 'T1', 'C1', false)).rejects.toThrow(ForbiddenException);
@@ -40,7 +63,7 @@ describe('TaskAssignmentService.assign · CTO', () => {
 // aux seuls membres de son équipe ; un Salarié qui n'est chef d'aucune équipe
 // du projet n'assigne pas.
 describe('TaskAssignmentService · chef d’équipe', () => {
-  const salarie = { userId: 'U1', role: 'Salarié', permissions: { projets: 'lecture' as const } };
+  const salarie = { userId: 'U1', role: 'Salarié', permissions: SAL };
   const tache = {
     id: 'T1',
     libelle: 'Plans',
@@ -107,7 +130,7 @@ describe('TaskAssignmentService · chef d’équipe', () => {
 // Bouton « Assigner le bloc » (30/10/2026) : toutes les tâches encore ouvertes
 // de la carte, les validées et non nécessaires gardent leur personne.
 describe('TaskAssignmentService.assignCard', () => {
-  const dirgc = { userId: 'DG', role: 'Dir. GC', permissions: { projets: 'ecriture' as const } };
+  const dirgc = { userId: 'DG', role: 'Dir. GC', permissions: DG };
   function svc(card: object | null) {
     const tx = {
       tacheProjet: {

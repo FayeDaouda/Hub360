@@ -81,8 +81,8 @@ export class OpenProjectsController {
     return this.threads.mentionable(req.user.societeId);
   }
 
-  // Tableau de production (Dir. GC : ses projets ; CTO, CEO : tous) — rôle
-  // vérifié par le service.
+  // Tableau de production (Dir. GC : ses projets ; les autres : tous) — la
+  // Lecture de son étape est vérifiée par le service.
   @Get('production')
   @RequiertPermission('projets', 'lecture')
   production(@Req() req: R): Promise<ProductionViewDto> {

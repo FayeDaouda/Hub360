@@ -160,6 +160,16 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
       ecriture: 'Modifie la numérotation des factures et le profil de facturation',
     },
   },
+  // Lot 4 (Holding, 31/10/2026) : vue consolidée de toutes les sociétés.
+  {
+    module: 'finances_factures',
+    cle: ETAPE.financesGroupe,
+    nom: 'Finances du groupe',
+    ordre: 4,
+    libelles: {
+      lecture: 'Voit les finances consolidées de toutes les sociétés du groupe (facturé, encaissé, à encaisser)',
+    },
+  },
   {
     module: 'finances_marges',
     cle: ETAPE.financesMarges,
@@ -199,5 +209,74 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
       ecriture: 'Saisit ou modifie les coordonnées de paiement d’un apporteur',
       validation: 'Paie une commission',
     },
+  },
+
+  // Projets (lot 5, 31/10/2026) : le circuit (assigné, chef d'équipe, CTO pour
+  // le travail d'un Dir. GC) reste une règle ; la matrice dit qui a le droit.
+  {
+    module: 'projets',
+    cle: ETAPE.projets,
+    nom: 'Projets et cartes',
+    ordre: 0,
+    libelles: {
+      lecture: 'Voit les projets, leurs cartes, leurs tâches et leur avancement',
+      ecriture: 'Coche un élément, joint un fichier, marque « non nécessaire »',
+    },
+  },
+  {
+    module: 'projets',
+    cle: ETAPE.projetsAssignation,
+    nom: 'Assignation des tâches',
+    ordre: 1,
+    libelles: {
+      ecriture: 'Assigne une tâche ou un bloc à un collaborateur (le chef d’équipe assigne ses membres sans case)',
+    },
+  },
+  {
+    module: 'projets',
+    cle: ETAPE.projetsValidation,
+    nom: 'Validation des remises',
+    ordre: 2,
+    libelles: {
+      validation: 'Valide ou renvoie une remise (le chef d’équipe valide son équipe ; le CTO le travail d’un Dir. GC)',
+    },
+  },
+  {
+    module: 'projets',
+    cle: ETAPE.projetsVisa,
+    nom: 'Visa DPLG',
+    ordre: 3,
+    libelles: { validation: 'Appose le visa de l’architecte sur une tâche validée' },
+  },
+  {
+    module: 'projets',
+    cle: ETAPE.projetsProlongations,
+    nom: 'Prolongations',
+    ordre: 4,
+    libelles: { validation: 'Accorde ou refuse un délai (le CTO quand la livraison du projet recule)' },
+  },
+  {
+    module: 'projets',
+    cle: ETAPE.projetsTs,
+    nom: 'Travaux supplémentaires',
+    ordre: 5,
+    libelles: {
+      ecriture: 'Ajoute un TS jusqu’au seuil des Réglages, le demande au-delà',
+      validation: 'Accorde un TS au-delà du seuil (ou l’ajoute d’emblée)',
+    },
+  },
+  {
+    module: 'projets',
+    cle: ETAPE.projetsFils,
+    nom: 'Fils de discussion',
+    ordre: 6,
+    libelles: { ecriture: 'Écrit et mentionne dans les fils (le Salarié, sur les projets de son périmètre)' },
+  },
+  {
+    module: 'projets',
+    cle: ETAPE.projetsProduction,
+    nom: 'Tableau de production',
+    ordre: 7,
+    libelles: { lecture: 'Voit le tableau de production (le Dir. GC : les projets qu’il porte)' },
   },
 ];

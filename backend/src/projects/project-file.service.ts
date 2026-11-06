@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { aLaPermission } from '../commun/permission.guard';
-import { ROLE_CTO, todayIso } from '@hub/domain';
+import { ETAPE, hasRight, ROLE_CTO, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { Temps } from '../reglages/gabarit';
@@ -8,7 +8,7 @@ import { refDevis, statutDevisEffectif } from '../devis/domaine';
 import { dateOfDay, workdayRank } from './work-calendar';
 import { invoiceWaits } from './task-states';
 import { deliveryDate, projectHorizon, type DecisionContext } from './decision-context';
-import { actsAsDplg, canDecide, canQualify, canVisa, outsideCircuit, projectScope } from './review-rules';
+import { canDecide, canQualify, canVisa, projectScope } from './review-rules';
 import {
   fullName,
   grantedExtension,
@@ -118,11 +118,11 @@ export class ProjectFileService {
     const { etapes, cardStates, taskStates } = this.states.states(p, today, holidays);
     const cell = p.cellules[0]?.cellule ?? null;
     const chief = cell?.dispatcher ?? null;
-    // « Ajouter en TS » : l'Architecte DPLG (ou son suppléant) et le CTO.
-    const dplgConnected = actsAsDplg(decider) || actor.role === ROLE_CTO;
+    // « Ajouter en TS » : le droit de l'étape « Travaux supplémentaires ».
+    const dplgConnected =
+      hasRight(actor.permissions, ETAPE.projetsTs, 'ecriture') ||
+      hasRight(actor.permissions, ETAPE.projetsTs, 'validation');
     const deliveryOn = deliveryDate(p, holidays);
-    // Remise et demande de prolongation : jamais pour un rôle hors circuit (CEO).
-    const inCircuit = !outsideCircuit(actor.role);
     const dplg = p.societe.contratSignataireNom?.trim() || null;
     const pilot = await this.reglages.regle<string>(companyId, 'pilote_etudes');
     const horizon = projectHorizon(p.budgetHeures);
@@ -179,9 +179,9 @@ export class ProjectFileService {
       // Projets, le CTO seulement en suppléance d'un Dir. GC (revue CTO) ; ou
       // le chef d'une équipe du projet.
       peutAssigner:
-        inCircuit &&
-        ((aLaPermission(actor.permissions, 'projets', 'ecriture') && (actor.role !== ROLE_CTO || ctx.ctoStandsIn)) ||
-          (!!me && p.cellules.some((c) => c.cellule.dispatcher?.id === me))),
+        (aLaPermission(actor.permissions, ETAPE.projetsAssignation, 'ecriture') &&
+          (actor.role !== ROLE_CTO || ctx.ctoStandsIn)) ||
+        (!!me && p.cellules.some((c) => c.cellule.dispatcher?.id === me)),
       // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
       optionsTs: dplgConnected
         ? p.cartes.flatMap((c) => {
@@ -250,7 +250,7 @@ export class ProjectFileService {
               : null,
             // L'architecte DPLG (Dir. GC, ou un autre Dir. GC en suppléance —
             // jamais le CTO : le visa engage la signature de l'architecte).
-            peutViser: canVisa(actor.role) && t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace,
+            peutViser: canVisa(actor) && t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace,
             assigne: t.assigne
               ? { id: t.assigne.id, nom: fullName(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null }
               : null,
@@ -267,7 +267,6 @@ export class ProjectFileService {
             // Prolongation : l'assigné la demande (tâche ni validée ni « non
             // nécessaire », aucune demande en attente) ; chef d’équipe ou DPLG décide.
             peutDemanderProlongation:
-              inCircuit &&
               !!me &&
               t.assigneId === me &&
               !['validee', 'non_necessaire'].includes(t.statut) &&
@@ -283,7 +282,6 @@ export class ProjectFileService {
               ),
             // Remise par la personne assignée, carte ouverte (ni désactivée ni verrouillée).
             peutRemettre:
-              inCircuit &&
               !!me &&
               t.assigneId === me &&
               (t.statut === 'a_faire' || t.statut === 'reprise') &&

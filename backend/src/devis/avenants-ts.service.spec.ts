@@ -7,6 +7,29 @@ import { TsElementsService } from '../projects/ts-elements.service';
 import { AvenantsTsService } from './avenants-ts.service';
 import { DevisService } from './devis.service';
 
+// Droits de départ du lot 5 (matrice, 31/10/2026), par rôle.
+const DG = {
+  projets: 'LE',
+  'projets.assignation': 'E',
+  'projets.validation': 'V',
+  'projets.visa': 'V',
+  'projets.prolongations': 'V',
+  'projets.ts': 'E',
+  'projets.fils': 'E',
+  'projets.production': 'L',
+};
+const CTO_P = {
+  projets: 'LE',
+  'projets.assignation': 'E',
+  'projets.validation': 'V',
+  'projets.prolongations': 'V',
+  'projets.ts': 'EV',
+  'projets.fils': 'E',
+  'projets.production': 'L',
+};
+const CEO_P = { projets: 'L', 'projets.fils': 'E', 'projets.production': 'L' };
+const SAL = { projets: 'L', 'projets.fils': 'E' };
+
 const dec = (n: number) => new Prisma.Decimal(n);
 
 function svc(
@@ -59,7 +82,7 @@ function svc(
   return { s, devis, tsElements, notifications, majTache, prisma };
 }
 
-const acteur = { userId: 'DPLG1', role: 'Dir. GC' };
+const acteur = { userId: 'DPLG1', role: 'Dir. GC', permissions: DG };
 const mineure = { carteId: 'C1', element: 'Bureau', reprise: 'mineure' as const };
 
 describe('AvenantsTsService.ajouterTs', () => {
@@ -144,11 +167,11 @@ describe('AvenantsTsService · TS au-delà du seuil', () => {
 
   it('le CTO l’ajoute directement, même au-delà du seuil', async () => {
     const { s, tsElements } = svc({ prix: grosPrix });
-    await s.ajouterTs('S1', { userId: 'CTO1', role: 'CTO (transverse)' }, 'P1', majeure);
+    await s.ajouterTs('S1', { userId: 'CTO1', role: 'CTO (transverse)', permissions: CTO_P }, 'P1', majeure);
     expect(tsElements.add).toHaveBeenCalled();
   });
 
-  it('décision : seul le CTO ; accepté → ajouté, demandeur prévenu ; refus motivé', async () => {
+  it('décision : la Validation des TS (le CTO au départ) ; accepté → ajouté, demandeur prévenu ; refus motivé', async () => {
     const demande = {
       id: 'DTS1',
       projetId: 'P1',
@@ -161,9 +184,9 @@ describe('AvenantsTsService · TS au-delà du seuil', () => {
       projet: { code: 'GC-01' },
     };
     await expect(svc({ demande }).s.deciderDemande('S1', acteur, 'P1', 'DTS1', true)).rejects.toThrow(
-      'validé par le CTO',
+      'Validation de « Travaux supplémentaires »',
     );
-    const cto = { userId: 'CTO1', role: 'CTO (transverse)' };
+    const cto = { userId: 'CTO1', role: 'CTO (transverse)', permissions: CTO_P };
     const ok = svc({ demande, prix: grosPrix });
     expect(await ok.s.deciderDemande('S1', cto, 'P1', 'DTS1', true)).toEqual({ statut: 'acceptee', tacheId: 'T9' });
     expect(ok.tsElements.add).toHaveBeenCalledWith('S1', cto, 'P1', 'C1', 'Nouvelle planche R+2');

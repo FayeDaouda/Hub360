@@ -1,10 +1,8 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { ROLE_CTO, todayIso } from '@hub/domain';
+import { ETAPE, hasRight } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Temps } from '../reglages/gabarit';
-import { decisionContext } from './decision-context';
-import { actsAsDplg, assertInCircuit } from './review-rules';
 import { TS_UNITS, type Actor } from './project-query';
 
 // « Ajouter en TS » (Architecte DPLG) : un élément demandé par le client
@@ -15,11 +13,13 @@ export class TsElementsService {
   constructor(private prisma: PrismaService) {}
 
   async add(companyId: string, actor: Actor, projectId: string, cardId: string, element: string) {
-    assertInCircuit(actor.role);
-    // Seuil et suppléance vérifiés en amont (AvenantsTsService) ; ici, le rôle.
-    const ctx = await decisionContext(this.prisma, companyId, todayIso());
-    if (!actsAsDplg({ role: actor.role, employeeId: null, ctoStandsIn: ctx.ctoStandsIn }) && actor.role !== ROLE_CTO) {
-      throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG (ou au CTO).');
+    // Seuil vérifié en amont (AvenantsTsService) ; ici, le droit de l'étape
+    // « Travaux supplémentaires » (Écriture ou Validation).
+    if (
+      !hasRight(actor.permissions, ETAPE.projetsTs, 'ecriture') &&
+      !hasRight(actor.permissions, ETAPE.projetsTs, 'validation')
+    ) {
+      throw new ForbiddenException('Ajouter en TS demande le droit de l’étape « Travaux supplémentaires ».');
     }
     const card = await this.prisma.carteProjet.findFirst({
       where: { id: cardId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },

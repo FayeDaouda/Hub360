@@ -5,6 +5,29 @@ import { ReglagesService } from '../reglages/reglages.service';
 import { ReviewCircuitService } from './review-circuit.service';
 import { TaskReviewService } from './task-review.service';
 
+// Droits de départ du lot 5 (matrice, 31/10/2026), par rôle.
+const DG = {
+  projets: 'LE',
+  'projets.assignation': 'E',
+  'projets.validation': 'V',
+  'projets.visa': 'V',
+  'projets.prolongations': 'V',
+  'projets.ts': 'E',
+  'projets.fils': 'E',
+  'projets.production': 'L',
+};
+const CTO_P = {
+  projets: 'LE',
+  'projets.assignation': 'E',
+  'projets.validation': 'V',
+  'projets.prolongations': 'V',
+  'projets.ts': 'EV',
+  'projets.fils': 'E',
+  'projets.production': 'L',
+};
+const CEO_P = { projets: 'L', 'projets.fils': 'E', 'projets.production': 'L' };
+const SAL = { projets: 'L', 'projets.fils': 'E' };
+
 // Visa DPLG (revue Dir. GC, 21/10/2026) : l'architecte DPLG appose son visa
 // sur une tâche validée qui l'exige, ou le refuse avec un motif (reprise).
 describe('TaskReviewService.visa', () => {
@@ -33,11 +56,11 @@ describe('TaskReviewService.visa', () => {
     assigneId: 'C1',
     projet: { code: 'FS_POI.26' },
   };
-  const dirGc = { userId: 'DG', role: 'Dir. GC' };
+  const dirGc = { userId: 'DG', role: 'Dir. GC', permissions: DG };
 
   it('le CTO ne vise pas à la place de l’architecte, même en suppléance', async () => {
     await expect(
-      svc(aViser).s.visa('S1', { userId: 'CTO', role: 'CTO (transverse)' }, 'P1', 'T1', true),
+      svc(aViser).s.visa('S1', { userId: 'CTO', role: 'CTO (transverse)', permissions: CTO_P }, 'P1', 'T1', true),
     ).rejects.toThrow(ForbiddenException);
   });
 

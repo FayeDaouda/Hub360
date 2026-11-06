@@ -37,7 +37,8 @@ export const WITH_TASKS = {
 } satisfies Prisma.ProjetInclude;
 
 export type ProjectWithTasks = Prisma.ProjetGetPayload<{ include: typeof WITH_TASKS }>;
-export type Actor = { userId: string; role: string };
+// `permissions` : droits par étape (matrice), relus à chaque requête.
+export type Actor = { userId: string; role: string; permissions?: Record<string, string> };
 
 export const fullName = (p: { prenom: string; nom: string } | null | undefined) => (p ? `${p.prenom} ${p.nom}` : null);
 export const isoDay = (d: Date | null) => (d ? toIsoDay(d) : null);
