@@ -3,6 +3,7 @@ import * as nodemailer from 'nodemailer';
 import {
   AlerteEmail,
   AvisSecurite,
+  CandidatEmail,
   ContratEmail,
   DevisEmail,
   EmailService,
@@ -16,6 +17,7 @@ import { contenuRelanceFacture } from './contenu-relance-facture';
 import { contenuRelanceDevis } from './contenu-relance-devis';
 import { contenuContrat } from './contenu-contrat';
 import { contenuAvisSecurite } from './contenu-avis-securite';
+import { contenuCandidat } from './contenu-candidat';
 
 // Transport SMTP (nodemailer). Instancié uniquement quand EMAIL_TRANSPORT=smtp
 // ET SMTP_HOST est renseigné (cf. email.module.ts) — donc jamais actif sans
@@ -114,6 +116,26 @@ export class SmtpEmailService extends EmailService {
     } catch (e) {
       this.log.error(
         `[smtp] échec d'envoi relance devis ${r.reference} à ${r.email} : ${e instanceof Error ? e.message : e}`,
+      );
+      return { envoye: false };
+    }
+  }
+
+  async envoyerCandidat(c: CandidatEmail): Promise<{ envoye: boolean }> {
+    const { sujet, texte, html } = contenuCandidat(c);
+    try {
+      await this.transport.sendMail({
+        from: this.from,
+        to: c.email,
+        subject: sujet,
+        text: texte,
+        html,
+      });
+      this.log.log(`[smtp] candidat ${c.reference} (${c.type}) envoyé à ${c.email}`);
+      return { envoye: true };
+    } catch (e) {
+      this.log.error(
+        `[smtp] échec d'envoi candidat ${c.reference} (${c.type}) à ${c.email} : ${e instanceof Error ? e.message : e}`,
       );
       return { envoye: false };
     }

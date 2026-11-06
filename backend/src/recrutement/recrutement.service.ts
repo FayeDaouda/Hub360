@@ -1,9 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ETAPE, formatTime, formatWeekdayDayMonth, hasRight } from '@hub/domain';
+import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DossiersPersonnelService } from '../rh/dossiers.service';
+import { appelOuvert, type PieceDemandee, type QuestionAppel } from './appels.service';
+import { referenceCandidature, titulaires } from './titulaires';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
 import type {
   DecisionEmbaucheDto,
@@ -38,12 +41,13 @@ export class RecrutementService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private dossiers: DossiersPersonnelService,
+    private email: EmailService,
   ) {}
 
   async vue(a: Acteur) {
     const postes = await this.prisma.posteRecrutement.findMany({
       where: { societeId: a.societeId },
-      include: { candidatures: { select: { etape: true } } },
+      include: { candidatures: { select: { etape: true, source: true } }, appel: true },
       orderBy: [{ createdAt: 'desc' }],
     });
     const equipes = await this.prisma.cellule.findMany({
@@ -63,6 +67,19 @@ export class RecrutementService {
         demandePar: noms.get(p.demandeParId) ?? '—',
         motifRefus: p.motifRefus,
         direct: p.direct,
+        // Appel à candidatures (lien externe) : réglages, état, candidatures reçues.
+        appel: p.appel && {
+          slug: p.appel.slug,
+          presentation: p.appel.presentation,
+          lieu: p.appel.lieu,
+          typeContrat: p.appel.typeContrat,
+          dateLimite: p.appel.dateLimite,
+          pieces: p.appel.pieces as unknown as PieceDemandee[],
+          questions: p.appel.questions as unknown as QuestionAppel[],
+          ouvert: p.appel.ouvert,
+          enLigne: appelOuvert(p.appel, p.statut),
+          recues: p.candidatures.filter((c) => c.source === 'lien').length,
+        },
         candidats: {
           candidature: p.candidatures.filter((c) => c.etape === 'candidature').length,
           entretien: p.candidatures.filter((c) => c.etape === 'entretien').length,
@@ -83,13 +100,18 @@ export class RecrutementService {
         decider: hasRight(a.permissions, ETAPE.recrutementDecision, 'validation'),
         embaucheDirecte: hasRight(a.permissions, ETAPE.recrutementDirect, 'ecriture'),
         voirGroupe: hasRight(a.permissions, ETAPE.recrutementGroupe, 'lecture'),
+        gererAppels: hasRight(a.permissions, ETAPE.recrutementAppels, 'ecriture'),
       },
     };
   }
 
   async candidats(a: Acteur, posteId: string) {
     const poste = await this.poste(a, posteId);
-    const c = await this.prisma.candidature.findMany({ where: { posteId: poste.id }, orderBy: { createdAt: 'asc' } });
+    const c = await this.prisma.candidature.findMany({
+      where: { posteId: poste.id },
+      include: { _count: { select: { pieces: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
     const rdvIds = c.map((x) => x.rendezVousId).filter((x): x is string => !!x);
     const rdv = new Map(
       (
@@ -111,7 +133,59 @@ export class RecrutementService {
       decideLe: x.decideLe?.toISOString() ?? null,
       dossierId: x.dossierId,
       entretien: (x.rendezVousId && rdv.get(x.rendezVousId)) || null,
+      source: x.source,
+      pieces: x._count.pieces,
+      creeLe: x.createdAt.toISOString(),
     }));
+  }
+
+  // Fiche d'un candidat : tout ce qu'il a déposé (réponses, pièces) pour
+  // ceux qui décident. Les pièces se téléchargent une à une.
+  async fiche(a: Acteur, id: string) {
+    const c = await this.candidature(a, id);
+    const [pieces, appel] = await Promise.all([
+      this.prisma.pieceCandidature.findMany({
+        where: { candidatureId: id },
+        select: { id: true, cle: true, libelle: true, nom: true, taille: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.appelCandidature.findUnique({ where: { posteId: c.posteId }, select: { questions: true } }),
+    ]);
+    const questions = (appel?.questions as unknown as QuestionAppel[] | undefined) ?? [];
+    const reponses = (c.reponses as Record<string, string> | null) ?? {};
+    return {
+      id: c.id,
+      reference: referenceCandidature(c.id),
+      prenom: c.prenom,
+      nom: c.nom,
+      email: c.email,
+      telephone: c.telephone,
+      poste: c.poste.intitule,
+      source: c.source,
+      etape: c.etape,
+      creeLe: c.createdAt.toISOString(),
+      consentementLe: c.consentementLe?.toISOString() ?? null,
+      notes: c.notes,
+      motif: c.motif,
+      // Réponses dans l'ordre des questions ; une question retirée depuis garde sa réponse.
+      reponses: [
+        ...questions.filter((q) => reponses[q.id]).map((q) => ({ question: q.libelle, reponse: reponses[q.id] })),
+        ...Object.entries(reponses)
+          .filter(([qid]) => !questions.some((q) => q.id === qid))
+          .map(([, reponse]) => ({ question: 'Question retirée de l’appel', reponse })),
+      ],
+      pieces,
+    };
+  }
+
+  async piece(a: Acteur, id: string, pieceId: string) {
+    await this.candidature(a, id);
+    const p = await this.prisma.pieceCandidature.findFirst({
+      where: { id: pieceId, candidatureId: id },
+      select: { nom: true, url: true },
+    });
+    if (!p) throw new NotFoundException('Pièce introuvable');
+    return p;
   }
 
   async demanderPoste(a: Acteur, dto: DemandePosteDto) {
@@ -230,6 +304,7 @@ export class RecrutementService {
         destinataireIds: [c.poste.demandeParId],
         parId: a.userId,
       });
+      if (dto.prevenirCandidat) await this.ecrireAuCandidat(a, c, { type: 'reponse', retenu: false });
       return { ok: true };
     }
     const dossier = await this.dossiers.creer(
@@ -265,6 +340,7 @@ export class RecrutementService {
       destinataireIds: [c.poste.demandeParId],
       parId: a.userId,
     });
+    if (dto.prevenirCandidat) await this.ecrireAuCandidat(a, c, { type: 'reponse', retenu: true });
     return { ok: true, dossierId: dossier.id };
   }
 
@@ -364,7 +440,30 @@ export class RecrutementService {
       destinataireIds: invites,
       parId: a.userId,
     });
+    if (dto.prevenirCandidat) {
+      await this.ecrireAuCandidat(a, c, { type: 'convocation', debut: dto.debut, fin: dto.fin, lieu: rdv.lieu });
+    }
     return { ok: true, rendezVousId: rdv.id };
+  }
+
+  // E-mail au candidat, au nom de la société (sans adresse, rien à envoyer) ;
+  // un échec d'envoi n'annule pas l'action.
+  private async ecrireAuCandidat(
+    a: Acteur,
+    c: { id: string; prenom: string; email: string | null; poste: { intitule: string } },
+    message:
+      { type: 'reponse'; retenu: boolean } | { type: 'convocation'; debut: string; fin: string; lieu: string | null },
+  ) {
+    if (!c.email) return;
+    const societe = await this.prisma.societe.findUnique({ where: { id: a.societeId }, select: { nom: true } });
+    await this.email.envoyerCandidat({
+      ...message,
+      email: c.email,
+      prenom: c.prenom,
+      societeNom: societe?.nom ?? '',
+      poste: c.poste.intitule,
+      reference: referenceCandidature(c.id),
+    });
   }
 
   // « À votre attention » (Pilotage) : ce qui attend l'acteur — postes à
@@ -480,17 +579,8 @@ export class RecrutementService {
     return c;
   }
 
-  // Titulaires actifs, dans la société, d'un rôle qui a ce droit sur l'étape.
-  private async titulaires(societeId: string, etape: string, droit: 'validation' | 'ecriture' = 'validation') {
-    const roles = await this.prisma.roleRight.findMany({
-      where: { [droit]: true, etape: { cle: etape } },
-      select: { roleId: true },
-    });
-    const l = await this.prisma.utilisateurSocieteRole.findMany({
-      where: { societeId, roleId: { in: roles.map((r) => r.roleId) }, utilisateur: { actif: true } },
-      select: { utilisateurId: true },
-    });
-    return [...new Set(l.map((x) => x.utilisateurId))];
+  private titulaires(societeId: string, etape: string, droit: 'validation' | 'ecriture' = 'validation') {
+    return titulaires(this.prisma, societeId, etape, droit);
   }
 
   private async noms(ids: string[]) {

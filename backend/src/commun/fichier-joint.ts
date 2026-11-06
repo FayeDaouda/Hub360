@@ -12,7 +12,7 @@ export const DATA_URI_BASE64 = /^data:[^,;]*(;[^,;]+)*;base64,[A-Za-z0-9+/]*={0,
 // le navigateur. Refusés partout : SVG et HTML (scripts), ZIP (contenu
 // incontrôlable) et tout ce qui n'est pas reconnu.
 export type TypeFichier = 'pdf' | 'jpeg' | 'png' | 'heic' | 'webp' | 'dwg' | 'dxf' | 'docx' | 'xlsx' | 'pptx';
-export type UsageFichier = 'rh' | 'projet' | 'contrat';
+export type UsageFichier = 'rh' | 'projet' | 'contrat' | 'candidature';
 
 export const TYPES_PAR_USAGE: Record<UsageFichier, readonly TypeFichier[]> = {
   // Justificatifs, pièces du dossier, bulletins, attestations.
@@ -22,6 +22,9 @@ export const TYPES_PAR_USAGE: Record<UsageFichier, readonly TypeFichier[]> = {
   projet: ['pdf', 'jpeg', 'png', 'heic', 'webp', 'dwg', 'dxf', 'docx', 'xlsx', 'pptx'],
   // Contrats (document, annexes, scan signé) et factures des bureaux d'études.
   contrat: ['pdf', 'jpeg', 'png', 'heic', 'docx', 'xlsx'],
+  // Pièces d'un candidat (appel à candidatures, 01/11/2026) : CV et lettres
+  // souvent en Word.
+  candidature: ['pdf', 'docx', 'jpeg', 'png'],
 };
 
 const LIBELLES: Record<TypeFichier, string> = {

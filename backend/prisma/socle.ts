@@ -180,6 +180,10 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
   const creeDossiers = droits[ETAPE.rh].ecriture;
   droits[ETAPE.recrutementDirect] = { ...NO_RIGHTS, lecture: creeDossiers, ecriture: creeDossiers };
   droits[ETAPE.recrutementGroupe] = { ...NO_RIGHTS, lecture: est(ROLE_HR) };
+  // Appels à candidatures (migration 20261102110000_appels_candidature) : qui
+  // gère les candidatures publie l'appel.
+  const gereCandidats = droits[ETAPE.recrutementCandidatures].ecriture;
+  droits[ETAPE.recrutementAppels] = { ...NO_RIGHTS, lecture: gereCandidats, ecriture: gereCandidats };
   return droits;
 }
 

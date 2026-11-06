@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   AlerteEmail,
   AvisSecurite,
+  CandidatEmail,
   ContratEmail,
   DevisEmail,
   EmailService,
@@ -33,6 +34,11 @@ export class LogEmailService extends EmailService {
 
   async envoyerRelanceDevis(r: RelanceDevisEmail): Promise<{ envoye: boolean }> {
     this.log.log(`[log] relance devis ${r.reference} pour ${r.email} → ${r.lien}`);
+    return { envoye: false };
+  }
+
+  async envoyerCandidat(c: CandidatEmail): Promise<{ envoye: boolean }> {
+    this.log.log(`[log] candidat ${c.reference} (${c.type}) pour ${c.email}`);
     return { envoye: false };
   }
 

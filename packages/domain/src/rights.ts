@@ -153,4 +153,5 @@ export const ETAPE = {
   // Recrutement côté RH (01/11/2026).
   recrutementDirect: 'recrutement.direct',
   recrutementGroupe: 'recrutement.groupe',
+  recrutementAppels: 'recrutement.appels',
 } as const;

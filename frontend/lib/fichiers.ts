@@ -14,6 +14,7 @@ export const FICHIERS_ACCEPTES = {
   rh: '.pdf,.jpg,.jpeg,.png,.heic',
   projet: '.pdf,.jpg,.jpeg,.png,.heic,.webp,.dwg,.dxf,.docx,.xlsx,.pptx',
   contrat: '.pdf,.jpg,.jpeg,.png,.heic,.docx,.xlsx',
+  candidature: '.pdf,.docx,.jpg,.jpeg,.png',
 } as const;
 
 export function lireFichier(file: File): Promise<{ nom: string; url: string; taille: number }> {

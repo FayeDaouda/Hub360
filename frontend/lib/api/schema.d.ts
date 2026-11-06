@@ -3492,6 +3492,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/recrutement/postes/{id}/appel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RecrutementController_enregistrerAppel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/recrutement/postes/{id}/appel/etat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RecrutementController_etatAppel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/recrutement/candidats/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RecrutementController_fiche"];
+        put?: never;
+        post?: never;
+        delete: operations["RecrutementController_retirerCandidat"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/recrutement/candidats/{id}/pieces/{pieceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RecrutementController_piece"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/recrutement/postes/{id}/candidats": {
         parameters: {
             query?: never;
@@ -3556,7 +3620,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/societes/{slug}/recrutement/candidats/{id}": {
+    "/api/recrutement-public/appels/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CandidaturePublicController_appel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recrutement-public/appels/{slug}/candidatures": {
         parameters: {
             query?: never;
             header?: never;
@@ -3565,8 +3645,24 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        post: operations["CandidaturePublicController_candidater"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recrutement-public/carrieres/{societe}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CandidaturePublicController_carrieres"];
+        put?: never;
         post?: never;
-        delete: operations["RecrutementController_retirerCandidat"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -5765,6 +5861,28 @@ export interface components {
             accepter: boolean;
             motif?: string;
         };
+        PieceDemandeeDto: {
+            /** @enum {string} */
+            cle: "autre" | "cv" | "diplomes" | "lettre" | "portfolio" | "references";
+            libelle?: string;
+            obligatoire: boolean;
+        };
+        QuestionAppelDto: {
+            id?: string;
+            libelle: string;
+            obligatoire: boolean;
+        };
+        AppelDto: {
+            presentation: string;
+            lieu?: string;
+            typeContrat?: string;
+            dateLimite?: string;
+            pieces: components["schemas"]["PieceDemandeeDto"][];
+            questions: components["schemas"]["QuestionAppelDto"][];
+        };
+        EtatAppelDto: {
+            ouvert: boolean;
+        };
         NouveauCandidatDto: {
             prenom: string;
             nom: string;
@@ -5778,6 +5896,7 @@ export interface components {
             fin: string;
             lieu?: string;
             inviteIds?: string[];
+            prevenirCandidat?: boolean;
         };
         NoteCandidatDto: {
             note: string;
@@ -5785,8 +5904,28 @@ export interface components {
         };
         DecisionEmbaucheDto: {
             embaucher: boolean;
+            prevenirCandidat?: boolean;
             dateEntree?: string;
             motif?: string;
+        };
+        PieceDeposeeDto: {
+            /** @enum {string} */
+            cle: "autre" | "cv" | "diplomes" | "lettre" | "portfolio" | "references";
+            nom: string;
+            url: string;
+        };
+        CandidaterDto: {
+            prenom: string;
+            nom: string;
+            /** Format: email */
+            email: string;
+            telephone: string;
+            reponses?: {
+                [key: string]: string;
+            };
+            pieces: components["schemas"]["PieceDeposeeDto"][];
+            consentement: boolean;
+            siteWeb?: string;
         };
         CreerLocaliteDto: {
             code: string;
@@ -11358,6 +11497,115 @@ export interface operations {
             };
         };
     };
+    RecrutementController_enregistrerAppel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppelDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecrutementController_etatAppel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EtatAppelDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecrutementController_fiche: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecrutementController_retirerCandidat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecrutementController_piece: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                pieceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RecrutementController_candidats: {
         parameters: {
             query?: never;
@@ -11476,13 +11724,54 @@ export interface operations {
             };
         };
     };
-    RecrutementController_retirerCandidat: {
+    CandidaturePublicController_appel: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 slug: string;
-                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CandidaturePublicController_candidater: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CandidaterDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CandidaturePublicController_carrieres: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                societe: string;
             };
             cookie?: never;
         };

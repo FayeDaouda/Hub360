@@ -4,12 +4,15 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { PermissionGuard } from '../commun/permission.guard';
+import { AppelsService } from './appels.service';
 import {
+  AppelDto,
   DecisionEmbaucheDto,
   DecisionPosteDto,
   DemandePosteDto,
   EmbaucheDirecteDto,
   EntretienDto,
+  EtatAppelDto,
   NoteCandidatDto,
   NouveauCandidatDto,
 } from './recrutement.dto';
@@ -21,7 +24,10 @@ type R = { user: { userId: string; societeId: string; role: string; permissions:
 @Controller('societes/:slug/recrutement')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 export class RecrutementController {
-  constructor(private recrutement: RecrutementService) {}
+  constructor(
+    private recrutement: RecrutementService,
+    private appels: AppelsService,
+  ) {}
 
   @Get()
   @RequiertPermission(ETAPE.recrutementPostes, 'lecture')
@@ -61,6 +67,34 @@ export class RecrutementController {
   @RequiertPermission(ETAPE.recrutementPostes, 'suppression')
   fermerPoste(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
     return this.recrutement.fermerPoste(req.user, id);
+  }
+
+  // Appel à candidatures du poste : créé ou mis à jour (son lien ne change pas).
+  @Post('postes/:id/appel')
+  @HttpCode(200)
+  @RequiertPermission(ETAPE.recrutementAppels, 'ecriture')
+  enregistrerAppel(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AppelDto) {
+    return this.appels.enregistrer(req.user, id, dto);
+  }
+
+  @Post('postes/:id/appel/etat')
+  @HttpCode(200)
+  @RequiertPermission(ETAPE.recrutementAppels, 'ecriture')
+  etatAppel(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: EtatAppelDto) {
+    return this.appels.changerEtat(req.user, id, dto.ouvert);
+  }
+
+  // Fiche complète d'un candidat (réponses, pièces) et ses pièces.
+  @Get('candidats/:id')
+  @RequiertPermission(ETAPE.recrutementCandidatures, 'lecture')
+  fiche(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
+    return this.recrutement.fiche(req.user, id);
+  }
+
+  @Get('candidats/:id/pieces/:pieceId')
+  @RequiertPermission(ETAPE.recrutementCandidatures, 'lecture')
+  piece(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Param('pieceId', ParseUUIDPipe) pieceId: string) {
+    return this.recrutement.piece(req.user, id, pieceId);
   }
 
   @Get('postes/:id/candidats')
