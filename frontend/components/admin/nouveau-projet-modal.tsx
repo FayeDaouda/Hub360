@@ -198,7 +198,6 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
             valeur={localiteId}
             onChange={setLocaliteId}
             idChamp="nouveau-projet-localite"
-            filtre={false}
           />
           <span className="field-aide">
             Choisie dans le référentiel des localités. Le code{localite ? ` (ici ${localite.code})` : ''} n’est jamais
