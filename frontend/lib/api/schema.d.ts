@@ -5851,7 +5851,7 @@ export interface components {
         ElementAgendaDto: {
             id: string;
             /** @enum {string} */
-            type: "conge" | "echeance" | "rendez_vous";
+            type: "conge" | "demande" | "echeance" | "rendez_vous";
             titre: string;
             jour: string;
             debut: string | null;
@@ -5861,6 +5861,13 @@ export interface components {
             organisateur: string | null;
             invites: string[];
             annulable: boolean;
+            demande?: {
+                id: string;
+                /** @enum {string} */
+                type: "autre" | "conge_paye" | "maladie" | "permission_exceptionnelle";
+                jours: number;
+                validationFinale: boolean;
+            };
         };
         SemaineAgendaDto: {
             du: string;
@@ -12001,6 +12008,7 @@ export interface operations {
         parameters: {
             query: {
                 du: string;
+                au?: string;
                 personne?: string;
             };
             header?: never;

@@ -124,12 +124,22 @@ export class DemandesService {
         include: { justificatifs: { select: { id: true, nom: true } } },
       }),
     ]);
-    const plafond = await this.reglages.regle<number>(dossier.societeId, 'plafond_report_conges');
     return {
-      solde: soldeConges(dossier.dateEntree, absences, todayIso(), plafond),
+      solde: await this.soldeDe({ ...dossier, absences }),
       absences: absences.map(versAbsence),
       remboursements,
     };
+  }
+
+  // Solde de congés d'un dossier (règles : regles-conges.ts, report plafonné
+  // par les Réglages) — pour le salarié, et pour qui décide de sa demande.
+  private async soldeDe(dossier: {
+    societeId: string;
+    dateEntree: string | null;
+    absences: Parameters<typeof soldeConges>[1];
+  }) {
+    const plafond = await this.reglages.regle<number>(dossier.societeId, 'plafond_report_conges');
+    return soldeConges(dossier.dateEntree, dossier.absences, todayIso(), plafond);
   }
 
   async deposerAbsence(a: Acteur, dto: DeposerAbsenceDto) {
@@ -356,9 +366,12 @@ export class DemandesService {
     const d = await this.absence(id);
     const salarie = await this.prisma.dossierPersonnel.findUnique({
       where: { id: d.dossierId },
-      select: { prenom: true, nom: true, poste: true },
+      select: { prenom: true, nom: true, poste: true, societeId: true, dateEntree: true, absences: true },
     });
     if (!(await this.estN1(a, d))) throw new ForbiddenException("Vous n'êtes pas le N+1 de cette demande.");
+    // Le solde du demandeur, comme il le voit dans Mon espace (demande en cours
+    // comprise dans « en attente »).
+    const solde = salarie ? await this.soldeDe(salarie) : null;
     const collab = await this.collaborateurDe(d.dossierId);
     const livrables = collab ? await this.livrables(collab.id, d.dateDebut, d.dateFin) : [];
     const candidats = await this.prisma.collaborateur.findMany({
@@ -392,7 +405,11 @@ export class DemandesService {
       };
     }
     return {
-      demande: { ...versAbsence(d), salarie },
+      demande: {
+        ...versAbsence(d),
+        salarie: salarie && { prenom: salarie.prenom, nom: salarie.nom, poste: salarie.poste },
+      },
+      solde,
       livrables,
       candidats: candidats.map((c) => ({ id: c.id, libelle: `${c.prenom} ${c.nom}`, cellule: c.cellule?.nom ?? null })),
       alerteCellule,

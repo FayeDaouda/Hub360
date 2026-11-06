@@ -1,3 +1,4 @@
+import { TypeAbsence } from '@prisma/client';
 import {
   ArrayMaxSize,
   IsArray,
@@ -22,7 +23,7 @@ export class CreerRendezVousDto {
 // Un élément de l'agenda : rendez-vous, échéance d'une tâche ou congé validé.
 export class ElementAgendaDto {
   id: string;
-  type: 'rendez_vous' | 'echeance' | 'conge';
+  type: 'rendez_vous' | 'echeance' | 'conge' | 'demande';
   titre: string;
   jour: string; // AAAA-MM-JJ
   debut: string | null; // ISO (rendez-vous seulement)
@@ -33,6 +34,9 @@ export class ElementAgendaDto {
   invites: string[];
   // L'organisateur peut l'annuler (rendez-vous seulement).
   annulable: boolean;
+  // Demande d'absence à trancher : son identifiant ; `validationFinale` = celle
+  // du CEO (demande de la RH), sinon la décision du N+1.
+  demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };
 }
 
 export class SemaineAgendaDto {
