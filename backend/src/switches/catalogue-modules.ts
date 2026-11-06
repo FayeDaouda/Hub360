@@ -19,7 +19,7 @@ export const CATALOGUE_MODULES: FamilleModules[] = [
       { nom: 'Documents partagés', statut: 'a_venir', module: 'documents', note: 'Case prête, pas encore d’écran' },
       { nom: 'Annuaire', statut: 'en_partie', note: 'Fiche contact, recherche Ctrl+K' },
       { nom: 'Mon espace RH', statut: 'en_service', note: 'Chacun ses propres données, hors matrice' },
-      { nom: 'Agenda et réunions', statut: 'a_venir' },
+      { nom: 'Agenda et réunions', statut: 'en_service', module: 'agenda' },
       { nom: 'Tâches et suivi d’actions', statut: 'en_service', module: 'projets', note: 'Mes tâches' },
       { nom: 'Notifications et alertes', statut: 'en_service', note: 'Cloche, alertes d’échéance' },
       { nom: 'Recherche globale', statut: 'en_service', note: 'Ctrl+K' },

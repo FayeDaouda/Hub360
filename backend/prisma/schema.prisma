@@ -83,6 +83,8 @@ model Societe {
   signalements      Signalement[]
   journalDroits     JournalDroit[]
 
+  rendezVous RendezVous[]
+
   @@map("societes")
 }
 
@@ -295,6 +297,8 @@ enum NotificationType {
   decision_arbitree // au CTO : acceptée, modifiée ou refusée
   decision_en_retard
   own_rights_changed // aux titulaires d'un rôle : leurs droits viennent de changer (matrice, 31/10/2026)
+  rdv_invitation // Agenda (01/11/2026) : vous êtes invité à une réunion
+  rdv_annule // Agenda : une réunion où vous étiez invité est annulée
 }
 
 model Notification {
@@ -2936,4 +2940,36 @@ model ProlongationTache {
 
   @@index([tacheId])
   @@map("prolongations_taches")
+}
+
+// Agenda (lot 11, 01/11/2026) : rendez-vous et réunions. Les échéances des
+// tâches et les congés validés s'y ajoutent à la lecture (jamais copiés).
+model RendezVous {
+  id             String    @id @default(uuid())
+  societeId      String    @map("societe_id")
+  titre          String
+  debut          DateTime
+  fin            DateTime
+  lieu           String?
+  description    String?
+  organisateurId String    @map("organisateur_id") // compte, sans clé (comme parId)
+  annuleLe       DateTime? @map("annule_le")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  societe Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  invites InviteRendezVous[]
+
+  @@index([societeId, debut])
+  @@map("rendez_vous")
+}
+
+model InviteRendezVous {
+  rendezVousId  String @map("rendez_vous_id")
+  utilisateurId String @map("utilisateur_id")
+
+  rendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+
+  @@id([rendezVousId, utilisateurId])
+  @@index([utilisateurId])
+  @@map("invites_rendez_vous")
 }
