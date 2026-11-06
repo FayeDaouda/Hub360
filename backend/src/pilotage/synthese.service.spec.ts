@@ -89,7 +89,22 @@ describe('SyntheseService', () => {
   it('commentaire : le CFO seul', async () => {
     const { s } = svc({ journal: [] });
     await expect(
-      s.commenter({ userId: 'U', societeId: 'S1', role: 'CEO (transverse)' }, '2026-09', 'ok'),
-    ).rejects.toThrow('CFO');
+      s.commenter(
+        {
+          userId: 'U',
+          societeId: 'S1',
+          role: 'CEO (transverse)',
+          permissions: {
+            'pilotage.registre': 'E',
+            'pilotage.decisions': 'V',
+            'pilotage.synthese': 'L',
+            'pilotage.delegation': 'LV',
+            'pilotage.journal': 'L',
+          },
+        },
+        '2026-09',
+        'ok',
+      ),
+    ).rejects.toThrow('Écriture de « Synthèse mensuelle »');
   });
 });

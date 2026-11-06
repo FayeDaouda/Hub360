@@ -34,14 +34,10 @@ import { Progression, Tendance } from './tendance';
 import { Pill } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
-import { ROLE_CEO, ROLE_CFO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_CTO, ROLE_DIR_GC } from '@hub/domain';
+import { ETAPE, ROLE_CEO, ROLE_CTO, ROLE_DIR_GC } from '@hub/domain';
+import { niveauSuffisant } from '@/lib/auth';
 
 type Onglet = 'indicateurs' | 'reportings' | 'registre' | 'journal' | 'synthese';
-
-// Journal d'audit : mêmes rôles que le serveur (audit/journal-audit.service.ts).
-const ROLES_JOURNAL = new Set([ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN]);
-// Synthèse mensuelle (revue CEO) : le CEO la lit, le CFO la commente.
-const ROLES_SYNTHESE = new Set([ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN]);
 
 const PILL_EVALUATION: Record<IndicateurPilotage['evaluation'], { classe: string; libelle: string } | null> = {
   hors_objectif: { classe: 'pill--risque', libelle: 'Hors objectif' },
@@ -88,6 +84,9 @@ const tonValeur = (i: IndicateurPilotage) =>
 export function Pilotage({ slug }: { slug: string }) {
   const session = useSessionCourante();
   // Accueil du CEO : « À votre attention » au-dessus du tableau de bord.
+  // Journal et synthèse : la Lecture de leur étape (matrice, 31/10/2026).
+  const voitJournal = niveauSuffisant(session, ETAPE.pilotageJournal, 'lecture');
+  const voitSynthese = niveauSuffisant(session, ETAPE.pilotageSynthese, 'lecture');
   const accueilCeo = session.role === ROLE_CEO;
   const [vue, setVue] = useState<VuePilotage | null>(null);
   const [attention, setAttention] = useState<AttentionPilotage | null>(null);
@@ -96,8 +95,8 @@ export function Pilotage({ slug }: { slug: string }) {
   const [onglet, setOnglet] = useState<Onglet>(
     ongletDemande === 'reportings' ||
       ongletDemande === 'registre' ||
-      (ongletDemande === 'journal' && ROLES_JOURNAL.has(session.role)) ||
-      (ongletDemande === 'synthese' && ROLES_SYNTHESE.has(session.role))
+      (ongletDemande === 'journal' && voitJournal) ||
+      (ongletDemande === 'synthese' && voitSynthese)
       ? ongletDemande
       : 'indicateurs',
   );
@@ -166,8 +165,8 @@ export function Pilotage({ slug }: { slug: string }) {
               ['indicateurs', 'Indicateurs'],
               ['reportings', `Reportings · ${t.reportingsADeposer}`],
               ['registre', `Registre des décisions · ${t.decisionsOuvertes}`],
-              ...(ROLES_SYNTHESE.has(session.role) ? ([['synthese', 'Synthèse mensuelle']] as const) : []),
-              ...(ROLES_JOURNAL.has(session.role) ? ([['journal', 'Journal']] as const) : []),
+              ...(voitSynthese ? ([['synthese', 'Synthèse mensuelle']] as const) : []),
+              ...(voitJournal ? ([['journal', 'Journal']] as const) : []),
             ] as const
           ).map(([cle, libelle]) => (
             <button

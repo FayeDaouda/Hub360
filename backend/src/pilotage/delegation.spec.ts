@@ -10,10 +10,34 @@ const enFonction = (delegataireId: string | null) => ({
 describe('délégation · lecture commune', () => {
   it('le CEO, ou le délégataire en fonction (CTO ou CFO) ; jamais un autre rôle', async () => {
     const prisma = enFonction('CFO1') as never;
-    expect(await agitPourCeo(prisma, { userId: 'CEO1', societeId: 'S1', role: 'CEO (transverse)' })).toBe(true);
-    expect(await agitPourCeo(prisma, { userId: 'CFO1', societeId: 'S1', role: 'CFO' })).toBe(true);
-    expect(await agitPourCeo(prisma, { userId: 'CTO1', societeId: 'S1', role: 'CTO (transverse)' })).toBe(false);
-    expect(await agitPourCeo(enFonction('X') as never, { userId: 'X', societeId: 'S1', role: 'COO' })).toBe(false);
+    expect(
+      await agitPourCeo(prisma, {
+        userId: 'CEO1',
+        societeId: 'S1',
+        role: 'CEO (transverse)',
+      }),
+    ).toBe(true);
+    expect(
+      await agitPourCeo(prisma, {
+        userId: 'CFO1',
+        societeId: 'S1',
+        role: 'CFO',
+      }),
+    ).toBe(true);
+    expect(
+      await agitPourCeo(prisma, {
+        userId: 'CTO1',
+        societeId: 'S1',
+        role: 'CTO (transverse)',
+      }),
+    ).toBe(false);
+    expect(
+      await agitPourCeo(enFonction('X') as never, {
+        userId: 'X',
+        societeId: 'S1',
+        role: 'COO',
+      }),
+    ).toBe(false);
   });
 
   it('destinataires : le délégataire en plus, sauf s’il est le demandeur', async () => {
@@ -40,17 +64,29 @@ describe('DelegationService.creer', () => {
     const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CIO1']) };
     return { s: new DelegationService(prisma as never, notifications as never), prisma, notifications };
   }
-  const ceo = { userId: 'CEO1', societeId: 'S1', role: 'CEO (transverse)' };
+  const ceo = {
+    userId: 'CEO1',
+    societeId: 'S1',
+    role: 'CEO (transverse)',
+    permissions: {
+      'pilotage.registre': 'E',
+      'pilotage.decisions': 'V',
+      'pilotage.synthese': 'L',
+      'pilotage.delegation': 'LV',
+      'pilotage.journal': 'L',
+    },
+  };
   const demain = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
   const cfo = { role: { nom: 'CFO' }, utilisateur: { prenom: 'Bineta', nom: 'Sarr' } };
 
-  it('le CEO seul, un CTO ou un CFO actif, période valide et sans chevauchement', async () => {
+  it('la Validation de l’étape (le CEO au départ), un CTO ou un CFO actif, période valide et sans chevauchement', async () => {
     await expect(
       svc({ affectation: cfo }).s.creer(
-        { ...ceo, role: 'CIO (transverse)' },
+        // Sans la Validation de « Délégation du CEO » (le CIO l'a par sa carte blanche).
+        { ...ceo, role: 'CTO (transverse)', permissions: {} },
         { delegataireId: 'CFO1', du: demain, au: demain },
       ),
-    ).rejects.toThrow('Seul le CEO');
+    ).rejects.toThrow('Validation de « Délégation du CEO »');
     await expect(svc().s.creer(ceo, { delegataireId: 'COO1', du: demain, au: demain })).rejects.toThrow(
       'CTO ou le CFO',
     );
@@ -100,7 +136,16 @@ describe('arbitrage par le délégataire', () => {
       {} as never,
     );
     await expect(
-      s.arbitrer({ userId: 'CTO1', societeId: 'S1', role: 'CTO (transverse)' }, 'D5', { issue: 'accepter' }),
+      s.arbitrer(
+        {
+          userId: 'CTO1',
+          societeId: 'S1',
+          role: 'CTO (transverse)',
+          permissions: { 'pilotage.registre': 'E', 'pilotage.decisions': 'E' },
+        },
+        'D5',
+        { issue: 'accepter' },
+      ),
     ).rejects.toThrow('votre propre proposition');
   });
 });

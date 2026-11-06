@@ -35,14 +35,15 @@ import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendanc
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
 import {
   addDays,
+  ETAPE,
   formatDate,
   formatDayMonth,
   formatMonthYear,
   formatNumericMonth,
+  hasRight,
   ROLE_CEO,
   ROLE_CFO,
   ROLE_CIO,
-  ROLE_COMPANY_ADMIN,
   ROLE_COO,
   ROLE_CTO,
   ROLE_DIR_GC,
@@ -58,13 +59,14 @@ export type Acteur = {
   permissions?: Record<string, string>;
 };
 
-// Rôles qui saisissent et clôturent les décisions des instances (choix du
-// 05/10/2026 : « par fonction », la matrice reste en lecture).
-const ROLES_REGISTRE = new Set([ROLE_CTO, ROLE_CEO, ROLE_COMPANY_ADMIN]);
-// Revue CTO puis COO (22/10/2026) : pas de reporting CTO → CEO ni COO → CEO ;
-// ils proposent une décision, le CEO l'arbitre. Le COO ne fait que proposer.
-const PROPOSANTS = new Set([ROLE_CTO, ROLE_COO]);
-const ARBITRES = new Set([ROLE_CEO, ROLE_COMPANY_ADMIN]);
+// Matrice des droits (lot 8, 31/10/2026) : saisir et clôturer une décision =
+// Écriture du « Registre des décisions » (au départ CTO, CEO, administration) ;
+// proposer une décision au CEO = Écriture des « Décisions proposées » (CTO,
+// COO, revue du 22/10/2026) ; la trancher = sa Validation (CEO,
+// administration ; le délégataire du CEO en fonction, par délégation).
+const inscrit = (a: Acteur) => hasRight(a.permissions, ETAPE.pilotageRegistre, 'ecriture');
+const propose = (a: Acteur) => hasRight(a.permissions, ETAPE.pilotageDecisions, 'ecriture');
+const tranche = (a: Acteur) => hasRight(a.permissions, ETAPE.pilotageDecisions, 'validation');
 
 // Rôles proposés comme responsables d'une décision (fonctions de direction).
 const ROLES_RESPONSABLES = [ROLE_DIR_GC, ROLE_COO, ROLE_CFO, ROLE_CEO, ROLE_CTO, ROLE_CIO, ROLE_HR];
@@ -612,7 +614,7 @@ export class PilotageService {
   // --- Registre des décisions ---------------------------------------------
 
   private async registre(a: Acteur, jour: string) {
-    const saisir = ROLES_REGISTRE.has(a.role) || PROPOSANTS.has(a.role);
+    const saisir = inscrit(a) || propose(a);
     const [decisions, collaborateurId, rolesPourvus, collaborateurs, rattachables] = await Promise.all([
       this.prisma.decisionRegistre.findMany({
         where: { societeId: a.societeId },
@@ -645,7 +647,7 @@ export class PilotageService {
       decisions.filter((d) => d.proposition).flatMap((d) => [d.creeParId, d.arbitreParId]),
     );
     // Délégataire du CEO en fonction (revue CEO) : il arbitre, sauf ses propres propositions.
-    const delegue = !ARBITRES.has(a.role) && (await agitPourCeo(this.prisma, a));
+    const delegue = !tranche(a) && (await agitPourCeo(this.prisma, a));
     return {
       decisions: decisions.map((d) => ({
         id: d.id,
@@ -675,7 +677,7 @@ export class PilotageService {
                 (d.proposeeInitiale as { texte: string; responsable: string; echeance: string | null } | null) ?? null,
             }
           : null,
-        peutArbitrer: d.proposition === 'proposee' && (ARBITRES.has(a.role) || (delegue && d.creeParId !== a.userId)),
+        peutArbitrer: d.proposition === 'proposee' && (tranche(a) || (delegue && d.creeParId !== a.userId)),
         responsableRole: d.responsableRole,
         responsableCollaborateurId: d.responsableCollaborateurId,
       })),
@@ -687,8 +689,8 @@ export class PilotageService {
               ...collaborateurs.map((c) => ({ collaborateurId: c.id, libelle: nomDe(c) })),
             ],
             rattachables,
-            peutProposer: PROPOSANTS.has(a.role),
-            peutInscrire: ROLES_REGISTRE.has(a.role),
+            peutProposer: propose(a),
+            peutInscrire: inscrit(a),
           }
         : null,
     };
@@ -709,7 +711,7 @@ export class PilotageService {
     d: { responsableRole: string | null; responsableCollaborateurId: string | null },
     collaborateurId: string | null,
   ) {
-    if (ROLES_REGISTRE.has(a.role)) return true;
+    if (inscrit(a)) return true;
     if (d.responsableRole && d.responsableRole === a.role) return true;
     return !!collaborateurId && d.responsableCollaborateurId === collaborateurId;
   }
@@ -727,13 +729,13 @@ export class PilotageService {
   }
 
   async saisir(a: Acteur, dto: SaisirDecisionDto) {
-    if (dto.proposer && !PROPOSANTS.has(a.role))
-      throw new ForbiddenException('Proposer une décision au CEO est réservé au CTO et au COO.');
-    if (!dto.proposer && !ROLES_REGISTRE.has(a.role)) {
+    if (dto.proposer && !propose(a))
+      throw new ForbiddenException('Proposer une décision demande l’Écriture de « Décisions proposées ».');
+    if (!dto.proposer && !inscrit(a)) {
       throw new ForbiddenException(
-        PROPOSANTS.has(a.role)
+        propose(a)
           ? 'Vos décisions passent par le CEO : proposez-la-lui.'
-          : 'Saisir une décision est réservé au CTO et au CEO.',
+          : 'Saisir une décision demande l’Écriture du « Registre des décisions ».',
       );
     }
     const jour = todayIso();
@@ -796,9 +798,9 @@ export class PilotageService {
   // jour de l'arbitrage, responsable prévenu, relances comme toute décision.
   // Refusée, elle reste au registre avec son motif. Le CTO est prévenu.
   async arbitrer(a: Acteur, id: string, dto: ArbitrerDecisionDto) {
-    const delegue = !ARBITRES.has(a.role) && (await agitPourCeo(this.prisma, a));
-    if (!ARBITRES.has(a.role) && !delegue)
-      throw new ForbiddenException('Seul le CEO accepte, modifie ou refuse une décision proposée.');
+    const delegue = !tranche(a) && (await agitPourCeo(this.prisma, a));
+    if (!tranche(a) && !delegue)
+      throw new ForbiddenException('Trancher une décision proposée demande la Validation de « Décisions proposées ».');
     const d = await this.prisma.decisionRegistre.findFirst({ where: { id, societeId: a.societeId } });
     if (!d) throw new NotFoundException('Décision introuvable.');
     // Délégataire du CEO : jamais sa propre proposition.

@@ -365,4 +365,55 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
       validation: 'Valide en dernier une absence, après le N+1 (le CEO pour la RH)',
     },
   },
+
+  // Pilotage (lot 8, 31/10/2026) : les reportings suivent leur circuit par
+  // fonction (émetteur → destinataire).
+  {
+    module: 'pilotage',
+    cle: ETAPE.pilotage,
+    nom: 'Indicateurs et reportings',
+    ordre: 0,
+    libelles: { lecture: 'Voit les indicateurs de sa fonction et les reportings qui le concernent' },
+  },
+  {
+    module: 'pilotage',
+    cle: ETAPE.pilotageRegistre,
+    nom: 'Registre des décisions',
+    ordre: 1,
+    libelles: { ecriture: 'Inscrit une décision des instances au registre, la clôture' },
+  },
+  {
+    module: 'pilotage',
+    cle: ETAPE.pilotageDecisions,
+    nom: 'Décisions proposées',
+    ordre: 2,
+    libelles: {
+      ecriture: 'Propose une décision au CEO',
+      validation: 'Accepte, modifie ou refuse une décision proposée',
+    },
+  },
+  {
+    module: 'pilotage',
+    cle: ETAPE.pilotageSynthese,
+    nom: 'Synthèse mensuelle',
+    ordre: 3,
+    libelles: { lecture: 'Lit la synthèse du mois', ecriture: 'Commente la synthèse' },
+  },
+  {
+    module: 'pilotage',
+    cle: ETAPE.pilotageDelegation,
+    nom: 'Délégation du CEO',
+    ordre: 4,
+    libelles: {
+      lecture: 'Voit toutes les délégations en cours et à venir',
+      validation: 'Délègue les décisions du CEO à un délégataire, ou révoque',
+    },
+  },
+  {
+    module: 'pilotage',
+    cle: ETAPE.pilotageJournal,
+    nom: 'Journal d’audit',
+    ordre: 5,
+    libelles: { lecture: 'Lit le journal d’audit : comptes, droits, finances, réglages' },
+  },
 ];

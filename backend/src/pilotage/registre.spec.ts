@@ -36,7 +36,12 @@ describe('PilotageService.saisir · registre', () => {
     jest.spyOn(s, 'vue').mockResolvedValue({} as never);
     return { s, prisma, notifications };
   }
-  const cto = { userId: 'CTO', societeId: 'S1', role: 'CTO (transverse)' };
+  const cto = {
+    userId: 'CTO',
+    societeId: 'S1',
+    role: 'CTO (transverse)',
+    permissions: { 'pilotage.registre': 'E', 'pilotage.decisions': 'E' },
+  };
   const base = { instance: 'CODIR' as const, texte: 'Réorganiser la cellule ARC-02', echeance: '2026-12-31' };
 
   it('responsable sans compte HUB actif : refusé', async () => {
@@ -109,8 +114,24 @@ describe('PilotageService · décisions proposées', () => {
     jest.spyOn(s, 'vue').mockResolvedValue({} as never);
     return { s, prisma, notifications };
   }
-  const cto = { userId: 'CTO', societeId: 'S1', role: 'CTO (transverse)' };
-  const ceo = { userId: 'CEO1', societeId: 'S1', role: 'CEO (transverse)' };
+  const cto = {
+    userId: 'CTO',
+    societeId: 'S1',
+    role: 'CTO (transverse)',
+    permissions: { 'pilotage.registre': 'E', 'pilotage.decisions': 'E' },
+  };
+  const ceo = {
+    userId: 'CEO1',
+    societeId: 'S1',
+    role: 'CEO (transverse)',
+    permissions: {
+      'pilotage.registre': 'E',
+      'pilotage.decisions': 'V',
+      'pilotage.synthese': 'L',
+      'pilotage.delegation': 'LV',
+      'pilotage.journal': 'L',
+    },
+  };
   const base = {
     instance: 'CODIR' as const,
     texte: 'Recruter un CAD L3 pour ARC-04',
@@ -144,11 +165,13 @@ describe('PilotageService · décisions proposées', () => {
         titre: expect.stringContaining('D-005'),
       }),
     );
-    await expect(svc().s.saisir(ceo, { ...base, proposer: true })).rejects.toThrow('réservé au CTO et au COO');
+    await expect(svc().s.saisir(ceo, { ...base, proposer: true })).rejects.toThrow(
+      'Écriture de « Décisions proposées »',
+    );
   });
 
   it('le COO propose (titre « par le COO ») mais n’inscrit pas directement', async () => {
-    const coo = { userId: 'COO1', societeId: 'S1', role: 'COO' };
+    const coo = { userId: 'COO1', societeId: 'S1', role: 'COO', permissions: { 'pilotage.decisions': 'E' } };
     const { s, notifications } = svc();
     await s.saisir(coo, { ...base, proposer: true });
     expect(notifications.envoyer).toHaveBeenCalledWith(
@@ -158,7 +181,9 @@ describe('PilotageService · décisions proposées', () => {
   });
 
   it('seul le CEO arbitre ; une décision déjà tranchée n’attend plus rien', async () => {
-    await expect(svc(proposee).s.arbitrer(cto, 'D5', { issue: 'accepter' })).rejects.toThrow('Seul le CEO');
+    await expect(svc(proposee).s.arbitrer(cto, 'D5', { issue: 'accepter' })).rejects.toThrow(
+      'Validation de « Décisions proposées »',
+    );
     await expect(
       svc({ ...proposee, proposition: 'acceptee' }).s.arbitrer(ceo, 'D5', { issue: 'accepter' }),
     ).rejects.toThrow('n’attend pas');
