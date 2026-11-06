@@ -48,7 +48,12 @@ const CEO = {
 
 describe('AttentionService', () => {
   it('rubriques hors des droits de l’acteur → null', async () => {
-    const r = await svc(0).attention({ userId: 'U', societeId: 'S', role: 'COO', permissions: { crm: 'ecriture' } });
+    const r = await svc(0).attention({
+      userId: 'U',
+      societeId: 'S',
+      role: 'COO',
+      permissions: { 'crm.dossiers': 'LE', 'crm.soumission': 'E' },
+    });
     expect(r).toMatchObject({ retards: null, factures: null, ts: null, absences: [] });
   });
   it('tranche prête : « par vous » pour le CEO au-delà du seuil seulement', async () => {

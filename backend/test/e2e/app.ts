@@ -12,6 +12,7 @@ export const COMPTES = {
   ceo: 'ceo.greyconcrete@hub.group',
   cfo: 'cfo.greyconcrete@hub.group',
   dirgc: 'dirgc.greyconcrete@hub.group',
+  coo: 'coo.greyconcrete@hub.group',
   salarie: 'rokhaya.ndoye@greyconcrete.hub', // Salarié avec fiche d'équipe
 } as const;
 

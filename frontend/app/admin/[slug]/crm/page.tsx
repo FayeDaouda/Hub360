@@ -32,7 +32,7 @@ import {
   type Projet,
   type StatutCrm,
 } from '@/lib/types';
-import { daysSince, formatNumber, plural, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_COO, yearOf } from '@hub/domain';
+import { daysSince, ETAPE, formatNumber, plural, ROLE_COO, yearOf } from '@hub/domain';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
 import { KpiStrip } from '@/components/ui/kpi';
@@ -88,7 +88,7 @@ export default function CrmPage(props: Props) {
   const session = useSessionCourante();
   // Lecture seule pour un rôle qui n'a que la lecture sur le CRM (CFO, CEO…)
   // — affichage seulement, le serveur refuse de toute façon l'écriture.
-  const peutEcrire = niveauSuffisant(session, 'crm', 'ecriture');
+  const peutEcrire = niveauSuffisant(session, ETAPE.crmDossiers, 'ecriture');
   // Offre d'un dossier (étape F) : préparer (dans Finances) / relancer /
   // saisir la réponse = finances_devis écriture (le Dir. GC, pas le COO).
   const peutPreparerOffre = niveauSuffisant(session, 'finances_devis', 'ecriture');
@@ -170,13 +170,10 @@ export default function CrmPage(props: Props) {
   // Dérivé de `projets` (pas une copie figée) : reflète tout de suite un
   // changement de statut fait depuis la modale, sans avoir à la resynchroniser.
   const detailProjet = detailId ? ((projets ?? []).find((p) => p.id === detailId) ?? null) : null;
-  // Réassigner et archiver : titulaires Dir. GC, administration, CIO (même
-  // règle que CrmService.peutReassigner — le serveur tranche).
-  const estDirectionOuCio =
-    !!session.adminHub ||
-    session.role === ROLE_COMPANY_ADMIN ||
-    session.role === ROLE_CIO ||
-    !!proprietaires?.some((p) => p.id === session.utilisateur.id);
+  // Réassigner : « Propriétaire du dossier » ; archiver : Suppression de
+  // « Dossiers et leads » (matrice, 31/10/2026 — le serveur revérifie).
+  const peutReassigner = niveauSuffisant(session, ETAPE.crmProprietaire, 'ecriture');
+  const peutArchiver = niveauSuffisant(session, ETAPE.crmDossiers, 'suppression');
 
   // Tuiles et compteurs — sur le pipeline de l'année, indépendants de la recherche.
   const kpi = useMemo(() => {
@@ -486,13 +483,15 @@ export default function CrmPage(props: Props) {
                       {
                         titre: 'Apporteur',
                         valeur: (p) =>
-                          p.apporteur?.type === 'externe'
-                            ? p.apporteur.nom
-                            : p.apporteur?.type === 'interne'
-                              ? (p.apporteur.utilisateur?.nom ?? 'Apporteur interne')
-                              : 'Affaire directe',
+                          !('apporteur' in p)
+                            ? null
+                            : p.apporteur?.type === 'externe'
+                              ? p.apporteur.nom
+                              : p.apporteur?.type === 'interne'
+                                ? (p.apporteur.utilisateur?.nom ?? 'Apporteur interne')
+                                : 'Affaire directe',
                       },
-                      { titre: 'Commission (%)', valeur: (p) => p.commissionApporteur },
+                      { titre: 'Commission (%)', valeur: (p) => p.commissionApporteur ?? null },
                       { titre: 'Complétude', valeur: (p) => `${completudeFiche(p).faits}/${completudeFiche(p).total}` },
                       { titre: 'Situation', valeur: (p) => LIBELLE_SITUATION[situationDe(p)] },
                       { titre: 'Créé le', valeur: (p) => dateExport(p.creeLe) },
@@ -604,28 +603,31 @@ export default function CrmPage(props: Props) {
                               )}
                             </td>
                             <td data-label="Apporteur">
-                              <span className="cell-stack">
-                                <span className="cell-fort">
-                                  {ap?.type === 'externe'
-                                    ? ap.nom
-                                    : ap?.type === 'interne'
-                                      ? (ap.utilisateur?.nom ?? 'Apporteur interne')
-                                      : 'Affaire directe'}
+                              {/* Sans la Lecture de « Fiche apporteur » : rien. */}
+                              {'apporteur' in projet && (
+                                <span className="cell-stack">
+                                  <span className="cell-fort">
+                                    {ap?.type === 'externe'
+                                      ? ap.nom
+                                      : ap?.type === 'interne'
+                                        ? (ap.utilisateur?.nom ?? 'Apporteur interne')
+                                        : 'Affaire directe'}
+                                  </span>
+                                  <span className="cell-sub crm-tronque crm-tronque--apporteur">
+                                    {ap
+                                      ? [
+                                          projet.commissionApporteur != null &&
+                                            `${formatNumber(projet.commissionApporteur)} %`,
+                                          ap.type === 'interne' ? 'Interne' : ap.structure || ap.telephone,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(' · ')
+                                      : projet.verrouillee
+                                        ? 'fiche verrouillée'
+                                        : ''}
+                                  </span>
                                 </span>
-                                <span className="cell-sub crm-tronque crm-tronque--apporteur">
-                                  {ap
-                                    ? [
-                                        projet.commissionApporteur != null &&
-                                          `${formatNumber(projet.commissionApporteur)} %`,
-                                        ap.type === 'interne' ? 'Interne' : ap.structure || ap.telephone,
-                                      ]
-                                        .filter(Boolean)
-                                        .join(' · ')
-                                    : projet.verrouillee
-                                      ? 'fiche verrouillée'
-                                      : ''}
-                                </span>
-                              </span>
+                              )}
                             </td>
                             <td data-label="Complétude">
                               <span
@@ -686,9 +688,9 @@ export default function CrmPage(props: Props) {
           peutFacturer={niveauSuffisant(session, 'finances_factures', 'ecriture')}
           depuisFinances={depuisFinances}
           onMaj={rafraichir}
-          peutReassigner={estDirectionOuCio}
+          peutReassigner={peutReassigner}
           // Archiver exige l'écriture sur le CRM (le CIO, en lecture, ne fait que réassigner).
-          peutArchiver={estDirectionOuCio && peutEcrire}
+          peutArchiver={peutArchiver}
           onClose={() => setDetailId(null)}
           onAgir={(action, commentaire) => onAgir(detailProjet, action, commentaire)}
           onRattacher={(localiteId) => onRattacher(detailProjet, localiteId)}

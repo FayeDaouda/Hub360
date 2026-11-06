@@ -41,7 +41,7 @@ export const PAS_COMMISSION = [3, 3.5, 4, 4.5, 5] as const;
 // Fiche apporteur d'affaire (maquette « Nouveau projet », oct. 2026) :
 // obligatoire — soit « aucun apporteur (affaire directe) », soit un tiers
 // avec nom et % attribué ; structure et coordonnées facultatives. Validée et
-// verrouillée à la création, puis modifiable par le COO seul (même DTO).
+// verrouillée à la création, puis modifiable avec l’Écriture de « Fiche apporteur » (même DTO).
 // Plus d'apporteur « interne » à la création ; les dossiers antérieurs qui en
 // ont un le gardent.
 export const TYPES_APPORTEUR_SAISIS = ['aucun', 'externe'] as const;

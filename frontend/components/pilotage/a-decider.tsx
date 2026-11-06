@@ -257,7 +257,7 @@ export function ADecider({
     });
   }
   // 5. Leads sans responsable : l'un des Dir. GC le prend.
-  for (const d of dirGc ? dossiers.filter((x) => !x.proprietaire && x.statut === 'nouveau_projet') : []) {
+  for (const d of dirGc ? dossiers.filter((x) => x.proprietaire === null && x.statut === 'nouveau_projet') : []) {
     const jours = daysSince(d.creeLe, maintenant);
     elements.push({
       cle: `lead-${d.id}`,

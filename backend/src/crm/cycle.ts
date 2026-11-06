@@ -1,5 +1,6 @@
 import { NiveauPermission, StatutCrm } from '@prisma/client';
 import { ROLE_DIR_GC } from '@hub/domain';
+import { ETAPE } from '../rights/catalogue';
 
 // Cycle commercial d'un dossier CRM (étapes E et F, validées sept. 2026) :
 //
@@ -38,10 +39,11 @@ export type RegleAction = {
 };
 
 export const REGLES_ACTIONS: Record<ActionCrm, RegleAction> = {
+  // Étape à part (31/10/2026) : le bouton se donne seul.
   soumettre: {
     de: ['nouveau_projet'],
     vers: 'en_validation',
-    module: 'crm',
+    module: ETAPE.crmSoumission,
     niveau: 'ecriture',
     commentaireObligatoire: false,
   },
@@ -62,7 +64,7 @@ export const REGLES_ACTIONS: Record<ActionCrm, RegleAction> = {
   onboarder: {
     de: ['offre_envoyee'],
     vers: 'onboard',
-    module: 'crm',
+    module: ETAPE.crmDossiers,
     niveau: 'ecriture',
     commentaireObligatoire: false,
   },
@@ -72,14 +74,14 @@ export const REGLES_ACTIONS: Record<ActionCrm, RegleAction> = {
   refaire: {
     de: ['offre_envoyee'],
     vers: 'nouveau_projet',
-    module: 'crm',
+    module: ETAPE.crmDossiers,
     niveau: 'ecriture',
     commentaireObligatoire: false,
   },
   perdre: {
     de: ['nouveau_projet', 'en_validation', 'offre_envoyee'],
     vers: 'perdu',
-    module: 'crm',
+    module: ETAPE.crmDossiers,
     niveau: 'ecriture',
     commentaireObligatoire: true,
   },

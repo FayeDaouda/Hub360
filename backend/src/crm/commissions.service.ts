@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { ModePaiement, Prisma, type NiveauPermission } from '@prisma/client';
+import { ModePaiement, Prisma } from '@prisma/client';
 import { ConfirmationIdentiteService } from '../auth/confirmation-identite.service';
 import { aLaPermission } from '../commun/permission.guard';
 import { montantHtLignes } from '../devis/domaine';
@@ -27,7 +27,7 @@ import {
   toIsoDay,
 } from '@hub/domain';
 
-type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
+type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 
 const CHAMPS_COORDONNEES = ['banque', 'rib', 'wave', 'orangeMoney'] as const;
 type Coordonnees = Record<(typeof CHAMPS_COORDONNEES)[number], string>;

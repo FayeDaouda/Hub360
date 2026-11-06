@@ -26,7 +26,10 @@ describe('RechercheService', () => {
   it('moins de 2 caractères : aucune requête', async () => {
     const { s, prisma } = svc();
     expect(
-      await s.chercher({ userId: 'U1', societeId: 'S1', role: 'CIO', permissions: { crm: 'ecriture' } }, ' d '),
+      await s.chercher(
+        { userId: 'U1', societeId: 'S1', role: 'CIO', permissions: { 'crm.dossiers': 'LE', 'crm.soumission': 'E' } },
+        ' d ',
+      ),
     ).toEqual([]);
     expect(prisma.dossierCrm.findMany).not.toHaveBeenCalled();
   });
@@ -34,7 +37,7 @@ describe('RechercheService', () => {
   it('chaque type seulement avec la lecture du module', async () => {
     const { s, prisma } = svc();
     const r = await s.chercher(
-      { userId: 'U1', societeId: 'S1', role: 'Salarié', permissions: { projets: 'lecture', crm: 'aucun' } },
+      { userId: 'U1', societeId: 'S1', role: 'Salarié', permissions: { projets: 'lecture', 'crm.dossiers': '' } },
       'diop',
     );
     expect(r.map((x) => x.type)).toEqual(['projet']);

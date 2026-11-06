@@ -53,9 +53,9 @@ export function versDossierCrm(
     transitions?: { creeLe: Date; de?: string | null; vers?: string; commentaire?: string | null }[];
     projet?: { id: string } | null;
   },
-  // Offre (finances_devis) : absente de la réponse (clé omise, pas null) pour
-  // qui n'a pas le droit en lecture.
-  opts: { voitOffre: boolean },
+  // Offre (finances_devis), fiche apporteur et propriétaire : absents de la
+  // réponse (clé omise, pas null) pour qui n'a pas la Lecture de l'étape.
+  opts: { voitOffre: boolean; voitApporteur?: boolean; voitProprietaire?: boolean },
 ) {
   return {
     id: d.id,
@@ -82,24 +82,25 @@ export function versDossierCrm(
     creeLe: d.createdAt,
     creePar: versPersonne(d.creePar),
     // null = aucun apporteur (affaire directe), ou dossier antérieur à la
-    // fiche apporteur.
-    apporteur:
-      d.apporteurType === 'interne'
-        ? { type: 'interne' as const, utilisateur: versPersonne(d.apporteurUtilisateur) }
-        : d.apporteurType === 'externe'
-          ? {
-              type: 'externe' as const,
-              nom: d.apporteurNom ?? '',
-              structure: d.apporteurStructure ?? undefined,
-              telephone: d.apporteurTelephone ?? undefined,
-              email: d.apporteurEmail ?? undefined,
-            }
-          : null,
-    // % attribué — partie de la fiche apporteur, lue par les rôles CRM
-    // (maquette « Nouveau projet », oct. 2026). null = aucun.
-    commissionApporteur: d.commissionApporteur === null ? null : Number(d.commissionApporteur),
+    // fiche apporteur. % attribué : partie de la fiche apporteur (maquette
+    // « Nouveau projet », oct. 2026), null = aucun.
+    ...(opts.voitApporteur !== false && {
+      apporteur:
+        d.apporteurType === 'interne'
+          ? { type: 'interne' as const, utilisateur: versPersonne(d.apporteurUtilisateur) }
+          : d.apporteurType === 'externe'
+            ? {
+                type: 'externe' as const,
+                nom: d.apporteurNom ?? '',
+                structure: d.apporteurStructure ?? undefined,
+                telephone: d.apporteurTelephone ?? undefined,
+                email: d.apporteurEmail ?? undefined,
+              }
+            : null,
+      commissionApporteur: d.commissionApporteur === null ? null : Number(d.commissionApporteur),
+    }),
     // null = « à assigner ».
-    proprietaire: versPersonne(d.proprietaire),
+    ...(opts.voitProprietaire !== false && { proprietaire: versPersonne(d.proprietaire) }),
     // null = lead actif ; sinon figé, consultable dans « Archivés ».
     archive: d.archiveLe ? { le: d.archiveLe, par: versPersonne(d.archivePar) } : null,
     // CO1/CO2/CO3 fixée à l'envoi de l'offre — null tant qu'aucune offre avec

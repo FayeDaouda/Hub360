@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { aLaPermission } from '../commun/permission.guard';
 import { SocieteAdminOuCioGuard } from '../commun/societe-admin-ou-cio.guard';
+import { ETAPE } from '../rights/catalogue';
 
 // Lire le référentiel : la direction qui le GÈRE (societe_admin ou CIO, même
 // garde que l'écriture) OU quiconque crée des dossiers CRM (back-office +
@@ -18,7 +19,7 @@ export class LectureLocalitesGuard implements CanActivate {
     } catch (refusGestion) {
       this.backOffice.canActivate(ctx); // 403 « réservé à la direction » sinon
       const user = ctx.switchToHttp().getRequest().user;
-      if (aLaPermission(user.permissions, 'crm', 'lecture')) return true;
+      if (aLaPermission(user.permissions, ETAPE.crmDossiers, 'lecture')) return true;
       throw refusGestion;
     }
   }

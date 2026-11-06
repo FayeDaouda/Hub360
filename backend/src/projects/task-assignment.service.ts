@@ -1,5 +1,4 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { NiveauPermission } from '@prisma/client';
 import { ROLE_CTO, todayIso } from '@hub/domain';
 import { aLaPermission } from '../commun/permission.guard';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,7 +14,7 @@ import { fullName, type Actor } from './project-query';
 // Qui assigne (décision du 29/10/2026) : l'écriture sur Projets (le Dir. GC ;
 // le CTO seulement en suppléance), à n'importe qui ; et le chef d'une équipe
 // du projet, aux seuls membres de ses équipes.
-export type AssignActor = Actor & { permissions?: Record<string, NiveauPermission> };
+export type AssignActor = Actor & { permissions?: Record<string, string> };
 // « all » : tout le monde ; sinon les cellules dont l'acteur est le chef.
 export type AssignScope = 'all' | { cellIds: string[] };
 @Injectable()

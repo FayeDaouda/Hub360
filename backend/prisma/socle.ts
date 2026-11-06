@@ -2,6 +2,7 @@ import { NiveauPermission, PrismaClient } from '@prisma/client';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CatalogueSource, importerCatalogue } from './catalogue';
+import { ETAPE, ETAPES_DETAILLEES, LIBELLES_MODULE } from '../src/rights/catalogue';
 import {
   ROLE_CEO,
   ROLE_CFO,
@@ -14,6 +15,8 @@ import {
   ROLE_HOLDING_ADMIN,
   ROLE_HR,
   ROLE_HUB_ADMIN,
+  NO_RIGHTS,
+  type RightSet,
 } from '@hub/domain';
 
 // Socle RÉEL du HUB : rôles, modules, société Grey Concrete (pied des
@@ -26,25 +29,42 @@ import {
 // déjà émis (societeId dedans) reste valide après un reseed.
 export const ID_GREY = '11111111-1111-4111-8111-111111111111';
 
-const LIBELLES_MODULE = {
-  lecture: 'Voit les écrans et les informations du module',
-  ecriture: 'Crée et modifie',
-  validation: 'Valide, émet, paie, signe : les actes qui engagent',
-  suppression: 'Supprime ou archive, de façon récupérable',
-};
+// Niveau de l'ancienne matrice converti comme la migration du 31/10/2026 :
+// l'écriture couvrait la suppression.
+const versDroits = (niveau: NiveauPermission = 'aucun'): RightSet => ({
+  lecture: niveau !== 'aucun',
+  ecriture: niveau === 'ecriture' || niveau === 'validation',
+  validation: niveau === 'validation',
+  suppression: niveau === 'ecriture' || niveau === 'validation',
+});
 
-// La matrice validée ci-dessous est écrite en niveaux (historique des
-// décisions) ; convertie comme la migration du 31/10/2026 : l'écriture
-// couvrait la suppression. Seulement si la case n'existe pas encore : depuis
-// le 31/10/2026, le CIO règle la matrice dans le HUB, un nouveau passage du
-// socle ne revient jamais sur ses choix.
-async function poserDroits(prisma: PrismaClient, roleId: string, etapeId: string, niveau: NiveauPermission) {
-  const droits = {
-    lecture: niveau !== 'aucun',
-    ecriture: niveau === 'ecriture' || niveau === 'validation',
-    validation: niveau === 'validation',
-    suppression: niveau === 'ecriture' || niveau === 'validation',
+// Droits de départ par étape, à partir de la matrice validée (écrite en
+// niveaux par module, historique des décisions). Le CRM est découpé (lot 2,
+// mêmes règles que la migration 20261101090000_crm_etapes) : archiver et
+// réassigner aux Dir. GC et à l'administration, modifier l'apporteur au COO,
+// totaux à qui voyait crm_totaux ou les offres.
+function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>): Record<string, RightSet> {
+  const droits: Record<string, RightSet> = {};
+  for (const [cle, niveau] of Object.entries(niveaux)) {
+    if (cle !== 'crm' && cle !== 'crm_totaux') droits[cle] = versDroits(niveau);
+  }
+  const crm = versDroits(niveaux.crm);
+  const direction = nomRole === ROLE_DIR_GC || nomRole === ROLE_COMPANY_ADMIN;
+  droits[ETAPE.crmDossiers] = { ...crm, validation: false, suppression: crm.suppression && direction };
+  droits[ETAPE.crmSoumission] = { ...NO_RIGHTS, ecriture: crm.ecriture };
+  droits[ETAPE.crmProprietaire] = { ...NO_RIGHTS, lecture: crm.lecture, ecriture: crm.lecture && direction };
+  droits[ETAPE.crmApporteur] = { ...NO_RIGHTS, lecture: crm.lecture, ecriture: crm.ecriture && nomRole === ROLE_COO };
+  droits[ETAPE.crmTotaux] = {
+    ...NO_RIGHTS,
+    lecture: versDroits(niveaux.crm_totaux).lecture || versDroits(niveaux.finances_devis).lecture,
   };
+  return droits;
+}
+
+// Seulement si la case n'existe pas encore : depuis le 31/10/2026, le CIO
+// règle la matrice dans le HUB, un nouveau passage du socle ne revient jamais
+// sur ses choix.
+async function poserDroits(prisma: PrismaClient, roleId: string, etapeId: string, droits: RightSet) {
   await prisma.roleRight.upsert({
     where: { roleId_etapeId: { roleId, etapeId } },
     update: {},
@@ -73,10 +93,10 @@ export async function installerSocle(prisma: PrismaClient) {
   // de permissions Grey Concrete posée (Dir. GC voit devis+factures mais pas
   // marges, charges réservées CFO — non exprimable sur un module unique).
   await prisma.module.deleteMany({ where: { cle: 'finances' } });
+  // 'crm_totaux' : devenu l'étape « Totaux du pipeline » du CRM (lot 2).
+  await prisma.module.deleteMany({ where: { cle: 'crm_totaux' } });
   for (const m of [
     { nom: 'CRM', cle: 'crm' },
-    // Revue COO (22/10/2026) : totaux HT du pipeline, sans le détail des offres.
-    { nom: 'CRM — Totaux HT', cle: 'crm_totaux' },
     { nom: 'Projets', cle: 'projets' },
     { nom: 'Finances — Devis', cle: 'finances_devis' },
     { nom: 'Finances — Factures', cle: 'finances_factures' },
@@ -90,13 +110,19 @@ export async function installerSocle(prisma: PrismaClient) {
   ]) {
     await prisma.module.upsert({ where: { cle: m.cle }, update: {}, create: m });
   }
-  // Étapes de la matrice (31/10/2026) : une étape « Ensemble du module » par
-  // module, même clé ; les lots par module la découpent ensuite.
+  // Étapes de la matrice (31/10/2026) : celles du catalogue pour les modules
+  // découpés, sinon une étape « Ensemble du module » de même clé.
   for (const m of await prisma.module.findMany()) {
-    if (await prisma.moduleStep.findUnique({ where: { cle: m.cle } })) continue;
-    await prisma.moduleStep.create({
-      data: { moduleId: m.id, cle: m.cle, nom: 'Ensemble du module', libelles: LIBELLES_MODULE },
-    });
+    const detaillees = ETAPES_DETAILLEES.filter((e) => e.module === m.cle);
+    const etapes = detaillees.length
+      ? detaillees
+      : [{ cle: m.cle, nom: 'Ensemble du module', ordre: 0, libelles: LIBELLES_MODULE }];
+    for (const e of etapes) {
+      if (await prisma.moduleStep.findUnique({ where: { cle: e.cle } })) continue;
+      await prisma.moduleStep.create({
+        data: { moduleId: m.id, cle: e.cle, nom: e.nom, ordre: e.ordre, libelles: e.libelles },
+      });
+    }
   }
 
   // --- Grey Concrete : société, modules, comptes ------------------------
@@ -352,10 +378,10 @@ export async function installerSocle(prisma: PrismaClient) {
     if (!roleGrey) {
       roleGrey = await prisma.role.create({ data: { nom: nomRole, societeId: societeIdRole } });
     }
-    for (const [cle, niveau] of Object.entries(permissions)) {
+    for (const [cle, droits] of Object.entries(droitsDepart(nomRole, permissions))) {
       const etape = etapesParCle.get(cle);
-      if (!etape) throw new Error(`Module inconnu dans la matrice Grey Concrete : ${cle}`);
-      await poserDroits(prisma, roleGrey.id, etape.id, niveau);
+      if (!etape) throw new Error(`Étape inconnue dans la matrice Grey Concrete : ${cle}`);
+      await poserDroits(prisma, roleGrey.id, etape.id, droits);
     }
   }
 
@@ -370,8 +396,12 @@ export async function installerSocle(prisma: PrismaClient) {
   // Sauf les marges et la RH (décision 12 du 21/10/2026, revue CFO) : le
   // compte de secours ne voit ni salaires ni rentabilité.
   const SANS_ACCES_ADMIN = new Set(['finances_marges', 'rh']);
-  for (const etape of etapesParCle.values()) {
-    await poserDroits(prisma, roleAdmin.id, etape.id, SANS_ACCES_ADMIN.has(etape.cle) ? 'aucun' : 'validation');
+  const niveauxAdmin = Object.fromEntries(
+    modules.map((m) => [m.cle, SANS_ACCES_ADMIN.has(m.cle) ? 'aucun' : 'validation'] as const),
+  ) as Record<string, NiveauPermission>;
+  for (const [cle, droits] of Object.entries(droitsDepart(ROLE_COMPANY_ADMIN, niveauxAdmin))) {
+    const etape = etapesParCle.get(cle);
+    if (etape) await poserDroits(prisma, roleAdmin.id, etape.id, droits);
   }
 
   // --- Annexes de contrat (étape G) : liste de départ du cadrage ------------

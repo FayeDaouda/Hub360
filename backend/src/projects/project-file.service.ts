@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { NiveauPermission } from '@prisma/client';
 import { aLaPermission } from '../commun/permission.guard';
 import { ROLE_CTO, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
@@ -74,7 +73,7 @@ export class ProjectFileService {
     private states: ProjectStatesService,
   ) {}
 
-  async file(companyId: string, projectId: string, actor: Actor & { permissions?: Record<string, NiveauPermission> }) {
+  async file(companyId: string, projectId: string, actor: Actor & { permissions?: Record<string, string> }) {
     const { decider, ctx } = await this.states.decider(companyId, actor);
     const p = await this.prisma.projet.findFirst({
       where: {

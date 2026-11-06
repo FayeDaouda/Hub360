@@ -1,6 +1,7 @@
 import { niveauSuffisant } from './auth';
 import type { Session } from './types';
 import {
+  ETAPE,
   ROLE_CEO,
   ROLE_CFO,
   ROLE_CIO,
@@ -25,7 +26,7 @@ import {
 // H5 = Facturation).
 const SECTIONS_DIRECTION: Record<string, string> = {
   'tableau-de-bord': 'pilotage', // Pilotage · tableau de bord Holding (maquette)
-  crm: 'crm', // clé de nav → module de la matrice
+  crm: ETAPE.crmDossiers, // clé de nav → étape de la matrice qui ouvre la section
   projets: 'projets',
   equipe: 'equipe',
   facturation: 'finances_factures',

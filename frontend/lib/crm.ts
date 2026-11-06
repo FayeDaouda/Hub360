@@ -24,7 +24,7 @@ import { CATEGORIES } from './types';
 //   POST  /api/societes/:slug/dossiers/:id/archivage
 //   GET   /api/societes/:slug/dossiers/proprietaires-possibles
 //   PATCH /api/societes/:slug/dossiers/:id/proprietaire  { proprietaireId }
-//   PATCH /api/societes/:slug/dossiers/:id/apporteur     (COO seul)
+//   PATCH /api/societes/:slug/dossiers/:id/apporteur     (Écriture de « Fiche apporteur »)
 // Passer un dossier à « onboard » déclenche la transaction pivot côté serveur
 // (création du projet d'exécution + coquille avant-projet, idempotente).
 // -----------------------------------------------------------------------------
@@ -145,8 +145,8 @@ export function desarchiverDossier(slug: string, id: string): Promise<Projet> {
   return apiSociete(slug, `/dossiers/${id}/desarchivage`, { method: 'POST' });
 }
 
-// Fiche apporteur verrouillée depuis la création : le COO seul la modifie
-// (le serveur le vérifie).
+// Fiche apporteur verrouillée depuis la création : l'Écriture de « Fiche
+// apporteur » la modifie (le serveur le vérifie).
 export function modifierApporteur(slug: string, id: string, apporteur: ApporteurSaisi): Promise<Projet> {
   return apiSociete(slug, `/dossiers/${id}/apporteur`, { method: 'PATCH', body: apporteur });
 }

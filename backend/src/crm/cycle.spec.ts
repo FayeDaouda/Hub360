@@ -128,16 +128,16 @@ function monter(
   };
 }
 
-const COO = { userId: 'U-COO', role: 'COO', permissions: { crm: 'ecriture' } } as const;
+const COO = { userId: 'U-COO', role: 'COO', permissions: { 'crm.dossiers': 'LE', 'crm.soumission': 'E' } } as const;
 const CFO = {
   userId: 'U-CFO',
   role: 'CFO',
-  permissions: { crm: 'lecture', finances_devis: 'validation' },
+  permissions: { 'crm.dossiers': 'L', finances_devis: 'validation' },
 } as const;
 const DIR_GC = {
   userId: 'U-DG',
   role: 'Dir. GC',
-  permissions: { crm: 'ecriture', finances_devis: 'ecriture' },
+  permissions: { 'crm.dossiers': 'LE', 'crm.soumission': 'E', finances_devis: 'ecriture' },
 } as const;
 
 describe('Cycle CRM — règles', () => {

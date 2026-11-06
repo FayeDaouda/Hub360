@@ -16,13 +16,17 @@ describe('LectureLocalitesGuard', () => {
   });
 
   it('rôle de direction avec crm ≥ lecture → oui', () => {
-    expect(guard.canActivate(ctx({ role: 'COO', societeSlug: 'gc', permissions: { crm: 'ecriture' } }))).toBe(true);
+    expect(
+      guard.canActivate(
+        ctx({ role: 'COO', societeSlug: 'gc', permissions: { 'crm.dossiers': 'LE', 'crm.soumission': 'E' } }),
+      ),
+    ).toBe(true);
   });
 
   it('rôle de direction sans crm → 403', () => {
-    expect(() => guard.canActivate(ctx({ role: 'RH', societeSlug: 'gc', permissions: { crm: 'aucun' } }))).toThrow(
-      ForbiddenException,
-    );
+    expect(() =>
+      guard.canActivate(ctx({ role: 'RH', societeSlug: 'gc', permissions: { 'crm.dossiers': '' } })),
+    ).toThrow(ForbiddenException);
   });
 
   it('collaborateur → 403', () => {

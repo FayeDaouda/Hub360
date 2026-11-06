@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, type NiveauPermission, type TypeReporting } from '@prisma/client';
+import { Prisma, type TypeReporting } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { TempsService } from '../rh/temps.service';
@@ -55,7 +55,7 @@ export type Acteur = {
   userId: string;
   societeId: string;
   role: string;
-  permissions?: Record<string, NiveauPermission>;
+  permissions?: Record<string, string>;
 };
 
 // Rôles qui saisissent et clôturent les décisions des instances (choix du
