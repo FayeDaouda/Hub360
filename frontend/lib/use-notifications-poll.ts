@@ -1,64 +1,109 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getNotifications, marquerNotificationsLues } from './notifications';
+import { getNotifications, marquerLuesParId, marquerNotificationsLues } from './notifications';
 import { jouerSonNotification } from './notification-sound';
 import type { FluxNotifications, NotificationItem } from './types';
 
 // Fréquence de sondage — pas de websocket dans cette appli, un intervalle
 // suffit pour une équipe de 4 personnes (cf. mémoire hub360°).
 const INTERVALLE_MS = 15_000;
-const DUREE_TOAST_MS = 5_000;
-const PAUSE_ENTRE_TOASTS_MS = 300;
+// Devant le HUB : onglet visible, fenêtre active, et un geste (souris,
+// clavier, toucher, défilement) depuis moins de 3 minutes.
+const INACTIF_APRES_MS = 3 * 60_000;
+// Pop-ups visibles en même temps ; au-delà, au retour d'une absence, un résumé.
+const POPUPS_MAX = 3;
 
-// Partagé admin + collab : sonde le flux de notifications, garde la cloche à
-// jour, et fait défiler en toast (5 s, une à la fois) les éléments STOCKÉS
-// apparus depuis le montage — jamais les alertes d'échéance dérivées, dont la
-// date est recalculée à chaque appel et paraîtrait donc toujours « neuve ».
+export type ResumeAbsence = { total: number; elements: NotificationItem[] };
+
+// Présence de l'utilisateur devant le HUB (01/11/2026).
+function usePresence(): boolean {
+  const [present, setPresent] = useState(true);
+  const derniereActivite = useRef(0);
+  useEffect(() => {
+    derniereActivite.current = Date.now();
+    const evaluer = () =>
+      setPresent(
+        document.visibilityState === 'visible' &&
+          document.hasFocus() &&
+          Date.now() - derniereActivite.current < INACTIF_APRES_MS,
+      );
+    const activite = () => {
+      derniereActivite.current = Date.now();
+      evaluer();
+    };
+    const gestes = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+    gestes.forEach((g) => window.addEventListener(g, activite, { passive: true }));
+    window.addEventListener('focus', activite);
+    window.addEventListener('blur', evaluer);
+    document.addEventListener('visibilitychange', evaluer);
+    const minuterie = setInterval(evaluer, 15_000);
+    evaluer();
+    return () => {
+      gestes.forEach((g) => window.removeEventListener(g, activite));
+      window.removeEventListener('focus', activite);
+      window.removeEventListener('blur', evaluer);
+      document.removeEventListener('visibilitychange', evaluer);
+      clearInterval(minuterie);
+    };
+  }, []);
+  return present;
+}
+
+// Partagé par la cloche : sonde le flux, garde la cloche à jour, et montre en
+// pop-up les notifications STOCKÉES apparues depuis le montage — jamais les
+// alertes d'échéance dérivées, recalculées à chaque appel. Devant le HUB, le
+// pop-up arrive tout de suite ; absent, il attend son retour (au-delà de 3,
+// un résumé). Le son accompagne l'apparition, pas l'arrivée.
 export function useNotificationsPoll(slug: string) {
   const [flux, setFlux] = useState<FluxNotifications | null>(null);
-  const [toast, setToast] = useState<NotificationItem | null>(null);
+  const [popups, setPopups] = useState<NotificationItem[]>([]);
+  const [resume, setResume] = useState<ResumeAbsence | null>(null);
+  const present = usePresence();
 
   const vus = useRef<Set<string> | null>(null);
-  const file = useRef<NotificationItem[]>([]);
-  const toastEnCours = useRef(false);
+  const enAttente = useRef<NotificationItem[]>([]);
+  const presentRef = useRef(present);
+  useEffect(() => {
+    presentRef.current = present;
+  }, [present]);
 
-  const defiler = useCallback(() => {
-    if (toastEnCours.current) return;
-    const prochain = file.current.shift();
-    if (!prochain) return;
-    toastEnCours.current = true;
-    setToast(prochain);
-    setTimeout(() => {
-      setToast(null);
-      toastEnCours.current = false;
-      setTimeout(defiler, PAUSE_ENTRE_TOASTS_MS);
-    }, DUREE_TOAST_MS);
+  // Montre la file : pop-ups (3 au plus) ou, au retour d'une absence, un résumé.
+  const montrer = useCallback((auRetour: boolean) => {
+    const file = enAttente.current;
+    if (!file.length) return;
+    enAttente.current = [];
+    jouerSonNotification();
+    if (auRetour && file.length > POPUPS_MAX) {
+      setResume({ total: file.length, elements: file.slice(-POPUPS_MAX).reverse() });
+      return;
+    }
+    setPopups((l) => [...file.reverse(), ...l].slice(0, POPUPS_MAX));
   }, []);
 
   const traiterNouveaux = useCallback(
     (f: FluxNotifications) => {
       const stockees = f.elements.filter((e) => !e.derivee);
       if (vus.current === null) {
-        // Premier chargement : mémorise l'existant sans le passer en toast.
+        // Premier chargement : mémorise l'existant sans le montrer.
         vus.current = new Set(stockees.map((e) => e.id));
         return;
       }
-      let nouvelles = false;
-      for (const e of stockees) {
+      for (const e of [...stockees].reverse()) {
         if (!vus.current.has(e.id)) {
           vus.current.add(e.id);
-          file.current.push(e);
-          nouvelles = true;
+          if (!e.lu) enAttente.current.push(e);
         }
       }
-      // Un seul son pour tout le lot plutôt qu'un par notification — évite
-      // une salve de carillons si plusieurs arrivent entre deux sondages.
-      if (nouvelles) jouerSonNotification();
-      defiler();
+      if (presentRef.current) montrer(false);
     },
-    [defiler],
+    [montrer],
   );
+
+  // Retour devant le HUB : ce qui est arrivé pendant l'absence.
+  useEffect(() => {
+    if (present) montrer(true);
+  }, [present, montrer]);
 
   const charger = useCallback(() => {
     getNotifications(slug)
@@ -83,5 +128,34 @@ export function useNotificationsPoll(slug: string) {
     }
   }
 
-  return { flux, recharger: charger, toutLire, toast, fermerToast: () => setToast(null) };
+  // Ouverte = lue (01/11/2026) : au clic, dans la cloche comme dans un pop-up.
+  const marquerLue = useCallback(
+    (n: NotificationItem) => {
+      setPopups((l) => l.filter((x) => x.id !== n.id));
+      if (n.derivee || n.lu) return;
+      setFlux((f) =>
+        f
+          ? {
+              nonLues: Math.max(0, f.nonLues - 1),
+              elements: f.elements.map((x) => (x.id === n.id ? { ...x, lu: true } : x)),
+            }
+          : f,
+      );
+      marquerLuesParId(slug, [n.id])
+        .then(setFlux)
+        .catch(() => {});
+    },
+    [slug],
+  );
+
+  return {
+    flux,
+    recharger: charger,
+    toutLire,
+    marquerLue,
+    popups,
+    fermerPopup: (id: string) => setPopups((l) => l.filter((x) => x.id !== id)),
+    resume,
+    fermerResume: () => setResume(null),
+  };
 }

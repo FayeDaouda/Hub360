@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Bell, Volume2, VolumeX } from 'lucide-react';
 import { useNotificationsPoll } from '@/lib/use-notifications-poll';
-import { estDecision, libelleAlerteDerivee, lienNotificationAdmin } from '@/lib/notifications';
-import type { Session } from '@/lib/types';
+import { cibleNotification, estDecision, libelleAlerteDerivee } from '@/lib/notifications';
+import { ouvrirConversation } from '@/lib/chat';
+import type { NotificationItem, Session } from '@/lib/types';
 import { definirSonActive, sonActive } from '@/lib/notification-sound';
-import { NotifToast } from '@/components/notif-toast';
+import { NotifPopups } from '@/components/notif-popups';
 
 function ilYa(iso: string): string {
   const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
@@ -18,10 +19,19 @@ function ilYa(iso: string): string {
   return j === 1 ? 'hier' : `il y a ${j} j`;
 }
 
-// Cloche du back-office : chaque notification ouvre l'écran concerné
-// (cf. lienNotificationAdmin).
+// Cloche du back-office : chaque notification ouvre l'écran concerné (ou la
+// conversation, cf. cibleNotification) et, ouverte, passe en lue.
 export function ClocheNotifications({ slug, session }: { slug: string; session: Session }) {
-  const { flux, recharger, toutLire, toast, fermerToast } = useNotificationsPoll(slug);
+  const { flux, recharger, toutLire, marquerLue, popups, fermerPopup, resume, fermerResume } =
+    useNotificationsPoll(slug);
+  const router = useRouter();
+  function ouvrir(n: NotificationItem) {
+    marquerLue(n);
+    setOuvert(false);
+    const cible = cibleNotification(slug, n, session);
+    if ('conversation' in cible) ouvrirConversation(cible.conversation);
+    else router.push(cible.href);
+  }
   const [ouvert, setOuvert] = useState(false);
   const boiteRef = useRef<HTMLDivElement>(null);
   // Lu après montage seulement (localStorage) — évite un mismatch d'hydratation
@@ -146,16 +156,11 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
                     </span>
                   </>
                 );
-                const href = lienNotificationAdmin(slug, n, session);
                 return (
                   <li key={n.id}>
-                    {href ? (
-                      <Link href={href} className="notif-item" onClick={() => setOuvert(false)}>
-                        {corps}
-                      </Link>
-                    ) : (
-                      <span className="notif-item">{corps}</span>
-                    )}
+                    <button type="button" className="notif-item" onClick={() => ouvrir(n)}>
+                      {corps}
+                    </button>
                   </li>
                 );
               })}
@@ -164,9 +169,17 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
         </div>
       )}
 
-      {toast && (
-        <NotifToast notification={toast} href={lienNotificationAdmin(slug, toast, session)} onFermer={fermerToast} />
-      )}
+      <NotifPopups
+        popups={popups}
+        resume={resume}
+        onOuvrir={ouvrir}
+        onFermer={fermerPopup}
+        onFermerResume={fermerResume}
+        onToutVoir={() => {
+          recharger();
+          setOuvert(true);
+        }}
+      />
     </div>
   );
 }

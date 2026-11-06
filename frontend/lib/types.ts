@@ -445,6 +445,24 @@ export type NotificationType =
   | 'coordonnees_apporteur_modifiees'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
+  // Matrice des droits (31/10/2026) : vos droits viennent de changer.
+  | 'own_rights_changed'
+  // Agenda, Annonces (01/11/2026).
+  | 'rdv_invitation'
+  | 'rdv_annule'
+  | 'annonce_importante'
+  | 'annonce_a_valider'
+  // Recrutement (01/11/2026).
+  | 'poste_a_approuver'
+  | 'poste_decide'
+  | 'poste_ouvert'
+  | 'embauche_decidee'
+  | 'entretien_planifie'
+  | 'candidat_decide'
+  | 'candidature_recue'
+  // Messagerie (01/11/2026) : mention (@), ajout à un groupe — ouvrent la conversation.
+  | 'mention_chat'
+  | 'groupe_chat'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore
   // incomplet 72 h après sa création — ouvre la fiche dans le CRM.
   | 'fiche_a_completer';
@@ -457,6 +475,7 @@ export type NotificationItem = {
   projetCode: string | null;
   dossierCrmId: string | null;
   factureId: string | null; // facture à valider (Finances)
+  canalId: string | null; // conversation (mention, groupe — messagerie)
   date: string; // ISO 8601
   lu: boolean;
   derivee: boolean;
@@ -471,7 +490,7 @@ export type FluxNotifications = {
 // Contrat renvoyé par l'API NestJS (src/chat). Le back pré-rend `nom` (nom de
 // cellule / « Général » / nom de l'autre participant) et le nom d'auteur.
 
-export type TypeCanal = 'cellule' | 'general' | 'direct';
+export type TypeCanal = 'cellule' | 'general' | 'direct' | 'groupe';
 
 export type CanalChat = {
   id: string;
@@ -479,6 +498,9 @@ export type CanalChat = {
   nom: string;
   nonLus: number;
   dernierMessageLe: string | null; // ISO 8601
+  // Groupe (01/11/2026) : son créateur (il gère les membres) et leur nombre.
+  creeParId?: string | null;
+  membres?: number;
 };
 
 export type MessageChat = {
@@ -487,7 +509,14 @@ export type MessageChat = {
   texte: string;
   envoyeLe: string; // ISO 8601
   auteur: { id: string; nom: string; photoUrl?: string | null };
+  // Ligne d'information d'un groupe (« X a ajouté Y »).
+  systeme?: boolean;
+  // Personnes mentionnées (@), pour les surligner.
+  mentions?: { id: string; nom: string }[];
 };
+
+// Personne d'une conversation : mentionnable (@) ou membre d'un groupe.
+export type PersonneChat = { id: string; nom: string; photoUrl: string | null; createur?: boolean };
 
 export type PageMessagesChat = {
   messages: MessageChat[]; // du plus ancien au plus récent

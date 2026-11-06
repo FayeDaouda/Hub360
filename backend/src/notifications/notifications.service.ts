@@ -33,6 +33,7 @@ export type NotificationItem = {
   projetCode: string | null;
   dossierCrmId: string | null;
   factureId: string | null; // facture à valider (Finances)
+  canalId: string | null; // conversation (mention, groupe — messagerie)
   date: Date;
   lu: boolean;
   derivee: boolean;
@@ -199,6 +200,7 @@ export class NotificationsService {
       projetCode: n.projet?.code ?? null,
       dossierCrmId: n.dossierCrmId,
       factureId: n.factureId,
+      canalId: n.canalId,
       date: n.createdAt,
       lu: n.luLe !== null,
       derivee: false,
@@ -251,6 +253,7 @@ export class NotificationsService {
           projetCode: null,
           dossierCrmId: d.id,
           factureId: null,
+          canalId: null,
           date: relance.date,
           lu: false,
           derivee: true,
@@ -271,6 +274,7 @@ export class NotificationsService {
     projetId?: string | null;
     factureId?: string | null;
     dossierCrmId?: string | null;
+    canalId?: string | null;
   }): Promise<number> {
     const ids = [...new Set(params.destinataireIds.filter((x): x is string => !!x && x !== params.parId))];
     if (!ids.length) return 0;
@@ -285,6 +289,7 @@ export class NotificationsService {
           projetId: params.projetId ?? null,
           factureId: params.factureId ?? null,
           dossierCrmId: params.dossierCrmId ?? null,
+          canalId: params.canalId ?? null,
         })),
       });
       return count;

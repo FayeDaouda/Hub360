@@ -335,3 +335,176 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* Groupes de discussion et mentions (01/11/2026). */
+.pchat-saisie {
+  position: relative;
+}
+.pchat-mentions {
+  position: absolute;
+  right: 0.7rem;
+  bottom: calc(100% + 0.25rem);
+  left: 0.7rem;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  list-style: none;
+}
+.pchat-mentions button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.pchat-mentions button.is-actif,
+.pchat-mentions button:hover {
+  background: color-mix(in oklch, var(--action) 12%, transparent);
+}
+.pchat-mention {
+  padding: 0 0.15rem;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--action) 16%, transparent);
+  color: color-mix(in oklch, var(--action) 80%, var(--text));
+  font-weight: 600;
+}
+.pchat-mention.is-moi {
+  background: color-mix(in oklch, var(--fuchsia) 22%, transparent);
+  color: color-mix(in oklch, var(--fuchsia) 85%, var(--text));
+}
+:root[data-theme='dark'] .pchat-mention {
+  color: color-mix(in oklch, var(--action) 45%, white);
+}
+:root[data-theme='dark'] .pchat-mention.is-moi {
+  color: color-mix(in oklch, var(--fuchsia) 45%, white);
+}
+.pchat-msg--mien .pchat-mention {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+.pchat-msg--mentionne .pchat-msg-bulle {
+  box-shadow: inset 3px 0 0 var(--fuchsia);
+  background: color-mix(in oklch, var(--fuchsia) 9%, var(--admin-fond, #f4f2ec));
+}
+.pchat-systeme {
+  align-self: center;
+  max-width: 90%;
+  margin: 0.35rem auto;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--text-muted) 10%, transparent);
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  text-align: center;
+}
+.pchat-canal-pastille--groupe {
+  background: color-mix(in oklch, var(--iris) 18%, transparent);
+  color: color-mix(in oklch, var(--iris) 85%, var(--text));
+}
+.pchat-nouveau-groupe .pchat-canal-nom {
+  color: var(--action);
+  font-weight: 600;
+}
+.pchat-groupe {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+  padding: 0.75rem;
+}
+.pchat-groupe .pchat-liste {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.pchat-recherche {
+  font-size: 0.85rem;
+}
+.pchat-canal.is-choisi {
+  background: color-mix(in oklch, var(--action) 9%, transparent);
+}
+.pchat-coche {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 1.5px solid color-mix(in oklch, var(--text-muted) 55%, transparent);
+  border-radius: 50%;
+  color: #fff;
+}
+.pchat-coche.is-coche {
+  border-color: var(--action);
+  background: var(--action);
+}
+.pchat-groupe-creer {
+  justify-content: center;
+}
+.pchat-groupe-nom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1rem;
+}
+.pchat-renommer {
+  display: flex;
+  flex: 1;
+  gap: 0.3rem;
+}
+.pchat-icone {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  margin-left: auto;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pchat-groupe-nom .pchat-icone {
+  margin-left: 0;
+}
+.pchat-icone:hover {
+  background: color-mix(in oklch, var(--text-muted) 12%, transparent);
+  color: var(--text);
+}
+.pchat-groupe-sous {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-12);
+}
+.pchat-membres .pchat-canal {
+  cursor: default;
+}
+.pchat-groupe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+.pchat-quitter {
+  color: var(--pill-risque);
+}
+.pchat-erreur {
+  margin: 0;
+  color: var(--pill-risque);
+  font-size: 0.82rem;
+}

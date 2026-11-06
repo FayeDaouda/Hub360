@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, TypeCanal } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { estRoleBackOffice } from '../commun/back-office.guard';
 import { ChatBus } from './chat.bus';
@@ -9,6 +10,9 @@ import { ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
 type Acteur = { userId: string; societeId: string; role: string };
 
 const PAGE = 50;
+const MEMBRES_MAX = 50;
+// Extrait d'un message dans une notification de mention.
+const extrait = (texte: string) => (texte.length > 90 ? `${texte.slice(0, 89)}…` : texte);
 
 export type CanalResume = {
   id: string;
@@ -16,6 +20,9 @@ export type CanalResume = {
   nom: string;
   nonLus: number;
   dernierMessageLe: Date | null;
+  // Groupe : qui l'a créé (il gère les membres) et combien ils sont.
+  creeParId?: string | null;
+  membres?: number;
 };
 
 export type MessageRendu = {
@@ -24,10 +31,15 @@ export type MessageRendu = {
   texte: string;
   envoyeLe: Date;
   auteur: { id: string; nom: string; photoUrl: string | null };
+  // Ligne d'information d'un groupe (« X a ajouté Y »).
+  systeme: boolean;
+  // Personnes mentionnées (@), avec leur nom pour les surligner.
+  mentions: { id: string; nom: string }[];
 };
 
 type CanalNommable = {
   type: TypeCanal;
+  nom: string | null;
   cellule: { nom: string } | null;
   participant1: { id: string; prenom: string; nom: string; nomAffiche: string | null } | null;
   participant2: { id: string; prenom: string; nom: string; nomAffiche: string | null } | null;
@@ -39,6 +51,9 @@ const SELECT_CANAL = {
   celluleId: true,
   participant1Id: true,
   participant2Id: true,
+  nom: true,
+  creeParId: true,
+  _count: { select: { membres: true } },
   cellule: { select: { nom: true } },
   participant1: { select: { id: true, prenom: true, nom: true, nomAffiche: true } },
   participant2: { select: { id: true, prenom: true, nom: true, nomAffiche: true } },
@@ -49,6 +64,7 @@ export class ChatService {
   constructor(
     private prisma: PrismaService,
     private bus: ChatBus,
+    private notifications: NotificationsService,
   ) {}
 
   // -- Liste des canaux visibles + non-lus par canal ---------------------
@@ -85,6 +101,7 @@ export class ChatService {
             { type: { in: [TypeCanal.general, TypeCanal.cellule] } },
             { type: TypeCanal.direct, participant1Id: userId },
             { type: TypeCanal.direct, participant2Id: userId },
+            { type: TypeCanal.groupe, membres: { some: { utilisateurId: userId } } },
           ],
         }
       : {
@@ -94,6 +111,7 @@ export class ChatService {
             ...(celluleId ? [{ type: TypeCanal.cellule, celluleId } as Prisma.CanalWhereInput] : []),
             { type: TypeCanal.direct, participant1Id: userId },
             { type: TypeCanal.direct, participant2Id: userId },
+            { type: TypeCanal.groupe, membres: { some: { utilisateurId: userId } } },
           ],
         };
 
@@ -128,6 +146,7 @@ export class ChatService {
           nom: this.nomCanal(c, userId),
           nonLus,
           dernierMessageLe: dernier?.createdAt ?? null,
+          ...(c.type === TypeCanal.groupe && { creeParId: c.creeParId, membres: c._count.membres }),
         };
       }),
     );
@@ -148,25 +167,20 @@ export class ChatService {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: PAGE + 1,
       ...(curseur ? { cursor: { id: curseur }, skip: 1 } : {}),
-      select: {
-        id: true,
-        canalId: true,
-        texte: true,
-        createdAt: true,
-        auteur: { select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true } },
-      },
+      select: SELECT_MESSAGE,
     });
     const aPlus = lignes.length > PAGE;
     const page = aPlus ? lignes.slice(0, PAGE) : lignes;
+    const noms = await this.nomsDe(page.flatMap((m) => m.mentions));
     return {
       // du plus ancien au plus récent pour l'affichage direct
-      messages: [...page].reverse().map(rendreMessage),
+      messages: [...page].reverse().map((m) => rendreMessage(m, noms)),
       curseurSuivant: aPlus ? page[page.length - 1].id : null,
     };
   }
 
   // -- Envoi ------------------------------------------------------------
-  async envoyer(canalId: string, auteurId: string, texte: string): Promise<MessageRendu> {
+  async envoyer(canalId: string, auteurId: string, texte: string, mentionIds: string[] = []): Promise<MessageRendu> {
     const propre = texte.trim();
     if (!propre) throw new BadRequestException('Message vide');
 
@@ -182,19 +196,46 @@ export class ChatService {
     });
     if (!canal) throw new NotFoundException('Canal introuvable'); // AccesCanalGuard déjà passé — ceinture
 
+    // Mentions : seulement des personnes qui lisent cette conversation.
+    const lecteurs = mentionIds.length ? new Set((await this.mentionnables(canalId)).map((p) => p.id)) : new Set();
+    const mentions = [...new Set(mentionIds)].filter((id) => id !== auteurId && lecteurs.has(id));
+
     const message = await this.prisma.message.create({
-      data: { canalId, auteurId, texte: propre },
+      data: { canalId, auteurId, texte: propre, mentions },
+      select: SELECT_MESSAGE,
+    });
+    const rendu = rendreMessage(message, await this.nomsDe(mentions));
+    await this.diffuser(canalId, rendu);
+
+    // La personne mentionnée est prévenue (cloche, pop-up) ; le clic ouvre la conversation.
+    if (mentions.length) {
+      const nomCanal = await this.nomDuCanal(canalId, auteurId);
+      await this.notifications.envoyer({
+        societeId: canal.societeId,
+        type: 'mention_chat',
+        titre: `${rendu.auteur.nom} vous a mentionné · ${nomCanal} : « ${extrait(propre)} »`,
+        destinataireIds: mentions,
+        parId: auteurId,
+        canalId,
+      });
+    }
+    return rendu;
+  }
+
+  // Push temps réel vers les abonnés SSE autorisés sur ce canal.
+  private async diffuser(canalId: string, message: MessageRendu) {
+    const canal = await this.prisma.canal.findUnique({
+      where: { id: canalId },
       select: {
-        id: true,
-        canalId: true,
-        texte: true,
-        createdAt: true,
-        auteur: { select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true } },
+        societeId: true,
+        type: true,
+        celluleId: true,
+        participant1Id: true,
+        participant2Id: true,
+        membres: { select: { utilisateurId: true } },
       },
     });
-    const rendu = rendreMessage(message);
-
-    // Push temps réel vers les abonnés SSE autorisés sur ce canal.
+    if (!canal) return;
     this.bus.publier({
       kind: 'message',
       societeId: canal.societeId,
@@ -203,9 +244,177 @@ export class ChatService {
       celluleId: canal.celluleId,
       participant1Id: canal.participant1Id,
       participant2Id: canal.participant2Id,
-      message: rendu,
+      membreIds: canal.membres.map((m) => m.utilisateurId),
+      message,
     });
-    return rendu;
+  }
+
+  // -- Groupes de discussion (01/11/2026) ---------------------------------
+  // Créés par n'importe quel membre de la société qui participe au chat ;
+  // le créateur gère le groupe (nom, retrait d'un membre) ; tout membre peut
+  // en ajouter et quitter le groupe. Accès réservé aux membres.
+  async creerGroupe(acteur: Acteur, nom: string, membreIds: string[]): Promise<CanalResume> {
+    const propre = nom.trim();
+    if (propre.length < 2) throw new BadRequestException('Nom du groupe : 2 caractères au moins.');
+    const autres = await this.membresValides(acteur, membreIds);
+    if (!autres.length) throw new BadRequestException('Ajoutez au moins une personne au groupe.');
+    const canal = await this.prisma.canal.create({
+      data: {
+        societeId: acteur.societeId,
+        type: TypeCanal.groupe,
+        nom: propre.slice(0, 80),
+        creeParId: acteur.userId,
+        membres: { create: [acteur.userId, ...autres].map((utilisateurId) => ({ utilisateurId })) },
+      },
+      select: SELECT_CANAL,
+    });
+    const noms = await this.nomsDe([acteur.userId, ...autres]);
+    await this.ligneSysteme(canal.id, acteur.userId, `${noms.get(acteur.userId)} a créé le groupe « ${propre} »`);
+    await this.notifications.envoyer({
+      societeId: acteur.societeId,
+      type: 'groupe_chat',
+      titre: `${noms.get(acteur.userId)} vous a ajouté au groupe « ${propre} »`,
+      destinataireIds: autres,
+      parId: acteur.userId,
+      canalId: canal.id,
+    });
+    return {
+      id: canal.id,
+      type: canal.type,
+      nom: propre,
+      nonLus: 0,
+      dernierMessageLe: new Date(),
+      creeParId: acteur.userId,
+      membres: autres.length + 1,
+    };
+  }
+
+  async membresGroupe(canalId: string) {
+    const canal = await this.groupe(canalId);
+    const membres = await this.prisma.membreCanal.findMany({
+      where: { canalId },
+      select: {
+        utilisateur: { select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true } },
+      },
+      orderBy: { ajouteLe: 'asc' },
+    });
+    return membres.map((m) => ({
+      id: m.utilisateur.id,
+      nom: nomPublic(m.utilisateur),
+      photoUrl: cheminPhoto(m.utilisateur.photoCle),
+      createur: m.utilisateur.id === canal.creeParId,
+    }));
+  }
+
+  async ajouterMembres(acteur: Acteur, canalId: string, membreIds: string[]) {
+    const canal = await this.groupe(canalId);
+    const deja = new Set(
+      (await this.prisma.membreCanal.findMany({ where: { canalId }, select: { utilisateurId: true } })).map(
+        (m) => m.utilisateurId,
+      ),
+    );
+    const nouveaux = (await this.membresValides(acteur, membreIds)).filter((id) => !deja.has(id));
+    if (!nouveaux.length) throw new BadRequestException('Ces personnes sont déjà dans le groupe.');
+    if (deja.size + nouveaux.length > MEMBRES_MAX) throw new BadRequestException(`${MEMBRES_MAX} membres au plus.`);
+    await this.prisma.membreCanal.createMany({ data: nouveaux.map((utilisateurId) => ({ canalId, utilisateurId })) });
+    const noms = await this.nomsDe([acteur.userId, ...nouveaux]);
+    await this.ligneSysteme(
+      canalId,
+      acteur.userId,
+      `${noms.get(acteur.userId)} a ajouté ${nouveaux.map((id) => noms.get(id)).join(', ')}`,
+    );
+    await this.notifications.envoyer({
+      societeId: acteur.societeId,
+      type: 'groupe_chat',
+      titre: `${noms.get(acteur.userId)} vous a ajouté au groupe « ${canal.nom} »`,
+      destinataireIds: nouveaux,
+      parId: acteur.userId,
+      canalId,
+    });
+    return this.membresGroupe(canalId);
+  }
+
+  // Le créateur retire un membre ; chacun peut se retirer lui-même (quitter).
+  // Le créateur qui part passe la main au membre le plus ancien ; un groupe
+  // vide est supprimé.
+  async retirerMembre(acteur: Acteur, canalId: string, utilisateurId: string) {
+    const canal = await this.groupe(canalId);
+    const soi = utilisateurId === acteur.userId;
+    if (!soi && canal.creeParId !== acteur.userId) {
+      throw new ForbiddenException('Seul le créateur du groupe retire un membre.');
+    }
+    const { count } = await this.prisma.membreCanal.deleteMany({ where: { canalId, utilisateurId } });
+    if (!count) throw new NotFoundException('Cette personne n’est pas dans le groupe.');
+    const restants = await this.prisma.membreCanal.findMany({ where: { canalId }, orderBy: { ajouteLe: 'asc' } });
+    if (!restants.length) {
+      await this.prisma.canal.delete({ where: { id: canalId } });
+      return { ok: true };
+    }
+    if (canal.creeParId === utilisateurId) {
+      await this.prisma.canal.update({ where: { id: canalId }, data: { creeParId: restants[0].utilisateurId } });
+    }
+    const noms = await this.nomsDe([acteur.userId, utilisateurId]);
+    await this.ligneSysteme(
+      canalId,
+      acteur.userId,
+      soi
+        ? `${noms.get(acteur.userId)} a quitté le groupe`
+        : `${noms.get(acteur.userId)} a retiré ${noms.get(utilisateurId)}`,
+    );
+    return { ok: true };
+  }
+
+  async renommerGroupe(acteur: Acteur, canalId: string, nom: string) {
+    const canal = await this.groupe(canalId);
+    if (canal.creeParId !== acteur.userId) throw new ForbiddenException('Seul le créateur du groupe le renomme.');
+    const propre = nom.trim().slice(0, 80);
+    if (propre.length < 2) throw new BadRequestException('Nom du groupe : 2 caractères au moins.');
+    await this.prisma.canal.update({ where: { id: canalId }, data: { nom: propre } });
+    const noms = await this.nomsDe([acteur.userId]);
+    await this.ligneSysteme(canalId, acteur.userId, `${noms.get(acteur.userId)} a renommé le groupe « ${propre} »`);
+    return { ok: true };
+  }
+
+  // Personnes qu'on peut mentionner (@) dans une conversation : celles qui la lisent.
+  async mentionnables(canalId: string) {
+    const canal = await this.prisma.canal.findUnique({
+      where: { id: canalId },
+      select: {
+        societeId: true,
+        type: true,
+        celluleId: true,
+        participant1Id: true,
+        participant2Id: true,
+        membres: { select: { utilisateurId: true } },
+      },
+    });
+    if (!canal) throw new NotFoundException('Canal introuvable');
+    let ids: string[];
+    if (canal.type === TypeCanal.direct)
+      ids = [canal.participant1Id, canal.participant2Id].filter((x): x is string => !!x);
+    else if (canal.type === TypeCanal.groupe) ids = canal.membres.map((m) => m.utilisateurId);
+    else if (canal.type === TypeCanal.cellule) {
+      const [collabs, admins] = await Promise.all([
+        this.prisma.collaborateur.findMany({
+          where: { societeId: canal.societeId, celluleId: canal.celluleId, utilisateurId: { not: null } },
+          select: { utilisateurId: true },
+        }),
+        this.prisma.utilisateurSocieteRole.findMany({
+          where: { societeId: canal.societeId, role: { nom: ROLE_COMPANY_ADMIN } },
+          select: { utilisateurId: true },
+        }),
+      ]);
+      ids = [...collabs.map((c) => c.utilisateurId!), ...admins.map((a) => a.utilisateurId)];
+    } else {
+      ids = (await this.membresSociete(canal.societeId)).map((u) => u.id);
+    }
+    const u = await this.prisma.utilisateur.findMany({
+      where: { id: { in: [...new Set(ids)] }, actif: true },
+      select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true },
+    });
+    return u
+      .map((x) => ({ id: x.id, nom: nomPublic(x), photoUrl: cheminPhoto(x.photoCle) }))
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
   }
 
   // -- Marquer le canal lu -------------------------------------------
@@ -349,8 +558,61 @@ export class ChatService {
   private nomCanal(c: CanalNommable, moi: string): string {
     if (c.type === TypeCanal.general) return 'Général';
     if (c.type === TypeCanal.cellule) return c.cellule?.nom ?? 'Cellule';
+    if (c.type === TypeCanal.groupe) return c.nom ?? 'Groupe';
     const autre = c.participant1?.id === moi ? c.participant2 : c.participant1;
     return autre ? nomPublic(autre) : 'Conversation';
+  }
+
+  private async groupe(canalId: string) {
+    const canal = await this.prisma.canal.findUnique({
+      where: { id: canalId },
+      select: { id: true, type: true, nom: true, creeParId: true },
+    });
+    if (!canal || canal.type !== TypeCanal.groupe) throw new NotFoundException('Groupe introuvable');
+    return canal;
+  }
+
+  private async nomDuCanal(canalId: string, moi: string) {
+    const c = await this.prisma.canal.findUnique({ where: { id: canalId }, select: SELECT_CANAL });
+    return c ? this.nomCanal(c, moi) : 'Conversation';
+  }
+
+  // Membres proposables pour un groupe : même règle que l'annuaire (membres de
+  // la société, hors holding_admin), sans l'appelant.
+  private async membresValides(acteur: Acteur, ids: string[]) {
+    const autorises = new Set((await this.annuaire(acteur)).map((m) => m.utilisateurId));
+    const valides = [...new Set(ids)].filter((id) => autorises.has(id));
+    if (valides.length !== new Set(ids.filter((id) => id !== acteur.userId)).size) {
+      throw new BadRequestException('Une des personnes choisies n’est pas membre de la société.');
+    }
+    if (valides.length + 1 > MEMBRES_MAX) throw new BadRequestException(`${MEMBRES_MAX} membres au plus.`);
+    return valides;
+  }
+
+  private async membresSociete(societeId: string) {
+    const l = await this.prisma.utilisateurSocieteRole.findMany({
+      where: { OR: [{ societeId }, { societeId: null }], role: { nom: { not: ROLE_HOLDING_ADMIN }, supprimeLe: null } },
+      select: { utilisateur: { select: { id: true } } },
+    });
+    return l.map((x) => x.utilisateur);
+  }
+
+  private async nomsDe(ids: string[]) {
+    if (!ids.length) return new Map<string, string>();
+    const u = await this.prisma.utilisateur.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: { id: true, prenom: true, nom: true, nomAffiche: true },
+    });
+    return new Map(u.map((x) => [x.id, nomPublic(x)]));
+  }
+
+  // Ligne d'information du groupe, diffusée comme un message.
+  private async ligneSysteme(canalId: string, auteurId: string, texte: string) {
+    const m = await this.prisma.message.create({
+      data: { canalId, auteurId, texte, systeme: true },
+      select: SELECT_MESSAGE,
+    });
+    await this.diffuser(canalId, rendreMessage(m, new Map()));
   }
 
   // Un seul Général par société ; l'index partiel garantit l'unicité même en
@@ -381,13 +643,20 @@ export class ChatService {
   }
 }
 
-function rendreMessage(m: {
-  id: string;
-  canalId: string;
-  texte: string;
-  createdAt: Date;
-  auteur: { id: string; prenom: string; nom: string; nomAffiche: string | null; photoCle: string | null };
-}): MessageRendu {
+const SELECT_MESSAGE = {
+  id: true,
+  canalId: true,
+  texte: true,
+  systeme: true,
+  mentions: true,
+  createdAt: true,
+  auteur: { select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true } },
+} satisfies Prisma.MessageSelect;
+
+function rendreMessage(
+  m: Prisma.MessageGetPayload<{ select: typeof SELECT_MESSAGE }>,
+  noms: Map<string, string>,
+): MessageRendu {
   return {
     id: m.id,
     canalId: m.canalId,
@@ -395,5 +664,7 @@ function rendreMessage(m: {
     envoyeLe: m.createdAt,
     // Nom affiché (choisi par la personne) dans la conversation.
     auteur: { id: m.auteur.id, nom: nomPublic(m.auteur), photoUrl: cheminPhoto(m.auteur.photoCle) },
+    systeme: m.systeme,
+    mentions: m.mentions.map((id) => ({ id, nom: noms.get(id) ?? '' })).filter((x) => x.nom),
   };
 }

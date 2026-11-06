@@ -1,18 +1,21 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MessageSquare } from 'lucide-react';
 import {
   connecterFluxChat,
+  creerGroupe,
   envoyerMessage,
   getAnnuaireChat,
   getCanaux,
   getMessages,
   marquerCanalLu,
   ouvrirDirect,
+  surOuvrirConversation,
 } from '@/lib/chat';
 import type { CanalChat, EtatFluxChat, EvenementChat, MembreAnnuaire, MessageChat } from '@/lib/types';
-import { PanneauChat } from '@/components/chat/panneau-chat';
+import { PanneauChat, type VueChat } from '@/components/chat/panneau-chat';
 import { jouerSonNotification } from '@/lib/notification-sound';
 
 // Orchestrateur du chat, monté dans la topbar (collaborateur ET admin) : garde
@@ -30,7 +33,7 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
   const [curseur, setCurseur] = useState<string | null>(null);
   const [chargement, setChargement] = useState(false);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
-  const [vueAnnuaire, setVueAnnuaire] = useState(false);
+  const [vue, setVue] = useState<VueChat>('liste');
   const [annuaire, setAnnuaire] = useState<MembreAnnuaire[] | null>(null);
 
   // Refs pour lire l'état courant depuis le callback du flux (closure figée).
@@ -96,12 +99,38 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
     }
   }
 
-  function ouvrirAnnuaire() {
-    setVueAnnuaire(true);
+  function chargerAnnuaire() {
     setAnnuaire(null);
     getAnnuaireChat(slug)
       .then(setAnnuaire)
       .catch(() => setAnnuaire([]));
+  }
+  function ouvrirAnnuaire() {
+    setVue('annuaire');
+    chargerAnnuaire();
+  }
+
+  // Clic sur une notification de mention ou de groupe : la conversation s'ouvre.
+  useEffect(
+    () =>
+      surOuvrirConversation((id) => {
+        setOuvert(true);
+        getCanaux(slug)
+          .then((liste) => {
+            setCanaux(liste);
+            if (liste.some((c) => c.id === id)) choisirCanal(id);
+          })
+          .catch(() => {});
+      }),
+    // choisirCanal ne dépend que de setState stables et du slug
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slug],
+  );
+
+  async function nouveauGroupe(nom: string, membreIds: string[]) {
+    const canal = await creerGroupe(slug, nom, membreIds);
+    setCanaux(await getCanaux(slug));
+    choisirCanal(canal.id);
   }
 
   async function nouveauDm(utilisateurId: string) {
@@ -109,7 +138,6 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
       const canal = await ouvrirDirect(slug, utilisateurId);
       const liste = await getCanaux(slug);
       setCanaux(liste);
-      setVueAnnuaire(false);
       choisirCanal(canal.id);
     } catch {
       /* échec silencieux — l'annuaire reste ouvert */
@@ -117,7 +145,7 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
   }
 
   function choisirCanal(id: string) {
-    setVueAnnuaire(false);
+    setVue('liste');
     setCanalActifId(id);
     setMessages([]);
     setCurseur(null);
@@ -145,11 +173,11 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
       .finally(() => setChargement(false));
   }
 
-  async function envoyer(texte: string) {
+  async function envoyer(texte: string, mentionIds: string[]) {
     if (!canalActifId || envoiEnCours) return;
     setEnvoiEnCours(true);
     try {
-      const m = await envoyerMessage(slug, canalActifId, texte);
+      const m = await envoyerMessage(slug, canalActifId, texte, mentionIds);
       setMessages((ms) => (ms.some((x) => x.id === m.id) ? ms : [...ms, m]));
       setCanaux((cs) => trier(cs.map((c) => (c.id === canalActifId ? { ...c, dernierMessageLe: m.envoyeLe } : c))));
     } catch {
@@ -185,32 +213,45 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
         {total > 0 && <span className="admin-cloche-badge">{total}</span>}
       </button>
 
-      {ouvert && (
-        <PanneauChat
-          slug={slug}
-          moiId={moiId}
-          ecriture={ecriture}
-          etatFlux={etatFlux}
-          canaux={canaux}
-          canalActif={canalActif}
-          messages={messages}
-          curseur={curseur}
-          chargement={chargement}
-          envoiEnCours={envoiEnCours}
-          vueAnnuaire={vueAnnuaire}
-          annuaire={annuaire}
-          onFermer={() => setOuvert(false)}
-          onChoisirCanal={choisirCanal}
-          onRetourListe={() => {
-            setVueAnnuaire(false);
-            setCanalActifId(null);
-          }}
-          onChargerPlus={chargerPlus}
-          onEnvoyer={envoyer}
-          onOuvrirAnnuaire={ouvrirAnnuaire}
-          onNouveauDm={nouveauDm}
-        />
-      )}
+      {/* Portail : la barre du haut (backdrop-filter) enfermerait le panneau
+          sous la barre de navigation du téléphone. */}
+      {ouvert &&
+        createPortal(
+          <PanneauChat
+            slug={slug}
+            moiId={moiId}
+            ecriture={ecriture}
+            etatFlux={etatFlux}
+            canaux={canaux}
+            canalActif={canalActif}
+            messages={messages}
+            curseur={curseur}
+            chargement={chargement}
+            envoiEnCours={envoiEnCours}
+            vue={vue}
+            annuaire={annuaire}
+            onFermer={() => setOuvert(false)}
+            onChoisirCanal={choisirCanal}
+            onRetourListe={() => {
+              setVue('liste');
+              setCanalActifId(null);
+            }}
+            onChargerPlus={chargerPlus}
+            onEnvoyer={envoyer}
+            onOuvrirAnnuaire={ouvrirAnnuaire}
+            onNouveauDm={nouveauDm}
+            onVue={setVue}
+            onCreerGroupe={nouveauGroupe}
+            onGroupeQuitte={() => {
+              setVue('liste');
+              setCanalActifId(null);
+              rafraichirCanaux();
+            }}
+            onCanauxMaj={rafraichirCanaux}
+            onOuvrirAnnuaireSansVue={chargerAnnuaire}
+          />,
+          document.body,
+        )}
     </>
   );
 }

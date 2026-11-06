@@ -7,6 +7,8 @@ import { ROLE_COMPANY_ADMIN } from '@hub/domain';
 // cloisonnement chat, sur le modèle d'AccesProjetGuard.
 //   · general → tout membre de la société (déjà garanti par MembreSocieteGuard)
 //   · direct  → l'un des deux participants
+//   · groupe  → un membre du groupe (01/11/2026) — personne d'autre, pas
+//               même l'administration : une conversation privée.
 //   · cellule → membre de CETTE cellule, ou societe_admin (vue transverse).
 //               Un rôle de direction sans fiche n'a pas de cellule : refusé.
 // Un canal qu'on ne peut pas lire, on ne peut pas y écrire : la garde couvre
@@ -33,6 +35,14 @@ export class AccesCanalGuard implements CanActivate {
     if (!canal) throw new NotFoundException('Canal introuvable');
 
     if (canal.type === 'general') return true;
+    if (canal.type === 'groupe') {
+      const membre = await this.prisma.membreCanal.findUnique({
+        where: { canalId_utilisateurId: { canalId, utilisateurId: user.userId } },
+        select: { canalId: true },
+      });
+      if (membre) return true;
+      throw new ForbiddenException("Vous n'êtes pas membre de ce groupe");
+    }
 
     if (canal.type === 'direct') {
       if (user.userId === canal.participant1Id || user.userId === canal.participant2Id) {

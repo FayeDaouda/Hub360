@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { CompteCommeLecture, PermissionSelonMethode } from '../commun/permission.decorator';
@@ -6,7 +6,7 @@ import { PermissionGuard } from '../commun/permission.guard';
 import { AccesCanalGuard } from './acces-canal.guard';
 import { ChatService } from './chat.service';
 import { TicketStore } from './ticket.store';
-import { EnvoyerMessageDto, OuvrirDirectDto } from './dto';
+import { AjouterMembresDto, CreerGroupeDto, EnvoyerMessageDto, OuvrirDirectDto, RenommerGroupeDto } from './dto';
 
 type R = {
   user: {
@@ -45,7 +45,45 @@ export class ChatController {
   @Post('canaux/:id/messages')
   @UseGuards(AccesCanalGuard)
   envoyer(@Req() req: R, @Param('id') id: string, @Body() dto: EnvoyerMessageDto) {
-    return this.chat.envoyer(id, req.user.userId, dto.texte);
+    return this.chat.envoyer(id, req.user.userId, dto.texte, dto.mentionIds ?? []);
+  }
+
+  // Personnes qu'on peut mentionner (@) dans cette conversation.
+  @Get('canaux/:id/mentionnables')
+  @UseGuards(AccesCanalGuard)
+  mentionnables(@Param('id') id: string) {
+    return this.chat.mentionnables(id);
+  }
+
+  // Groupes de discussion (01/11/2026) : création, membres, nom, départ.
+  @Post('canaux/groupes')
+  creerGroupe(@Req() req: R, @Body() dto: CreerGroupeDto) {
+    return this.chat.creerGroupe(req.user, dto.nom, dto.membreIds);
+  }
+
+  @Get('canaux/:id/membres')
+  @UseGuards(AccesCanalGuard)
+  membres(@Param('id') id: string) {
+    return this.chat.membresGroupe(id);
+  }
+
+  @Post('canaux/:id/membres')
+  @UseGuards(AccesCanalGuard)
+  ajouterMembres(@Req() req: R, @Param('id') id: string, @Body() dto: AjouterMembresDto) {
+    return this.chat.ajouterMembres(req.user, id, dto.membreIds);
+  }
+
+  @Delete('canaux/:id/membres/:utilisateurId')
+  @CompteCommeLecture()
+  @UseGuards(AccesCanalGuard)
+  retirerMembre(@Req() req: R, @Param('id') id: string, @Param('utilisateurId') utilisateurId: string) {
+    return this.chat.retirerMembre(req.user, id, utilisateurId);
+  }
+
+  @Patch('canaux/:id')
+  @UseGuards(AccesCanalGuard)
+  renommer(@Req() req: R, @Param('id') id: string, @Body() dto: RenommerGroupeDto) {
+    return this.chat.renommerGroupe(req.user, id, dto.nom);
   }
 
   @Patch('canaux/:id/lecture')

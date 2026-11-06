@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { ChatService } from './chat.service';
 import { ChatBus } from './chat.bus';
 import { ChatController } from './chat.controller';
@@ -10,6 +11,7 @@ import { TicketStore } from './ticket.store';
 // Chat multi-canaux (lot 3) : modèle d'accès + surface REST + store de tickets
 // + flux SSE (émetteur ChatBus interne, réception seule ; l'envoi passe par REST).
 @Module({
+  imports: [NotificationsModule], // mentions, ajout à un groupe
   providers: [ChatService, ChatBus, AccesCanalGuard, TicketGuard, TicketStore],
   controllers: [ChatController, ChatFluxController],
   exports: [ChatService, ChatBus, TicketStore],

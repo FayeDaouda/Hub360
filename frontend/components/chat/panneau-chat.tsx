@@ -1,10 +1,16 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, Info, Plus, SendHorizonal, X } from 'lucide-react';
+import { ChevronLeft, Info, Plus, UsersRound, X } from 'lucide-react';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import type { CanalChat, EtatFluxChat, MembreAnnuaire, MessageChat } from '@/lib/types';
 import { PersonAvatar } from '@/components/ui/avatar';
+import { InfosGroupe, NouveauGroupe } from './groupe-chat';
+import { SaisieChat, TexteMessage } from './saisie-chat';
+
+// Vue du panneau : liste, nouvelle conversation (annuaire), nouveau groupe,
+// fiche du groupe ouvert (01/11/2026).
+export type VueChat = 'liste' | 'annuaire' | 'nouveau-groupe' | 'infos';
 import { addDays, formatDayLongMonth, formatTime, todayIso, toIsoDay } from '@hub/domain';
 
 type Props = {
@@ -18,15 +24,21 @@ type Props = {
   curseur: string | null;
   chargement: boolean;
   envoiEnCours: boolean;
-  vueAnnuaire: boolean;
+  vue: VueChat;
   annuaire: MembreAnnuaire[] | null;
   onFermer: () => void;
   onChoisirCanal: (id: string) => void;
   onRetourListe: () => void;
   onChargerPlus: () => void;
-  onEnvoyer: (texte: string) => void;
+  onEnvoyer: (texte: string, mentionIds: string[]) => void;
   onOuvrirAnnuaire: () => void;
   onNouveauDm: (utilisateurId: string) => void;
+  onVue: (v: VueChat) => void;
+  onCreerGroupe: (nom: string, membreIds: string[]) => Promise<void>;
+  onGroupeQuitte: () => void;
+  onCanauxMaj: () => void;
+  // Charge l'annuaire sans changer de vue (ajout de membres au groupe).
+  onOuvrirAnnuaireSansVue: () => void;
 };
 
 const heure = formatTime;
@@ -56,7 +68,7 @@ export function PanneauChat({
   curseur,
   chargement,
   envoiEnCours,
-  vueAnnuaire,
+  vue,
   annuaire,
   onFermer,
   onChoisirCanal,
@@ -65,8 +77,13 @@ export function PanneauChat({
   onEnvoyer,
   onOuvrirAnnuaire,
   onNouveauDm,
+  onVue,
+  onCreerGroupe,
+  onGroupeQuitte,
+  onCanauxMaj,
+  onOuvrirAnnuaireSansVue,
 }: Props) {
-  const [brouillon, setBrouillon] = useState('');
+  const vueAnnuaire = vue === 'annuaire';
   const [fiche, setFiche] = useState<string | null>(null);
   const filRef = useRef<HTMLDivElement>(null);
   const presDuBas = useRef(true);
@@ -92,13 +109,20 @@ export function PanneauChat({
     presDuBas.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   }
 
-  function envoyer() {
-    const t = brouillon.trim();
-    if (!t || envoiEnCours) return;
-    setBrouillon('');
+  function envoyer(texte: string, mentionIds: string[]) {
     presDuBas.current = true;
-    onEnvoyer(t);
+    onEnvoyer(texte, mentionIds);
   }
+  const titre =
+    vue === 'annuaire'
+      ? 'Nouvelle conversation'
+      : vue === 'nouveau-groupe'
+        ? 'Nouveau groupe'
+        : vue === 'infos'
+          ? 'Infos du groupe'
+          : canalActif
+            ? canalActif.nom
+            : 'Messages';
 
   return (
     <div
@@ -108,19 +132,37 @@ export function PanneauChat({
       aria-label={canalActif ? `Conversation ${canalActif.nom}` : 'Messages'}
     >
       <header className="pchat-tete">
-        {canalActif || vueAnnuaire ? (
-          <button type="button" className="pchat-retour" onClick={onRetourListe} aria-label="Retour à la liste">
+        {canalActif || vue !== 'liste' ? (
+          <button
+            type="button"
+            className="pchat-retour"
+            onClick={() =>
+              vue === 'infos' ? onVue('liste') : vue === 'nouveau-groupe' ? onVue('annuaire') : onRetourListe()
+            }
+            aria-label="Retour"
+          >
             <ChevronLeft size={18} aria-hidden />
           </button>
         ) : null}
         <div className="pchat-tete-txt">
-          <strong>{vueAnnuaire ? 'Nouvelle conversation' : canalActif ? canalActif.nom : 'Messages'}</strong>
+          <strong>{titre}</strong>
           <span className={`pchat-etat pchat-etat--${etatFlux}`} role="status">
             {etatFlux === 'ouvert' && <span className="pchat-etat-point" aria-hidden />}
             {LIBELLE_ETAT[etatFlux]}
           </span>
         </div>
-        {ecriture && !canalActif && !vueAnnuaire && (
+        {canalActif?.type === 'groupe' && vue === 'liste' && (
+          <button
+            type="button"
+            className="pchat-fermer"
+            onClick={() => onVue('infos')}
+            aria-label="Infos du groupe"
+            title={`Infos du groupe · ${canalActif.membres ?? ''} membres`}
+          >
+            <UsersRound size={18} />
+          </button>
+        )}
+        {ecriture && !canalActif && vue === 'liste' && (
           <button
             type="button"
             className="pchat-fermer"
@@ -136,8 +178,28 @@ export function PanneauChat({
         </button>
       </header>
 
-      {vueAnnuaire ? (
+      {vue === 'nouveau-groupe' ? (
+        <NouveauGroupe annuaire={annuaire} onCreer={onCreerGroupe} />
+      ) : vue === 'infos' && canalActif?.type === 'groupe' ? (
+        <InfosGroupe
+          slug={slug}
+          canal={canalActif}
+          moiId={moiId}
+          annuaire={annuaire}
+          onChargerAnnuaire={onOuvrirAnnuaireSansVue}
+          onQuitter={onGroupeQuitte}
+          onMaj={onCanauxMaj}
+        />
+      ) : vueAnnuaire ? (
         <ul className="pchat-liste">
+          <li>
+            <button type="button" className="pchat-canal pchat-nouveau-groupe" onClick={() => onVue('nouveau-groupe')}>
+              <span className="pchat-canal-pastille pchat-canal-pastille--groupe" aria-hidden>
+                <UsersRound size={15} />
+              </span>
+              <span className="pchat-canal-nom">Nouveau groupe</span>
+            </button>
+          </li>
           {annuaire === null ? (
             <li className="pchat-vide">Chargement…</li>
           ) : annuaire.length === 0 ? (
@@ -182,7 +244,7 @@ export function PanneauChat({
               <li key={c.id}>
                 <button type="button" className="pchat-canal" onClick={() => onChoisirCanal(c.id)}>
                   <span className={`pchat-canal-pastille pchat-canal-pastille--${c.type}`} aria-hidden>
-                    {c.type === 'direct' ? c.nom.charAt(0) : '#'}
+                    {c.type === 'direct' ? c.nom.charAt(0) : c.type === 'groupe' ? <UsersRound size={15} /> : '#'}
                   </span>
                   <span className="pchat-canal-nom">{c.nom}</span>
                   {c.dernierMessageLe && <span className="pchat-canal-quand">{heure(c.dernierMessageLe)}</span>}
@@ -208,16 +270,27 @@ export function PanneauChat({
                 const nouveauJour = !prec || jour(prec.envoyeLe) !== jour(m.envoyeLe);
                 const memeAuteur = prec && prec.auteur.id === m.auteur.id && !nouveauJour;
                 const mien = m.auteur.id === moiId;
+                const mentionne = !mien && !!m.mentions?.some((x) => x.id === moiId);
                 return (
                   <div key={m.id}>
                     {nouveauJour && <div className="pchat-jour">{jour(m.envoyeLe)}</div>}
-                    <div className={`pchat-msg${mien ? ' pchat-msg--mien' : ''}`}>
-                      {!memeAuteur && !mien && <span className="pchat-msg-auteur">{m.auteur.nom}</span>}
-                      <span className="pchat-msg-bulle">
-                        {m.texte}
-                        <span className="pchat-msg-heure">{heure(m.envoyeLe)}</span>
-                      </span>
-                    </div>
+                    {m.systeme ? (
+                      <div className="pchat-systeme">
+                        {m.texte} · {heure(m.envoyeLe)}
+                      </div>
+                    ) : (
+                      <div
+                        className={`pchat-msg${mien ? ' pchat-msg--mien' : ''}${mentionne ? ' pchat-msg--mentionne' : ''}`}
+                      >
+                        {(!memeAuteur || prec?.systeme) && !mien && (
+                          <span className="pchat-msg-auteur">{m.auteur.nom}</span>
+                        )}
+                        <span className="pchat-msg-bulle">
+                          <TexteMessage texte={m.texte} mentions={m.mentions ?? []} moiId={moiId} />
+                          <span className="pchat-msg-heure">{heure(m.envoyeLe)}</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -227,36 +300,14 @@ export function PanneauChat({
           {!ecriture ? (
             <p className="pchat-saisie pchat-saisie--lecture">Lecture seule</p>
           ) : (
-            <form
-              className="pchat-saisie"
-              onSubmit={(e) => {
-                e.preventDefault();
-                envoyer();
-              }}
-            >
-              <textarea
-                className="pchat-saisie-champ"
-                rows={1}
-                placeholder="Message…"
-                value={brouillon}
-                maxLength={4000}
-                onChange={(e) => setBrouillon(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    envoyer();
-                  }
-                }}
-              />
-              <button
-                type="submit"
-                className="pchat-saisie-btn"
-                disabled={!brouillon.trim() || envoiEnCours}
-                aria-label="Envoyer"
-              >
-                <SendHorizonal size={17} aria-hidden />
-              </button>
-            </form>
+            <SaisieChat
+              key={canalActif.id}
+              slug={slug}
+              canalId={canalActif.id}
+              moiId={moiId}
+              envoiEnCours={envoiEnCours}
+              onEnvoyer={envoyer}
+            />
           )}
         </>
       )}
