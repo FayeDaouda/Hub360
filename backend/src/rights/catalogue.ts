@@ -512,4 +512,22 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
     ordre: 2,
     libelles: { validation: 'Décide l’embauche (le dossier du personnel s’ouvre) ou refuse le candidat' },
   },
+  // Recrutement côté RH (01/11/2026, migration 20261102090000_recrutement_rh).
+  {
+    module: 'recrutement',
+    cle: ETAPE.recrutementDirect,
+    nom: 'Embauche directe',
+    ordre: 3,
+    libelles: {
+      ecriture:
+        'Embauche sans passer par le circuit : le dossier du personnel s’ouvre tout de suite, l’embauche reste tracée dans Recrutement',
+    },
+  },
+  {
+    module: 'recrutement',
+    cle: ETAPE.recrutementGroupe,
+    nom: 'Recrutements du groupe',
+    ordre: 4,
+    libelles: { lecture: 'Voit les recrutements de toutes les sociétés du groupe (postes, candidats, étapes)' },
+  },
 ];

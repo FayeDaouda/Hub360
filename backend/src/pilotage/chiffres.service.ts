@@ -17,7 +17,8 @@ import { ETAPE } from '../rights/catalogue';
 //  · CRM sans Finances (COO) : pipeline actif, fiches à compléter (72 h),
 //    en attente CFO (48 h), offres chez le client ;
 //  · RH : absences à valider, remboursements à traiter, feuilles de temps à
-//    contrôler, points d'intégration à faire.
+//    contrôler, points d'intégration à faire ;
+//  · en plus, à qui voit les postes : recrutements en cours (01/11/2026).
 // Couleur = sens : risque (délai dépassé, hors objectif), attention (à
 // traiter dans les délais), succes (rien en retard), marque (chiffre sans
 // objectif). Libellés, icônes et liens : côté écran (components/pilotage).
@@ -50,11 +51,37 @@ export class ChiffresPilotageService {
     feuilles: { total: number; controlees: number },
   ): Promise<{ jeu: JeuTuiles; tuiles: TuileChiffre[] } | null> {
     const voit = (module: string) => a.role === ROLE_COMPANY_ADMIN || aLaPermission(a.permissions, module, 'lecture');
+    const rangee = await this.rangee(a, jour, feuilles, voit);
+    if (!rangee || !voit(ETAPE.recrutementPostes)) return rangee;
+    return { ...rangee, tuiles: [...rangee.tuiles, await this.recrutement(a.societeId)] };
+  }
+
+  private async rangee(
+    a: Acteur,
+    jour: string,
+    feuilles: { total: number; controlees: number },
+    voit: (module: string) => boolean,
+  ): Promise<{ jeu: JeuTuiles; tuiles: TuileChiffre[] } | null> {
     if (voit('finances_factures') && voit('projets'))
       return { jeu: 'finances', tuiles: await this.finances(a.societeId, jour) };
     if (voit(ETAPE.crmDossiers)) return { jeu: 'crm', tuiles: await this.crm(a.societeId, jour) };
     if (voit('rh')) return { jeu: 'rh', tuiles: await this.rh(jour, feuilles) };
     return null;
+  }
+
+  // Postes à approuver ou ouverts ; ambre tant qu'un poste attend son approbation.
+  private async recrutement(societeId: string): Promise<TuileChiffre> {
+    const [aApprouver, ouverts, entretiens] = await Promise.all([
+      this.prisma.posteRecrutement.count({ where: { societeId, statut: 'a_approuver' } }),
+      this.prisma.posteRecrutement.count({ where: { societeId, statut: 'ouvert' } }),
+      this.prisma.candidature.count({ where: { etape: 'entretien', poste: { societeId, statut: 'ouvert' } } }),
+    ]);
+    return {
+      cle: 'recrutement',
+      valeur: aApprouver + ouverts,
+      aide: `${aApprouver} à approuver · ${plural(entretiens, 'candidat')} en entretien`,
+      etat: aApprouver > 0 ? 'attention' : 'marque',
+    };
   }
 
   private async finances(societeId: string, jour: string): Promise<TuileChiffre[]> {

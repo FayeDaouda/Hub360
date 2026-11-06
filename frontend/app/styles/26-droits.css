@@ -783,6 +783,88 @@
 .recrutement-ligne {
   grid-template-columns: 1fr 1fr;
 }
+/* Côté RH (01/11/2026) : deux chemins, vue groupe, entretien. */
+.recrutement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+}
+.recrutement-succes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+  margin: 0;
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: color-mix(in oklch, var(--pill-succes) 12%, transparent);
+  color: color-mix(in oklch, var(--pill-succes) 85%, var(--text));
+}
+:root[data-theme='dark'] .recrutement-succes {
+  color: color-mix(in oklch, var(--pill-succes) 45%, var(--text));
+}
+.recrutement-succes a {
+  color: inherit;
+  font-weight: 600;
+}
+.recrutement-entretien {
+  color: var(--text);
+}
+.recrutement-choix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e-12);
+}
+.recrutement-choix-carte {
+  display: grid;
+  align-content: start;
+  gap: var(--e-8);
+  padding: var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.recrutement-choix-carte:hover,
+.recrutement-choix-carte:focus-visible {
+  border-color: var(--action);
+}
+.recrutement-choix-carte svg {
+  color: var(--action);
+}
+.recrutement-choix-carte span {
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}
+.recrutement-groupe {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--e-12);
+}
+.recrutement-groupe-postes {
+  display: grid;
+  gap: var(--e-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.recrutement-groupe-postes li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--e-8);
+  align-items: center;
+}
+.recrutement-groupe-postes li .annonce-meta {
+  grid-column: 1;
+}
+.recrutement-groupe-postes li .pill {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
 @media (max-width: 1100px) {
   .recrutement-colonnes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -790,7 +872,8 @@
 }
 @media (max-width: 720px) {
   .recrutement-colonnes,
-  .recrutement-ligne {
+  .recrutement-ligne,
+  .recrutement-choix {
     grid-template-columns: minmax(0, 1fr);
   }
 }

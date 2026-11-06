@@ -8,6 +8,8 @@ import {
   DecisionEmbaucheDto,
   DecisionPosteDto,
   DemandePosteDto,
+  EmbaucheDirecteDto,
+  EntretienDto,
   NoteCandidatDto,
   NouveauCandidatDto,
 } from './recrutement.dto';
@@ -25,6 +27,20 @@ export class RecrutementController {
   @RequiertPermission(ETAPE.recrutementPostes, 'lecture')
   vue(@Req() req: R) {
     return this.recrutement.vue(req.user);
+  }
+
+  // Toutes les sociétés du groupe (lecture seule).
+  @Get('groupe')
+  @RequiertPermission(ETAPE.recrutementGroupe, 'lecture')
+  groupe() {
+    return this.recrutement.groupe();
+  }
+
+  // Embauche directe : sans poste ni candidature à trier.
+  @Post('embauche-directe')
+  @RequiertPermission(ETAPE.recrutementDirect, 'ecriture')
+  embaucheDirecte(@Req() req: R, @Body() dto: EmbaucheDirecteDto) {
+    return this.recrutement.embaucheDirecte(req.user, dto);
   }
 
   @Post('postes')
@@ -57,6 +73,14 @@ export class RecrutementController {
   @RequiertPermission(ETAPE.recrutementCandidatures, 'ecriture')
   ajouterCandidat(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: NouveauCandidatDto) {
     return this.recrutement.ajouterCandidat(req.user, id, dto);
+  }
+
+  // Entretien planifié : un rendez-vous de l'Agenda.
+  @Post('candidats/:id/entretien')
+  @HttpCode(200)
+  @RequiertPermission(ETAPE.recrutementCandidatures, 'ecriture')
+  entretien(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: EntretienDto) {
+    return this.recrutement.planifierEntretien(req.user, id, dto);
   }
 
   @Post('candidats/:id/notes')

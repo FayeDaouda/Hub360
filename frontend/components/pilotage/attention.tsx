@@ -13,6 +13,7 @@ import {
   Gavel,
   Hourglass,
   ReceiptText,
+  Briefcase,
   Scale,
   Undo2,
   UserCheck,
@@ -332,6 +333,29 @@ export function Attention({
         pill: { libelle: 'Vous êtes N+1', ton: 'attention' },
         href: `${base}/mon-espace?onglet=a-valider`,
       })),
+    },
+    {
+      cle: 'recrutement',
+      decision: true,
+      titre: 'Recrutement',
+      icone: <Briefcase size={16} aria-hidden />,
+      couleur: 'var(--corail)',
+      lignes: [
+        ...attention.recrutement.postes.map((p) => ({
+          cle: `poste:${p.id}`,
+          titre: p.intitule,
+          detail: `Ouverture de poste demandée par ${p.demandePar}`,
+          pill: { libelle: 'À approuver', ton: 'attention' as const },
+          href: `${base}/recrutement`,
+        })),
+        ...attention.recrutement.candidats.map((c) => ({
+          cle: `candidat:${c.id}`,
+          titre: c.nom,
+          detail: `${c.poste} · en entretien`,
+          pill: { libelle: 'À décider', ton: 'attention' as const },
+          href: `${base}/recrutement`,
+        })),
+      ],
     },
   ];
   const rubriques = toutes.filter((r) => r.lignes.length > 0);

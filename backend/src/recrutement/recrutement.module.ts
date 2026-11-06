@@ -8,5 +8,6 @@ import { RecrutementService } from './recrutement.service';
   imports: [NotificationsModule, RhModule], // l'embauche ouvre le dossier du personnel
   providers: [RecrutementService],
   controllers: [RecrutementController],
+  exports: [RecrutementService], // « À votre attention » (Pilotage)
 })
 export class RecrutementModule {}

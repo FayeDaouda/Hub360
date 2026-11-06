@@ -1693,6 +1693,11 @@ export type AttentionPilotage = {
     | null;
   ts: { devisId: string; projetId: string; code: string; objet: string; jours: number; seuil: number }[] | null;
   absences: { id: string; salarie: string; type: TypeAbsence; dateDebut: string; dateFin: string; jours: number }[];
+  // Recrutement (01/11/2026) : postes à approuver, candidats en entretien à décider.
+  recrutement: {
+    postes: { id: string; intitule: string; demandePar: string }[];
+    candidats: { id: string; nom: string; poste: string }[];
+  };
 };
 
 export type ResponsableDecision = { role: string; libelle: string } | { collaborateurId: string; libelle: string };

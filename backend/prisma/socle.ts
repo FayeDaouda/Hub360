@@ -175,6 +175,11 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
     suppression: est(ROLE_HR, ROLE_COMPANY_ADMIN),
   };
   droits[ETAPE.recrutementDecision] = { ...NO_RIGHTS, validation: est(ROLE_HR, ROLE_DIR_GC, ROLE_COMPANY_ADMIN) };
+  // Recrutement côté RH (migration 20261102090000_recrutement_rh) : l'embauche
+  // directe à qui crée un dossier du personnel ; la vue groupe à la RH.
+  const creeDossiers = droits[ETAPE.rh].ecriture;
+  droits[ETAPE.recrutementDirect] = { ...NO_RIGHTS, lecture: creeDossiers, ecriture: creeDossiers };
+  droits[ETAPE.recrutementGroupe] = { ...NO_RIGHTS, lecture: est(ROLE_HR) };
   return droits;
 }
 
