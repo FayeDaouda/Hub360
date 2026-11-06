@@ -29,3 +29,19 @@ export class InterrupteursDto {
   modules!: ModuleInterrupteurDto[];
   maintenance!: EtatMaintenanceDto;
 }
+
+// Écran « Modules » : catalogue du HUB par famille (lot 10, 31/10/2026).
+export class ModuleCatalogueDto {
+  nom: string;
+  statut: 'en_service' | 'en_partie' | 'a_venir';
+  note: string | null;
+  // Module de la matrice qui le porte, et son état dans la société ; null sinon.
+  module: { cle: string; actif: boolean } | null;
+}
+export class FamilleModulesDto {
+  nom: string;
+  modules: ModuleCatalogueDto[];
+}
+export class CatalogueModulesDto {
+  familles: FamilleModulesDto[];
+}

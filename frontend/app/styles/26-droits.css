@@ -321,3 +321,52 @@
     bottom: calc(var(--e-16) + 64px);
   }
 }
+
+/* --- Écran Modules (lot 10) -------------------------------------------- */
+.modules {
+  display: grid;
+  gap: var(--e-16);
+}
+.modules-intro {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-14);
+}
+.modules-famille h3 {
+  margin: 0 0 var(--e-8);
+  font-size: var(--t-16);
+}
+.modules-famille ul {
+  display: grid;
+  gap: var(--e-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.modules-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-8);
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+}
+.modules-ligne--a_venir .modules-nom {
+  color: var(--text-muted);
+}
+.modules-nom {
+  display: grid;
+  gap: 2px;
+  font-size: var(--t-14);
+}
+.modules-note {
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+}
+.modules-etat {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--e-8);
+}

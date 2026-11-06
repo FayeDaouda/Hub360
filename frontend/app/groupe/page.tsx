@@ -15,14 +15,16 @@ import { RolesPanel } from '@/components/admin/roles-panel';
 import { JournalAudit } from '@/components/pilotage/journal-audit';
 import { DeblocagesPanel } from '@/components/groupe/deblocages-panel';
 import { InterrupteursPanel } from '@/components/groupe/interrupteurs-panel';
+import { ModulesPanel } from '@/components/groupe/modules-panel';
 import { AvisDroitsBandeau } from '@/components/avis-droits-bandeau';
 import { libelleRole } from '@/lib/groupe';
 
-type Onglet = 'comptes' | 'droits' | 'journal' | 'deblocages' | 'interrupteurs';
+type Onglet = 'comptes' | 'droits' | 'modules' | 'journal' | 'deblocages' | 'interrupteurs';
 
 const ONGLETS: { cle: Onglet; libelle: string }[] = [
   { cle: 'comptes', libelle: 'Comptes & rôles' },
   { cle: 'droits', libelle: 'Droits des rôles' },
+  { cle: 'modules', libelle: 'Modules' },
   { cle: 'journal', libelle: 'Journal d’audit' },
   { cle: 'deblocages', libelle: 'Déblocages' },
   { cle: 'interrupteurs', libelle: 'Interrupteurs' },
@@ -121,6 +123,7 @@ export default function GroupePage() {
         </div>
         {onglet === 'comptes' && <ComptesRolesPanel moiId={session.utilisateur.id} />}
         {onglet === 'droits' && <RolesPanel slug={session.societe.slug} />}
+        {onglet === 'modules' && <ModulesPanel slug={session.societe.slug} societe={session.societe.nom} />}
         {onglet === 'journal' && <JournalAudit slug={session.societe.slug} />}
         {onglet === 'deblocages' && <DeblocagesPanel slug={session.societe.slug} />}
         {onglet === 'interrupteurs' && <InterrupteursPanel slug={session.societe.slug} />}

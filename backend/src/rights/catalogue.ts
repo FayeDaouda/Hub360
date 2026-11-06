@@ -416,4 +416,27 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
     ordre: 5,
     libelles: { lecture: 'Lit le journal d’audit : comptes, droits, finances, réglages' },
   },
+
+  // Documents et Communication (lot 9, 31/10/2026).
+  {
+    module: 'documents',
+    cle: ETAPE.documents,
+    nom: 'Documents partagés',
+    ordre: 0,
+    libelles: {
+      lecture: 'Voit et télécharge les documents partagés (aucun écran pour l’instant : module à venir)',
+      ecriture: 'Ajoute ou remplace un document partagé',
+      suppression: 'Supprime un document partagé',
+    },
+  },
+  {
+    module: 'communication',
+    cle: ETAPE.communication,
+    nom: 'Messagerie',
+    ordre: 0,
+    libelles: {
+      lecture: 'Lit le fil général, celui de son équipe et ses messages directs',
+      ecriture: 'Écrit, ouvre une conversation directe',
+    },
+  },
 ];

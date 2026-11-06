@@ -148,6 +148,10 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
     validation: est(ROLE_CEO),
   };
   droits[ETAPE.pilotageJournal] = { ...NO_RIGHTS, lecture: est(ROLE_CEO, ROLE_COMPANY_ADMIN) };
+  // Documents et Communication (lot 9, migration 20261102010000).
+  droits[ETAPE.documents] = { ...versDroits(niveaux.documents), validation: false };
+  const communication = versDroits(niveaux.communication);
+  droits[ETAPE.communication] = { ...NO_RIGHTS, lecture: communication.lecture, ecriture: communication.ecriture };
   return droits;
 }
 

@@ -3828,6 +3828,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/interrupteurs/catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SwitchesController_catalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/interrupteurs/modules/{cle}": {
         parameters: {
             query?: never;
@@ -5554,6 +5570,23 @@ export interface components {
         InterrupteursDto: {
             modules: components["schemas"]["ModuleInterrupteurDto"][];
             maintenance: components["schemas"]["EtatMaintenanceDto"];
+        };
+        ModuleCatalogueDto: {
+            nom: string;
+            /** @enum {string} */
+            statut: "a_venir" | "en_partie" | "en_service";
+            note: string | null;
+            module: {
+                cle: string;
+                actif: boolean;
+            };
+        };
+        FamilleModulesDto: {
+            nom: string;
+            modules: components["schemas"]["ModuleCatalogueDto"][];
+        };
+        CatalogueModulesDto: {
+            familles: components["schemas"]["FamilleModulesDto"][];
         };
         InterrupteurModuleDto: {
             motif: string;
@@ -11496,6 +11529,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InterrupteursDto"];
+                };
+            };
+        };
+    };
+    SwitchesController_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueModulesDto"];
                 };
             };
         };

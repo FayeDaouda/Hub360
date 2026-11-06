@@ -287,3 +287,25 @@ describe('Matrice des droits · Pilotage', () => {
     await api(app, cfo).get('/journal-audit').expect(200);
   });
 });
+
+// Lot 10 : écran Modules — le catalogue du HUB, réservé au CIO et à l'Administrateur HUB.
+describe('Écran Modules', () => {
+  let app: INestApplication;
+  beforeAll(async () => {
+    app = await demarrer();
+  });
+  afterAll(() => app.close());
+
+  it('le CIO voit chaque famille, le statut et l’état des modules qui existent ; le CEO n’y a pas accès', async () => {
+    const cio = await connecter(app, COMPTES.cio);
+    const r = (await api(app, cio).get('/interrupteurs/catalogue').expect(200)).body as {
+      familles: { nom: string; modules: { nom: string; statut: string; module: { actif: boolean } | null }[] }[];
+    };
+    const crm = r.familles.flatMap((f) => f.modules).find((m) => m.nom === 'CRM et projets');
+    expect(crm).toMatchObject({ statut: 'en_service', module: { actif: true } });
+    expect(r.familles.flatMap((f) => f.modules).some((m) => m.statut === 'a_venir' && m.module === null)).toBe(true);
+    await api(app, await connecter(app, COMPTES.ceo))
+      .get('/interrupteurs/catalogue')
+      .expect(403);
+  });
+});

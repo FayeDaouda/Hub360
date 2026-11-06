@@ -28,3 +28,17 @@ export function basculerMaintenance(
 ): Promise<Interrupteurs> {
   return apiAuth(`${base(slug)}/maintenance`, { method: 'PUT', body: { actif, message, motif } });
 }
+
+// Écran « Modules » (lot 10, 31/10/2026) : catalogue du HUB par famille.
+export type CatalogueModules = {
+  familles: {
+    nom: string;
+    modules: {
+      nom: string;
+      statut: 'en_service' | 'en_partie' | 'a_venir';
+      note: string | null;
+      module: { cle: string; actif: boolean } | null;
+    }[];
+  }[];
+};
+export const getCatalogueModules = (slug: string): Promise<CatalogueModules> => apiAuth(`${base(slug)}/catalogue`);
