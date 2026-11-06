@@ -5,7 +5,10 @@ import type {
   MembreAnnuaire,
   MessageChat,
   PageMessagesChat,
+  LectureChat,
   PersonneChat,
+  ReactionChat,
+  ResultatRechercheChat,
 } from './types';
 import { apiSociete } from './client-api';
 
@@ -28,16 +31,15 @@ export function getMessages(slug: string, canalId: string, curseur?: string): Pr
   return apiSociete<PageMessagesChat>(slug, `/canaux/${canalId}/messages${qs}`);
 }
 
-export function envoyerMessage(
-  slug: string,
-  canalId: string,
-  texte: string,
-  mentionIds: string[] = [],
-): Promise<MessageChat> {
-  return apiSociete<MessageChat>(slug, `/canaux/${canalId}/messages`, {
-    method: 'POST',
-    body: { texte, ...(mentionIds.length && { mentionIds }) },
-  });
+export type EnvoiMessage = {
+  texte: string;
+  mentionIds?: string[];
+  mentionTous?: boolean;
+  reponseAId?: string;
+  pieces?: { nom: string; url: string }[];
+};
+export function envoyerMessage(slug: string, canalId: string, envoi: EnvoiMessage): Promise<MessageChat> {
+  return apiSociete<MessageChat>(slug, `/canaux/${canalId}/messages`, { method: 'POST', body: envoi });
 }
 
 export function marquerCanalLu(slug: string, canalId: string): Promise<{ nonLus: number }> {
@@ -104,15 +106,16 @@ export function connecterFluxChat(opts: OptionsFlux): () => void {
       opts.onEtat('ouvert');
     });
 
-    const relais = (type: 'message' | 'non_lus') => (ev: MessageEvent<string>) => {
+    const relais = (type: EvenementChat['type']) => (ev: MessageEvent<string>) => {
       try {
         opts.onEvenement({ type, ...JSON.parse(ev.data) } as EvenementChat);
       } catch {
         /* trame illisible — ignorée */
       }
     };
-    source.addEventListener('message', relais('message'));
-    source.addEventListener('non_lus', relais('non_lus'));
+    for (const type of ['message', 'non_lus', 'message_modifie', 'reactions', 'frappe', 'lecture'] as const) {
+      source.addEventListener(type, relais(type));
+    }
     // 'ping' : battement serveur, rien à faire.
 
     source.addEventListener('error', () => {
@@ -166,3 +169,27 @@ export function surOuvrirConversation(f: (canalId: string) => void): () => void 
   window.addEventListener(EVENEMENT_CONVERSATION, ecoute);
   return () => window.removeEventListener(EVENEMENT_CONVERSATION, ecoute);
 }
+
+// Messagerie, suite (02/11/2026) : modifier, supprimer, réagir, pièces,
+// « en train d'écrire », lectures, recherche, conversation d'un projet.
+export const EMOJIS = ['👍', '❤️', '😂', '🎉', '👀', '✅'];
+export const DELAI_MODIFICATION_MS = 15 * 60_000;
+export const modifierMessage = (slug: string, canalId: string, id: string, texte: string) =>
+  apiSociete<MessageChat>(slug, `/canaux/${canalId}/messages/${id}`, { method: 'PATCH', body: { texte } });
+export const supprimerMessage = (slug: string, canalId: string, id: string) =>
+  apiSociete<MessageChat>(slug, `/canaux/${canalId}/messages/${id}`, { method: 'DELETE' });
+export const reagir = (slug: string, canalId: string, id: string, emoji: string) =>
+  apiSociete<ReactionChat[]>(slug, `/canaux/${canalId}/messages/${id}/reactions`, { method: 'POST', body: { emoji } });
+export const getPieceMessage = (slug: string, canalId: string, messageId: string, pieceId: string) =>
+  apiSociete<{ nom: string; url: string; type: string }>(
+    slug,
+    `/canaux/${canalId}/messages/${messageId}/pieces/${pieceId}`,
+  );
+export const signalerFrappe = (slug: string, canalId: string) =>
+  apiSociete<{ ok: true }>(slug, `/canaux/${canalId}/frappe`, { method: 'POST', body: {} });
+export const getLectures = (slug: string, canalId: string) =>
+  apiSociete<LectureChat[]>(slug, `/canaux/${canalId}/lectures`);
+export const rechercherMessages = (slug: string, q: string) =>
+  apiSociete<ResultatRechercheChat[]>(slug, `/canaux/recherche?q=${encodeURIComponent(q)}`);
+export const ouvrirConversationProjet = (slug: string, projetId: string) =>
+  apiSociete<{ canalId: string }>(slug, `/projets-ouverts/${projetId}/conversation`, { method: 'POST', body: {} });

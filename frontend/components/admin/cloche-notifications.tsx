@@ -1,14 +1,20 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Bell, Volume2, VolumeX } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { Bell, BellRing, Settings2, Volume2, VolumeX } from 'lucide-react';
 import { useNotificationsPoll } from '@/lib/use-notifications-poll';
 import { cibleNotification, estDecision, libelleAlerteDerivee } from '@/lib/notifications';
 import { ouvrirConversation } from '@/lib/chat';
 import type { NotificationItem, Session } from '@/lib/types';
 import { definirSonActive, sonActive } from '@/lib/notification-sound';
 import { NotifPopups } from '@/components/notif-popups';
+import { usePreferencesNotifications } from '@/lib/preferences-notifications';
+import { activerPush, etatPush, rafraichirPush, type EtatPush } from '@/lib/push';
+
+// « (3) » devant le titre de l'onglet tant que des notifications attendent.
+const PREFIXE = /^\(\d+\+?\) /;
 
 function ilYa(iso: string): string {
   const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
@@ -25,6 +31,9 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
   const { flux, recharger, toutLire, marquerLue, popups, fermerPopup, resume, fermerResume } =
     useNotificationsPoll(slug);
   const router = useRouter();
+  const chemin = usePathname();
+  // Préférences chargées une fois, partagées avec les pop-ups et la messagerie.
+  usePreferencesNotifications(slug);
   function ouvrir(n: NotificationItem) {
     marquerLue(n);
     setOuvert(false);
@@ -41,6 +50,37 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
   useEffect(() => setSon(sonActive()), []);
   // Revue CEO (22/10/2026) : les décisions ne se perdent plus dans les informations.
   const [onglet, setOnglet] = useState<'decisions' | 'informations'>('decisions');
+  // Notifications système sur cet appareil (02/11/2026) : proposées dans la
+  // cloche tant qu'elles ne sont ni actives, ni refusées.
+  const [push, setPush] = useState<EtatPush | null>(null);
+  useEffect(() => {
+    void rafraichirPush(slug);
+    etatPush(slug)
+      .then(setPush)
+      .catch(() => setPush('indisponible'));
+  }, [slug]);
+
+  // Clic sur une notification système : ?notification=<id> dans l'adresse →
+  // la notification s'ouvre (sa page, ou la conversation) et passe en lue.
+  const notificationDemandee = useRef<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('notification');
+    if (!id) return;
+    notificationDemandee.current = id;
+    params.delete('notification');
+    const reste = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${reste ? `?${reste}` : ''}`);
+  }, [chemin]);
+  useEffect(() => {
+    const id = notificationDemandee.current;
+    const n = id && flux?.elements.find((x) => x.id === id);
+    if (!n) return;
+    notificationDemandee.current = null;
+    ouvrir(n);
+    // ouvrir ne dépend que de stables (router, slug, session)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flux]);
 
   useEffect(() => {
     if (!ouvert) return;
@@ -68,6 +108,21 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
   }
 
   const nonLues = flux?.nonLues ?? 0;
+  // Compteur dans le titre de l'onglet (repris à chaque changement de page,
+  // qui réécrit le titre).
+  useEffect(() => {
+    const appliquer = () => {
+      const base = document.title.replace(PREFIXE, '');
+      const voulu = nonLues > 0 ? `(${nonLues > 99 ? '99+' : nonLues}) ${base}` : base;
+      if (document.title !== voulu) document.title = voulu;
+    };
+    appliquer();
+    const titre = document.querySelector('title');
+    if (!titre) return;
+    const obs = new MutationObserver(appliquer);
+    obs.observe(titre, { childList: true, characterData: true, subtree: true });
+    return () => obs.disconnect();
+  }, [nonLues, chemin]);
   const tous = flux?.elements ?? [];
   const decisions = tous.filter(estDecision);
   const informations = tous.filter((n) => !estDecision(n));
@@ -107,6 +162,15 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
               >
                 {son ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
               </button>
+              <Link
+                href={`/admin/${slug}/mes-reglages#notifications`}
+                className="notif-son-toggle"
+                aria-label="Préférences de notification"
+                title="Préférences de notification"
+                onClick={() => setOuvert(false)}
+              >
+                <Settings2 size={15} aria-hidden />
+              </Link>
               {nonLues > 0 && (
                 <button type="button" className="notif-tout-lu" onClick={toutLire}>
                   Tout marquer lu
@@ -114,6 +178,24 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
               )}
             </span>
           </div>
+
+          {push === 'inactif' && (
+            <div className="notif-push">
+              <BellRing size={16} aria-hidden />
+              <span>Recevoir les notifications sur cet appareil, même HUB fermé.</span>
+              <button
+                type="button"
+                className="btn-primary btn-primary--sm"
+                onClick={() =>
+                  activerPush(slug)
+                    .then(setPush)
+                    .catch(() => setPush('inactif'))
+                }
+              >
+                Activer
+              </button>
+            </div>
+          )}
 
           <div className="notif-onglets" role="tablist" aria-label="Notifications">
             {(

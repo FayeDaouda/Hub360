@@ -245,3 +245,8 @@ export class CustomizationResultDto {
   ok!: boolean;
   tacheId?: string;
 }
+
+// POST …/:id/conversation : la conversation du projet à ouvrir.
+export class ConversationProjetDto {
+  canalId!: string;
+}

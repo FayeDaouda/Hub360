@@ -13,7 +13,13 @@ describe('ProjectTeamsService.setTeams', () => {
       cellule: { count: jest.fn().mockResolvedValue(cellsFound), findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
     };
-    return { tx, s: new ProjectTeamsService(prisma as unknown as PrismaService) };
+    return {
+      tx,
+      s: new ProjectTeamsService(
+        prisma as unknown as PrismaService,
+        { synchroniserCanalProjet: jest.fn().mockResolvedValue(null) } as never,
+      ),
+    };
   }
 
   it('remplace les équipes : retire les autres, ajoute les nouvelles sans doublon', async () => {

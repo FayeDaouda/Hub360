@@ -6,17 +6,23 @@ import { MessageSquare } from 'lucide-react';
 import {
   connecterFluxChat,
   creerGroupe,
+  type EnvoiMessage,
   envoyerMessage,
   getAnnuaireChat,
   getCanaux,
+  getLectures,
   getMessages,
   marquerCanalLu,
   ouvrirDirect,
   surOuvrirConversation,
 } from '@/lib/chat';
-import type { CanalChat, EtatFluxChat, EvenementChat, MembreAnnuaire, MessageChat } from '@/lib/types';
+import type { CanalChat, EtatFluxChat, EvenementChat, LectureChat, MembreAnnuaire, MessageChat } from '@/lib/types';
 import { PanneauChat, type VueChat } from '@/components/chat/panneau-chat';
 import { jouerSonNotification } from '@/lib/notification-sound';
+import { sonPermis } from '@/lib/preferences-notifications';
+
+// « En train d'écrire » : affiché 5 s après le dernier signal.
+const FRAPPE_MS = 5_000;
 
 // Orchestrateur du chat, monté dans la topbar (collaborateur ET admin) : garde
 // une connexion SSE ouverte tant qu'on est dans l'app (le badge de non-lus vit
@@ -35,6 +41,11 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [vue, setVue] = useState<VueChat>('liste');
   const [annuaire, setAnnuaire] = useState<MembreAnnuaire[] | null>(null);
+  // Messagerie, suite (02/11/2026) : qui écrit, jusqu'où chacun a lu, message
+  // à montrer (résultat de recherche).
+  const [frappes, setFrappes] = useState<Record<string, { nom: string; jusqua: number }>>({});
+  const [lectures, setLectures] = useState<LectureChat[]>([]);
+  const [messageCible, setMessageCible] = useState<string | null>(null);
 
   // Refs pour lire l'état courant depuis le callback du flux (closure figée).
   const canalActifIdRef = useRef<string | null>(null);
@@ -68,7 +79,40 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
       return;
     }
 
+    const actifIci = e.canalId === canalActifIdRef.current;
+    if (e.type === 'message_modifie') {
+      if (actifIci) setMessages((ms) => ms.map((m) => (m.id === e.message.id ? e.message : m)));
+      return;
+    }
+    if (e.type === 'reactions') {
+      if (actifIci) setMessages((ms) => ms.map((m) => (m.id === e.messageId ? { ...m, reactions: e.reactions } : m)));
+      return;
+    }
+    if (e.type === 'frappe') {
+      setFrappes((f) => ({
+        ...f,
+        [`${e.canalId}:${e.utilisateurId}`]: { nom: e.nom, jusqua: Date.now() + FRAPPE_MS },
+      }));
+      setTimeout(() => setFrappes((f) => ({ ...f })), FRAPPE_MS + 50);
+      return;
+    }
+    if (e.type === 'lecture') {
+      if (actifIci) {
+        setLectures((l) => [
+          ...l.filter((x) => x.utilisateurId !== e.utilisateurId),
+          { utilisateurId: e.utilisateurId, nom: e.nom, luLe: e.luLe },
+        ]);
+      }
+      return;
+    }
+
     const { canalId, message } = e;
+    // Il a envoyé : il n'écrit plus.
+    setFrappes((f) => {
+      const n = { ...f };
+      delete n[`${canalId}:${message.auteur.id}`];
+      return n;
+    });
     if (!canauxRef.current.some((c) => c.id === canalId)) {
       rafraichirCanaux(); // nouveau canal (DM ouvert par l'autre)
       return;
@@ -77,7 +121,7 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
     const mien = message.auteur.id === moiId;
     // Jamais pour son propre message renvoyé par le flux SSE — seulement à
     // la réception d'un message de quelqu'un d'autre (décision boss, sept. 2026).
-    if (!mien) jouerSonNotification();
+    if (!mien && !message.systeme && sonPermis('messagerie')) jouerSonNotification();
 
     setCanaux((cs) =>
       trier(
@@ -110,22 +154,32 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
     chargerAnnuaire();
   }
 
-  // Clic sur une notification de mention ou de groupe : la conversation s'ouvre.
-  useEffect(
-    () =>
-      surOuvrirConversation((id) => {
-        setOuvert(true);
-        getCanaux(slug)
-          .then((liste) => {
-            setCanaux(liste);
-            if (liste.some((c) => c.id === id)) choisirCanal(id);
-          })
-          .catch(() => {});
-      }),
-    // choisirCanal ne dépend que de setState stables et du slug
+  // Ouvre une conversation (et, s'il est donné, y montre un message).
+  function ouvrirSur(id: string, messageId?: string) {
+    setOuvert(true);
+    getCanaux(slug)
+      .then((liste) => {
+        setCanaux(liste);
+        if (liste.some((c) => c.id === id)) choisirCanal(id, messageId);
+      })
+      .catch(() => {});
+  }
+
+  // Clic sur une notification de mention ou de groupe, ou sur une notification
+  // système (?conversation= dans l'adresse) : la conversation s'ouvre.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const demandee = params.get('conversation');
+    if (demandee) {
+      params.delete('conversation');
+      const reste = params.toString();
+      window.history.replaceState(null, '', `${window.location.pathname}${reste ? `?${reste}` : ''}`);
+      ouvrirSur(demandee);
+    }
+    return surOuvrirConversation((id) => ouvrirSur(id));
+    // ouvrirSur ne dépend que de setState stables et du slug
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [slug],
-  );
+  }, [slug]);
 
   async function nouveauGroupe(nom: string, membreIds: string[]) {
     const canal = await creerGroupe(slug, nom, membreIds);
@@ -144,12 +198,17 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
     }
   }
 
-  function choisirCanal(id: string) {
+  function choisirCanal(id: string, messageId?: string) {
     setVue('liste');
     setCanalActifId(id);
     setMessages([]);
     setCurseur(null);
+    setLectures([]);
+    setMessageCible(messageId ?? null);
     setChargement(true);
+    getLectures(slug, id)
+      .then(setLectures)
+      .catch(() => {});
     getMessages(slug, id)
       .then((p) => {
         setMessages(p.messages);
@@ -173,15 +232,17 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
       .finally(() => setChargement(false));
   }
 
-  async function envoyer(texte: string, mentionIds: string[]) {
-    if (!canalActifId || envoiEnCours) return;
+  // Renvoie false si l'envoi a échoué : la saisie garde le brouillon.
+  async function envoyer(envoi: EnvoiMessage): Promise<boolean> {
+    if (!canalActifId || envoiEnCours) return false;
     setEnvoiEnCours(true);
     try {
-      const m = await envoyerMessage(slug, canalActifId, texte, mentionIds);
+      const m = await envoyerMessage(slug, canalActifId, envoi);
       setMessages((ms) => (ms.some((x) => x.id === m.id) ? ms : [...ms, m]));
       setCanaux((cs) => trier(cs.map((c) => (c.id === canalActifId ? { ...c, dernierMessageLe: m.envoyeLe } : c))));
+      return true;
     } catch {
-      /* l'erreur réseau laisse le brouillon perdu — acceptable v1 */
+      return false;
     } finally {
       setEnvoiEnCours(false);
     }
@@ -189,6 +250,10 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
 
   const total = canaux.reduce((s, c) => s + c.nonLus, 0);
   const canalActif = canaux.find((c) => c.id === canalActifId) ?? null;
+  const maintenant = Date.now();
+  const ecrivent = Object.entries(frappes)
+    .filter(([cle, f]) => canalActifId && cle.startsWith(`${canalActifId}:`) && f.jusqua > maintenant)
+    .map(([, f]) => f.nom);
 
   return (
     <>
@@ -249,6 +314,11 @@ export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moi
             }}
             onCanauxMaj={rafraichirCanaux}
             onOuvrirAnnuaireSansVue={chargerAnnuaire}
+            ecrivent={ecrivent}
+            lectures={lectures}
+            messageCible={messageCible}
+            onMessageMaj={(m) => setMessages((ms) => ms.map((x) => (x.id === m.id ? m : x)))}
+            onOuvrirResultat={(canalId, messageId) => choisirCanal(canalId, messageId)}
           />,
           document.body,
         )}

@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { BellRing, FileSignature, KeyRound, LifeBuoy, Palette, ShieldCheck, UserRound } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
-import { definirSonActive, sonActive } from '@/lib/notification-sound';
 import { usePreferenceTheme } from '@/lib/theme';
 import { ouvrirAide } from '@/components/admin/aide-globale';
 import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
@@ -13,6 +12,7 @@ import { PersonAvatar } from '@/components/ui/avatar';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { nomAffiche } from '@/lib/profil';
 import { ParametresContratPanel } from '@/components/admin/parametres-contrat-panel';
+import { PreferencesNotificationsBloc } from './preferences-notifications';
 import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC } from '@hub/domain';
 
 // « CEO (transverse) » → « CEO » ; socle technique en clair.
@@ -29,8 +29,6 @@ export function MesReglages() {
   const { preference, choisir } = usePreferenceTheme();
   const [mdp, setMdp] = useState(false);
   const [profil, setProfil] = useState(false);
-  const [son, setSon] = useState(true);
-  useEffect(() => setSon(sonActive()), []);
 
   return (
     <div className="rg-page">
@@ -98,19 +96,8 @@ export function MesReglages() {
         </div>
       </Bloc>
 
-      <Bloc icone={BellRing} titre="Notifications">
-        <label className="po-miennes">
-          <input
-            type="checkbox"
-            checked={son}
-            onChange={(e) => {
-              definirSonActive(e.target.checked);
-              setSon(e.target.checked);
-            }}
-          />
-          Son à l’arrivée d’une notification ou d’un message
-        </label>
-        <p className="dmd-note">Réglé pour cet appareil seulement.</p>
+      <Bloc icone={BellRing} titre="Notifications" id="notifications">
+        <PreferencesNotificationsBloc slug={session.societe.slug} />
       </Bloc>
 
       <Bloc icone={LifeBuoy} titre="Aide">
@@ -138,9 +125,19 @@ export function MesReglages() {
   );
 }
 
-function Bloc({ icone: Icone, titre, children }: { icone: typeof UserRound; titre: string; children: ReactNode }) {
+function Bloc({
+  icone: Icone,
+  titre,
+  id,
+  children,
+}: {
+  icone: typeof UserRound;
+  titre: string;
+  id?: string;
+  children: ReactNode;
+}) {
   return (
-    <section className="panel glass-panel dmd-section rg-bloc">
+    <section id={id} className="panel glass-panel dmd-section rg-bloc">
       <h2 className="dmd-titre">
         <Icone size={17} aria-hidden /> {titre}
       </h2>

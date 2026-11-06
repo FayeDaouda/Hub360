@@ -154,7 +154,9 @@ export function InfosGroupe({
   const [choisis, setChoisis] = useState<Set<string>>(new Set());
   const [renommage, setRenommage] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-  const createur = canal.creeParId === moiId;
+  // Conversation d'un projet : membres tenus à jour par le HUB, rien à gérer ici.
+  const auto = canal.type === 'projet';
+  const createur = canal.creeParId === moiId && !auto;
 
   useEffect(() => {
     getMembresGroupe(slug, canal.id)
@@ -255,7 +257,10 @@ export function InfosGroupe({
         </>
       ) : (
         <>
-          <p className="pchat-groupe-sous">{membres ? `${membres.length} membres` : 'Chargement…'}</p>
+          <p className="pchat-groupe-sous">
+            {membres ? `${membres.length} membres` : 'Chargement…'}
+            {auto && ' · tenus à jour automatiquement : équipes du projet, personnes assignées, direction'}
+          </p>
           <ul className="pchat-liste pchat-membres">
             {membres?.map((m) => (
               <li key={m.id}>
@@ -282,33 +287,35 @@ export function InfosGroupe({
               </li>
             ))}
           </ul>
-          <div className="pchat-groupe-actions">
-            <button
-              type="button"
-              className="btn-ghost btn-ghost--sm"
-              onClick={() => {
-                onChargerAnnuaire();
-                setAjout(true);
-              }}
-            >
-              <UserPlus size={14} aria-hidden /> Ajouter des personnes
-            </button>
-            <button
-              type="button"
-              className="btn-ghost btn-ghost--sm pchat-quitter"
-              onClick={async () => {
-                setErreur(null);
-                try {
-                  await retirerMembreGroupe(slug, canal.id, moiId);
-                  onQuitter();
-                } catch (e) {
-                  setErreur(message(e, 'Impossible de quitter le groupe.'));
-                }
-              }}
-            >
-              <LogOut size={14} aria-hidden /> Quitter le groupe
-            </button>
-          </div>
+          {!auto && (
+            <div className="pchat-groupe-actions">
+              <button
+                type="button"
+                className="btn-ghost btn-ghost--sm"
+                onClick={() => {
+                  onChargerAnnuaire();
+                  setAjout(true);
+                }}
+              >
+                <UserPlus size={14} aria-hidden /> Ajouter des personnes
+              </button>
+              <button
+                type="button"
+                className="btn-ghost btn-ghost--sm pchat-quitter"
+                onClick={async () => {
+                  setErreur(null);
+                  try {
+                    await retirerMembreGroupe(slug, canal.id, moiId);
+                    onQuitter();
+                  } catch (e) {
+                    setErreur(message(e, 'Impossible de quitter le groupe.'));
+                  }
+                }}
+              >
+                <LogOut size={14} aria-hidden /> Quitter le groupe
+              </button>
+            </div>
+          )}
         </>
       )}
       {erreur && <p className="pchat-erreur">{erreur}</p>}

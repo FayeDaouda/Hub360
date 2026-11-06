@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ETAPE, ROLE_CTO, todayIso } from '@hub/domain';
 import { aLaPermission } from '../commun/permission.guard';
+import { ChatService } from '../chat/chat.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { tasksToAssign, unassignableReason } from './assignment-rules';
@@ -22,6 +23,7 @@ export class TaskAssignmentService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private chat: ChatService,
   ) {}
 
   // Périmètre d'assignation de l'acteur sur ce projet ; null = aucun.
@@ -109,6 +111,8 @@ export class TaskAssignmentService {
         `Tâche assignée · ${task.projet.code} · ${task.libelle}${others}`,
       );
     }
+    // La conversation du projet suit ses assignations.
+    if (changed) await this.chat.synchroniserCanalProjet(projectId).catch(() => null);
     return { modifiees: changed };
   }
 
@@ -147,6 +151,8 @@ export class TaskAssignmentService {
         `Bloc assigné · ${card.projet.code} · ${card.libelle} (${changed} tâche${changed > 1 ? 's' : ''})`,
       );
     }
+    // La conversation du projet suit ses assignations.
+    if (changed) await this.chat.synchroniserCanalProjet(projectId).catch(() => null);
     return { modifiees: changed };
   }
 
