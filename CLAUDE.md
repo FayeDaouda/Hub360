@@ -31,3 +31,19 @@ Turbopack : voir la feuille de route.
 - Une branche et une pull request par lot ; Conventional Commits.
 - Avant de conclure qu'une modification ne change rien : tests unitaires et
   e2e du back, captures et tests de fumée (`e2e/`, voir son `package.json`).
+
+## Workflow de modification
+
+Les agents cités sont ceux de l'utilisateur (`~/.claude/agents/`), pas du dépôt.
+
+1. Toujours proposer un plan avant de coder, et attendre la validation.
+2. Après chaque modification, lancer `code-reviewer`.
+3. Lancer `security-auditor` si la modification touche aux rôles, aux
+   permissions, aux finances, à la RH, aux contrats ou aux données
+   personnelles.
+4. Lancer `ui-reviewer` si un écran est créé ou modifié (serveur de dev
+   lancé).
+5. Lancer `test-writer` si une logique métier change.
+6. Corriger les points Critique et Haute, lancer tous les tests, puis
+   présenter un résumé avant le commit. Ne jamais pousser ni fusionner sans
+   accord explicite, même pour une PR sans changement de comportement.
