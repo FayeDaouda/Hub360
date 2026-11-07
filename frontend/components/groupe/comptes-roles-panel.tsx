@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, CircleAlert, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck } from 'lucide-react';
+import { Check, LoaderCircle, Plus, Search, ShieldCheck } from 'lucide-react';
 import { formatTime } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
 import { NouveauCompteModal, ResultatInvitation } from '@/components/groupe/nouveau-compte-modal';
@@ -27,7 +27,7 @@ import type {
 } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
-import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { EmptyState, ErrorState, Skeleton } from '@/components/ui/feedback';
 
 const LIBELLE_STATUT: Record<StatutCompteGroupe, string> = {
   actif: 'Actif',
@@ -84,17 +84,7 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
   }
 
   if (erreur) {
-    return (
-      <section className="groupe-panel glass-panel">
-        <p className="groupe-erreur" role="alert">
-          <CircleAlert size={18} aria-hidden />
-          {erreur}
-        </p>
-        <button type="button" className="btn-ghost" onClick={() => setEssai((n) => n + 1)}>
-          <RefreshCw size={15} aria-hidden /> Réessayer
-        </button>
-      </section>
-    );
+    return <ErrorState onRetry={() => setEssai((n) => n + 1)}>{erreur}</ErrorState>;
   }
 
   if (!donnees) {
@@ -109,27 +99,16 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
   }
 
   return (
-    <section className="groupe-panel glass-panel" aria-labelledby="groupe-comptes-titre">
-      <header className="groupe-panel-entete">
-        <div>
-          <h2 id="groupe-comptes-titre">Comptes &amp; rôles</h2>
-          <p>
-            Créez les comptes depuis les dossiers RH et attribuez à chacun son rôle dans la société. Le salaire se
-            renseigne dans le dossier RH.
-          </p>
-          {societe && (
-            <button
-              type="button"
-              className="btn-primary"
-              style={{ marginTop: '0.75rem' }}
-              onClick={() => setNouveau(true)}
-            >
-              <Plus size={15} aria-hidden /> Nouveau compte
-            </button>
-          )}
-        </div>
-        {societe && <Resume societe={societe} />}
-      </header>
+    <section className="groupe-panel glass-panel" aria-label="Comptes">
+      {/* Titre et explication : en-tête commun de la console (app/groupe). */}
+      {societe && (
+        <header className="groupe-panel-entete">
+          <button type="button" className="btn-primary" onClick={() => setNouveau(true)}>
+            <Plus size={15} aria-hidden /> Nouveau compte
+          </button>
+          <Resume societe={societe} />
+        </header>
+      )}
 
       {donnees.societes.length > 1 && (
         <div className="groupe-onglets" role="tablist" aria-label="Société">

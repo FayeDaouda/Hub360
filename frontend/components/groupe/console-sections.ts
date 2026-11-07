@@ -1,0 +1,103 @@
+import { History, LayoutGrid, LifeBuoy, ShieldCheck, ToggleRight, Users, type LucideIcon } from 'lucide-react';
+
+// Sections de l'Administration du HUB (refonte du 07/11/2026) : rangées en
+// trois groupes dans le menu latéral, chacune joignable par son adresse
+// (/groupe?onglet=droits) — rechargement, lien direct, capture.
+
+export type SectionConsole = 'comptes' | 'droits' | 'modules' | 'interrupteurs' | 'journal' | 'deblocages';
+
+export type DefinitionSection = {
+  cle: SectionConsole;
+  libelle: string;
+  icone: LucideIcon;
+  // « societe » : la section porte sur la société de connexion (affichée
+  // dans l'en-tête) ; « groupe » : sur toutes les sociétés.
+  portee: 'groupe' | 'societe';
+  description: (societe: string) => string;
+};
+
+export type GroupeSections = { libelle: string; sections: DefinitionSection[] };
+
+export const GROUPES_CONSOLE: GroupeSections[] = [
+  {
+    libelle: 'Personnes',
+    sections: [
+      {
+        cle: 'comptes',
+        portee: 'groupe',
+        libelle: 'Comptes & rôles',
+        icone: Users,
+        description: () =>
+          'Les comptes de toutes les sociétés du groupe. Créez-les depuis les dossiers RH et attribuez à chacun son rôle dans sa société. Le salaire se renseigne dans le dossier RH.',
+      },
+      {
+        cle: 'droits',
+        portee: 'societe',
+        libelle: 'Droits des rôles',
+        icone: ShieldCheck,
+        description: (societe) =>
+          `Ce que chaque rôle peut voir, créer, valider ou supprimer dans ${societe}, module par module et étape par étape.`,
+      },
+    ],
+  },
+  {
+    libelle: 'Plateforme',
+    sections: [
+      {
+        cle: 'modules',
+        portee: 'societe',
+        libelle: 'Modules',
+        icone: LayoutGrid,
+        description: (societe) =>
+          `Tous les modules du HUB, rangés par famille, avec leur statut et leur état dans ${societe}.`,
+      },
+      {
+        cle: 'interrupteurs',
+        portee: 'societe',
+        libelle: 'Interrupteurs',
+        icone: ToggleRight,
+        description: () =>
+          'Coupez un module pour la société, ou fermez le HUB pour maintenance. Vous gardez l’accès à tout. Chaque bascule exige un motif et entre au journal d’audit.',
+      },
+    ],
+  },
+  {
+    libelle: 'Contrôle',
+    sections: [
+      {
+        cle: 'journal',
+        portee: 'societe',
+        libelle: 'Journal d’audit',
+        icone: History,
+        description: () => 'Traces enregistrées par le HUB, jamais modifiables. Une consultation couvre un an au plus.',
+      },
+      {
+        cle: 'deblocages',
+        portee: 'societe',
+        libelle: 'Déblocages',
+        icone: LifeBuoy,
+        description: () =>
+          'Retrouvez un dossier ou un projet par son code pour faire ce que le parcours normal ne permet pas. Chaque intervention exige un motif et entre au journal d’audit.',
+      },
+    ],
+  },
+];
+
+export const SECTION_PAR_DEFAUT: SectionConsole = 'comptes';
+
+const SECTIONS = GROUPES_CONSOLE.flatMap((g) => g.sections.map((s) => ({ ...s, groupe: g.libelle })));
+
+/** La section demandée par `?onglet=`, sinon celle par défaut (valeur inconnue comprise). */
+export function sectionDepuisParametre(valeur: string | null): SectionConsole {
+  return SECTIONS.find((s) => s.cle === valeur)?.cle ?? SECTION_PAR_DEFAUT;
+}
+
+/** Définition et groupe d'une section. */
+export function definitionSection(cle: SectionConsole): DefinitionSection & { groupe: string } {
+  return SECTIONS.find((s) => s.cle === cle) ?? SECTIONS[0];
+}
+
+/** Adresse d'une section : la section par défaut garde l'adresse nue. */
+export function lienSection(cle: SectionConsole): string {
+  return cle === SECTION_PAR_DEFAUT ? '/groupe' : `/groupe?onglet=${cle}`;
+}

@@ -5,7 +5,7 @@ import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { getJournalAudit, type CategorieAudit, type JournalAudit as Journal, type LigneAudit } from '@/lib/pilotage';
 import { formatDateTime, formatTime } from '@hub/domain';
-import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { EmptyState, ErrorState, Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';
 
 const CATEGORIES: Record<CategorieAudit, string> = {
@@ -22,8 +22,9 @@ const CATEGORIES: Record<CategorieAudit, string> = {
 };
 
 // Pilotage › Journal (CEO, CIO) : qui a fait quoi et quand — comptes, droits,
-// factures et paiements, réglages, départs. Lecture seule.
-export function JournalAudit({ slug }: { slug: string }) {
+// factures et paiements, réglages, départs. Lecture seule. `entete` à false :
+// la page porte déjà le titre et l'explication (Administration du HUB).
+export function JournalAudit({ slug, entete = true }: { slug: string; entete?: boolean }) {
   const [journal, setJournal] = useState<Journal | null>(null);
   const [periode, setPeriode] = useState<{ debut?: string; fin?: string }>({});
   const [categorie, setCategorie] = useState<CategorieAudit | 'toutes'>('toutes');
@@ -38,7 +39,7 @@ export function JournalAudit({ slug }: { slug: string }) {
   }, [slug, periode]);
   useEffect(charger, [charger]);
 
-  if (!journal) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
+  if (!journal) return erreur ? <ErrorState onRetry={charger}>{erreur}</ErrorState> : <Skeleton />;
 
   const auteurs = [...new Set(journal.lignes.map((l) => l.par).filter((x): x is string => !!x))].sort();
   const visibles = journal.lignes.filter(
@@ -47,11 +48,15 @@ export function JournalAudit({ slug }: { slug: string }) {
   const compte = (c: CategorieAudit) => journal.lignes.filter((l) => l.categorie === c).length;
 
   return (
-    <section className="panel glass-panel pi-journal">
-      <h2>Journal d’audit</h2>
-      <p className="pi-aide">
-        Traces enregistrées par le HUB, jamais modifiables. Une consultation couvre un an au plus.
-      </p>
+    <section className="panel glass-panel pi-journal" aria-label={entete ? undefined : 'Journal d’audit'}>
+      {entete && (
+        <>
+          <h2>Journal d’audit</h2>
+          <p className="pi-aide">
+            Traces enregistrées par le HUB, jamais modifiables. Une consultation couvre un an au plus.
+          </p>
+        </>
+      )}
       <div className="pi-journal-outils">
         <Field label="Du">
           <input
