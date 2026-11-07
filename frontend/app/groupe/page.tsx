@@ -1,44 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { LayoutDashboard, LogOut, Settings } from 'lucide-react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Building2 } from 'lucide-react';
 import { clearSession, getSession, SESSION_EVENT } from '@/lib/auth';
-import { estAdministrateurHub, sectionAccessible } from '@/lib/acces-back-office';
+import { estAdministrateurHub } from '@/lib/acces-back-office';
 import { destinationForSession } from '@/lib/session-redirect';
 import { Session } from '@/lib/types';
 import { HubLogo } from '@/components/hub-logo';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
+import { MenuCompte } from '@/components/admin/menu-compte';
+import { AideGlobale } from '@/components/admin/aide-globale';
 import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
 import { RolesPanel } from '@/components/admin/roles-panel';
 import { JournalAudit } from '@/components/pilotage/journal-audit';
 import { DeblocagesPanel } from '@/components/groupe/deblocages-panel';
 import { InterrupteursPanel } from '@/components/groupe/interrupteurs-panel';
 import { ModulesPanel } from '@/components/groupe/modules-panel';
+import { NavigationConsole, NavigationConsoleMobile } from '@/components/groupe/console-navigation';
+import { definitionSection, sectionDepuisParametre } from '@/components/groupe/console-sections';
 import { AvisDroitsBandeau } from '@/components/avis-droits-bandeau';
+import { Pill } from '@/components/ui/pill';
 import { libelleRole } from '@/lib/groupe';
-
-type Onglet = 'comptes' | 'droits' | 'modules' | 'journal' | 'deblocages' | 'interrupteurs';
-
-const ONGLETS: { cle: Onglet; libelle: string }[] = [
-  { cle: 'comptes', libelle: 'Comptes & rôles' },
-  { cle: 'droits', libelle: 'Droits des rôles' },
-  { cle: 'modules', libelle: 'Modules' },
-  { cle: 'journal', libelle: 'Journal d’audit' },
-  { cle: 'deblocages', libelle: 'Déblocages' },
-  { cle: 'interrupteurs', libelle: 'Interrupteurs' },
-];
 
 // Administration du HUB — le CIO et l'Administrateur HUB, tous deux à carte
 // blanche (31/10/2026, cf. estAdministrateurHub). Les autres rôles sont
 // renvoyés vers leur propre destination (voir destinationForSession).
-// Console : comptes & rôles, droits des rôles (matrice), journal d'audit,
-// déblocages et interrupteurs de la société de connexion.
+// Console (refonte du 07/11/2026) : menu latéral en trois groupes, section
+// ouverte portée par l'adresse (?onglet=), en-tête commun à chaque section.
 export default function GroupePage() {
+  // useSearchParams : page prérendue, la lecture de l'adresse attend le client.
+  return (
+    <Suspense fallback={null}>
+      <ConsoleAdministration />
+    </Suspense>
+  );
+}
+
+function ConsoleAdministration() {
   const router = useRouter();
+  const section = sectionDepuisParametre(useSearchParams().get('onglet'));
   const [session, setSession] = useState<Session | null>(null);
-  const [onglet, setOnglet] = useState<Onglet>('comptes');
 
   useEffect(() => {
     const current = getSession();
@@ -51,18 +53,42 @@ export default function GroupePage() {
       return;
     }
     setSession(current);
-    // Droits relus après un avis : la console suit sans rechargement.
-    const suivre = () => setSession(getSession());
+    // Droits relus après un avis : la console suit sans rechargement, ou
+    // renvoie ailleurs si la personne n'administre plus le HUB.
+    const suivre = () => {
+      const relue = getSession();
+      if (!relue) router.replace('/');
+      else if (!estAdministrateurHub(relue)) router.replace(destinationForSession(relue));
+      else setSession(relue);
+    };
     window.addEventListener(SESSION_EVENT, suivre);
     return () => window.removeEventListener(SESSION_EVENT, suivre);
   }, [router]);
 
+  // Changement de section (menu collant) : retour en haut et focus sur le
+  // contenu, pour que le titre soit visible et que le lecteur d'écran suive.
+  const sectionPrecedente = useRef(section);
+  useEffect(() => {
+    if (sectionPrecedente.current === section) return;
+    sectionPrecedente.current = section;
+    window.scrollTo({ top: 0 });
+    document.getElementById('console-contenu')?.focus({ preventScroll: true });
+  }, [section]);
+
+  // Titre de l'onglet du navigateur : une adresse par section, un titre par section.
+  useEffect(() => {
+    document.title = `${definitionSection(section).libelle} · Administration du HUB`;
+  }, [section]);
+
   if (!session) return null;
 
-  function handleLogout() {
+  function deconnexion() {
     clearSession();
     router.push('/');
   }
+
+  const slug = session.societe.slug;
+  const definition = definitionSection(section);
 
   return (
     <div className="groupe-espace">
@@ -71,63 +97,58 @@ export default function GroupePage() {
         <span className="admin-atmosphere-blob admin-atmosphere-blob--orange" />
         <span className="admin-atmosphere-blob admin-atmosphere-blob--cyan" />
       </div>
+      <a className="lien-evitement" href="#console-contenu">
+        Aller au contenu
+      </a>
 
       <header className="groupe-barre">
         <div className="groupe-barre-marque">
+          <NavigationConsoleMobile session={session} active={section} />
           <HubLogo className="groupe-logo" />
           <span className="groupe-barre-titre">Administration du HUB</span>
+          <Pill tone="azur" className="groupe-barre-mandat">
+            {session.adminHub ? `Administrateur HUB · en tant que ${libelleRole(session.role)}` : 'Carte blanche'}
+          </Pill>
         </div>
         <div className="groupe-barre-actions">
-          {sectionAccessible(session, 'parametres') && (
-            <Link href={`/admin/${session.societe.slug}/reglages`} className="btn-ghost">
-              <Settings size={15} aria-hidden />
-              <span className="groupe-libelle-bouton">Réglages du HUB</span>
-            </Link>
-          )}
-          <Link href={`/admin/${session.societe.slug}`} className="btn-ghost">
-            <LayoutDashboard size={15} aria-hidden />
-            <span className="groupe-libelle-bouton">Back-office {session.societe.nom}</span>
-          </Link>
-          <ThemeToggle />
-          <button type="button" className="btn-ghost" onClick={handleLogout}>
-            <LogOut size={15} aria-hidden />
-            <span className="groupe-libelle-bouton">Se déconnecter</span>
-          </button>
+          <span className="groupe-societe">
+            <Building2 size={14} aria-hidden />
+            {session.societe.nom}
+          </span>
+          {/* Monté aussi sur téléphone (bouton masqué) : le menu du compte
+              ouvre l'aide et « Signaler un problème » par lui. */}
+          <span className="masque-mobile">
+            <AideGlobale session={session} />
+          </span>
+          <span className="masque-mobile">
+            <ThemeToggle />
+          </span>
+          <MenuCompte session={session} base={`/admin/${slug}`} onDeconnexion={deconnexion} />
         </div>
       </header>
 
-      <main className="groupe-contenu">
-        <AvisDroitsBandeau />
-        <div className="groupe-intro">
-          <h1>Bonjour {session.utilisateur.prenom}</h1>
-          <p>
-            {session.adminHub
-              ? `Administrateur HUB · en tant que ${libelleRole(session.role)} · ${session.societe.nom}. Comptes de toutes les sociétés ; droits et journal de ${session.societe.nom}.`
-              : `Administration du HUB · carte blanche. Comptes de toutes les sociétés ; droits, journal, déblocages et interrupteurs de ${session.societe.nom}.`}
-          </p>
-        </div>
-        <div className="admin-periode groupe-console-onglets">
-          <div className="admin-periode-toggle" role="group" aria-label="Section de l’administration">
-            {ONGLETS.map((o) => (
-              <button
-                key={o.cle}
-                type="button"
-                className={o.cle === onglet ? 'is-active' : ''}
-                aria-pressed={o.cle === onglet}
-                onClick={() => setOnglet(o.cle)}
-              >
-                {o.libelle}
-              </button>
-            ))}
-          </div>
-        </div>
-        {onglet === 'comptes' && <ComptesRolesPanel moiId={session.utilisateur.id} />}
-        {onglet === 'droits' && <RolesPanel slug={session.societe.slug} />}
-        {onglet === 'modules' && <ModulesPanel slug={session.societe.slug} societe={session.societe.nom} />}
-        {onglet === 'journal' && <JournalAudit slug={session.societe.slug} />}
-        {onglet === 'deblocages' && <DeblocagesPanel slug={session.societe.slug} />}
-        {onglet === 'interrupteurs' && <InterrupteursPanel slug={session.societe.slug} />}
-      </main>
+      <div className="groupe-cadre">
+        <NavigationConsole session={session} active={section} />
+
+        <main id="console-contenu" className="groupe-contenu" tabIndex={-1}>
+          <AvisDroitsBandeau />
+          <header className="groupe-section-entete">
+            <span className="groupe-section-groupe">
+              {definition.groupe}
+              {/* Périmètre de la section, visible aussi sur téléphone. */}
+              {definition.portee === 'societe' && ` · ${session.societe.nom}`}
+            </span>
+            <h1>{definition.libelle}</h1>
+            <p>{definition.description(session.societe.nom)}</p>
+          </header>
+          {section === 'comptes' && <ComptesRolesPanel moiId={session.utilisateur.id} />}
+          {section === 'droits' && <RolesPanel slug={slug} />}
+          {section === 'modules' && <ModulesPanel slug={slug} societe={session.societe.nom} />}
+          {section === 'interrupteurs' && <InterrupteursPanel slug={slug} />}
+          {section === 'journal' && <JournalAudit slug={slug} entete={false} />}
+          {section === 'deblocages' && <DeblocagesPanel slug={slug} />}
+        </main>
+      </div>
     </div>
   );
 }

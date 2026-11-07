@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
 import { getCatalogueModules, type CatalogueModules } from '@/lib/interrupteurs';
-import { FieldError } from '@/components/ui/field';
-import { Skeleton } from '@/components/ui/feedback';
+import { ErrorState, Skeleton } from '@/components/ui/feedback';
 import { Pill } from '@/components/ui/pill';
 
 const STATUT = {
@@ -20,14 +19,31 @@ const STATUT = {
 export function ModulesPanel({ slug, societe }: { slug: string; societe: string }) {
   const [catalogue, setCatalogue] = useState<CatalogueModules | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [essai, setEssai] = useState(0);
 
   useEffect(() => {
+    let annule = false;
     getCatalogueModules(slug)
-      .then(setCatalogue)
-      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger les modules.'));
-  }, [slug]);
+      .then((c) => !annule && setCatalogue(c))
+      .catch(
+        (e) =>
+          !annule &&
+          setErreur(
+            e instanceof ApiError
+              ? e.message
+              : 'Impossible de charger les modules. Vérifiez votre connexion, puis réessayez.',
+          ),
+      );
+    return () => {
+      annule = true;
+    };
+  }, [slug, essai]);
 
-  if (erreur) return <FieldError>{erreur}</FieldError>;
+  const reessayer = () => {
+    setErreur(null);
+    setEssai((n) => n + 1);
+  };
+  if (erreur) return <ErrorState onRetry={reessayer}>{erreur}</ErrorState>;
   if (!catalogue) return <Skeleton size="sm" />;
   const tous = catalogue.familles.flatMap((f) => f.modules);
   const compte = (s: keyof typeof STATUT) => tous.filter((m) => m.statut === s).length;
@@ -36,7 +52,7 @@ export function ModulesPanel({ slug, societe }: { slug: string; societe: string 
     <section className="panel glass-panel modules">
       <p className="modules-intro">
         {tous.length} modules : {compte('en_service')} en service, {compte('en_partie')} en partie, {compte('a_venir')}{' '}
-        à venir. L’état « activé » ou « coupé » vaut pour {societe} ; il se change dans l’onglet Interrupteurs.
+        à venir. L’état « activé » ou « coupé » vaut pour {societe} ; il se change dans la section Interrupteurs.
       </p>
       {catalogue.familles.map((f) => (
         <div key={f.nom} className="modules-famille">

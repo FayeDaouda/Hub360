@@ -8,6 +8,19 @@
   --gs-attente: var(--ocre-fonce);
   --gs-erreur: #b3261e;
 
+  /* Palette de la console (refonte du 07/11/2026, maquette validée) :
+     clair légèrement teinté par les halos du logo, sombre bleu nuit étagé.
+     Limitée à la console ; l'étendre au HUB sera un lot à part. */
+  --admin-fond: #f4f5fb;
+  --surface-2: #f0f1f8;
+  --border: #e5e6f0;
+  --border-hover: #d0d3e4;
+  --text: #0f1226;
+  --text-muted: #545a7a; /* 6,6:1 sur la surface */
+  --text-subtle: #5f6587; /* 5,8:1 */
+  --gs-nav-actif: #3a37b8;
+  --atmosphere-op: 0.1;
+
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
@@ -18,6 +31,19 @@
   --gs-ok: oklch(80% 0.15 142);
   --gs-attente: oklch(84% 0.13 82);
   --gs-erreur: #ff9b91;
+
+  --admin-fond: #080a14;
+  --surface: #10132a;
+  --surface-2: #1a1e3c;
+  --surface-donnees: rgba(16, 19, 42, 0.92);
+  --border: rgba(160, 170, 255, 0.1);
+  --border-hover: rgba(160, 170, 255, 0.24);
+  --glass-border: rgba(160, 170, 255, 0.1);
+  --text: #eef0fa;
+  --text-muted: #a9afcb; /* 8,4:1 */
+  --text-subtle: #8c93b5; /* 5,9:1 */
+  --gs-nav-actif: #c7c8ff;
+  --atmosphere-op: 0.22;
 }
 
 .groupe-espace .skeleton {
@@ -30,61 +56,231 @@
   background-size: 200% 100%;
 }
 
+/* Barre du haut : collée en haut, filet aux couleurs des pétales du logo.
+   Le flou passe par ::before — sur la barre elle-même, il enfermerait les
+   menus en position fixe (menu du compte, thème). */
 .groupe-barre {
-  position: relative;
-  z-index: 1;
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: max(1rem, env(safe-area-inset-top)) clamp(1rem, 4vw, 2rem) 0.5rem;
+  padding: max(0.7rem, env(safe-area-inset-top)) clamp(1rem, 3vw, 1.75rem) 0.7rem;
+  border-bottom: 1px solid var(--border);
+}
+.groupe-barre::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--admin-fond) 80%, transparent);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+.groupe-barre::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #454f99, #0394b9 35%, #f9c515 68%, #e86220);
 }
 .groupe-barre-marque {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
-  gap: 0.9rem;
+  gap: 0.75rem;
   min-width: 0;
 }
 .groupe-logo {
   flex: none;
-  width: 104px;
+  width: 92px;
 }
 .groupe-barre-titre {
-  padding-left: 0.9rem;
+  padding-left: 0.75rem;
   border-left: 1px solid var(--border);
-  color: var(--text-muted);
+  color: var(--text);
   font-size: 0.95rem;
   font-weight: 600;
   white-space: nowrap;
 }
+/* Seule pièce de la barre qui rétrécit : « Administrateur HUB · en tant
+   que … » ne pousse jamais le menu du compte hors de l'écran. */
+.groupe-barre-mandat {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis; /* .pill : inline-block, nowrap */
+}
 .groupe-barre-actions {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
-.groupe-barre-actions a.btn-ghost {
-  text-decoration: none; /* lien habillé en bouton (Back-office) */
+/* Société de connexion : simple mention, pas un bouton (rien à cliquer). */
+.groupe-societe {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.5rem;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  font-weight: 550;
+  white-space: nowrap;
+}
+.groupe-nav-bouton {
+  display: none;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-left: -0.5rem;
+  border: 0;
+  border-radius: var(--r-10);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.groupe-nav-bouton:hover {
+  background: var(--surface-2);
 }
 
-.groupe-contenu {
+/* Cadre : menu latéral + contenu. */
+.groupe-cadre {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 1.5rem;
-  max-width: 1180px;
+  grid-template-columns: 236px minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(1.25rem, 3vw, 2.25rem);
+  max-width: 1380px;
   margin: 0 auto;
-  padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1rem, 4vw, 2rem) 3rem;
+  padding: clamp(1.25rem, 3vw, 2rem) clamp(1rem, 3vw, 1.75rem) 3rem;
 }
-.groupe-intro h1 {
+.groupe-nav {
+  position: sticky;
+  top: 5.25rem;
+  display: grid;
+  gap: 1.1rem;
+  /* Fenêtre basse : le menu défile au lieu de cacher ses derniers liens. */
+  max-height: calc(100dvh - 6rem);
+  overflow-y: auto;
+}
+.groupe-nav ul {
+  display: grid;
+  gap: 2px;
   margin: 0;
-  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.1rem);
+  padding: 0;
+  list-style: none;
+}
+.groupe-nav-titre {
+  display: block;
+  padding: 0 0.7rem 0.35rem;
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.groupe-nav-lien {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.5rem;
+  padding: 0 0.7rem;
+  border-radius: var(--r-10);
+  color: var(--text-muted);
+  font-size: var(--t-14);
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background var(--duree-court) var(--courbe),
+    color var(--duree-court) var(--courbe);
+}
+.groupe-nav-lien:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.groupe-nav-lien:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.groupe-nav-lien.is-active {
+  background: color-mix(in srgb, var(--action) 12%, transparent);
+  color: var(--gs-nav-actif);
+  font-weight: 600;
+}
+.groupe-nav-lien.is-active svg {
+  color: var(--lien);
+}
+.groupe-nav .groupe-nav-sorties {
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+.groupe-feuille-groupe {
+  display: grid;
+  gap: 0.4rem;
+}
+/* Tablette : le panneau garde une largeur de téléphone, centré. */
+.feuille.groupe-feuille {
+  max-width: 560px;
+  margin-inline: auto;
+}
+
+.groupe-contenu {
+  container: console / inline-size; /* les panneaux suivent la largeur du contenu */
+  position: relative;
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.groupe-contenu:focus {
+  outline: none; /* cible du lien d'évitement */
+}
+.groupe-section-entete {
+  display: grid;
+  gap: 0.3rem;
+}
+.groupe-section-groupe {
+  color: var(--text-subtle);
+  font-size: var(--t-13);
+  font-weight: 500;
+}
+.groupe-section-entete h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 1.25rem + 0.9vw, 1.9rem);
+  font-weight: 650;
+  line-height: 1.15;
   letter-spacing: -0.02em;
 }
-.groupe-intro p {
-  margin: 0.35rem 0 0;
+.groupe-section-entete p {
+  max-width: 68ch;
+  margin: 0;
   color: var(--text-muted);
+}
+
+/* Tablette étroite et téléphone : le menu latéral passe dans un panneau. */
+@media (max-width: 900px) {
+  .groupe-cadre {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .groupe-nav {
+    display: none;
+  }
+  .groupe-nav-bouton {
+    display: inline-grid;
+  }
+}
+/* Téléphone : le logo et le mandat (« Carte blanche ») suffisent. */
+@media (max-width: 640px) {
+  .groupe-barre-titre,
+  .groupe-societe {
+    display: none;
+  }
 }
 
 .groupe-panel {
@@ -103,16 +299,6 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem 2rem;
-}
-.groupe-panel-entete h2 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-.groupe-panel-entete p {
-  max-width: 52ch;
-  margin: 0.3rem 0 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
 }
 
 .groupe-resume {
@@ -431,13 +617,6 @@
   flex: none;
   margin-top: 0.1rem;
 }
-.groupe-erreur {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  color: var(--gs-erreur);
-}
 .groupe-squelette-titre {
   width: 40%;
   height: 1.6rem;
@@ -454,8 +633,9 @@
   }
 }
 
-/* Sous 860px : chaque compte devient une carte (libellés tirés de data-libelle). */
-@media (max-width: 859px) {
+/* Contenu de moins de 760px (fenêtre étroite, ou menu latéral à côté) :
+   chaque compte devient une carte (libellés tirés de data-libelle). */
+@container console (max-width: 760px) {
   .groupe-table thead {
     display: none;
   }
@@ -515,16 +695,12 @@
   }
 }
 
-@media (max-width: 520px) {
+@container console (max-width: 500px) {
   .groupe-table td,
   .groupe-table td:first-child,
   .groupe-table td:last-child {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.35rem;
-  }
-  .groupe-barre-titre,
-  .groupe-libelle-bouton {
-    display: none;
   }
   .groupe-resume > div {
     flex: 1 1 40%;
@@ -646,17 +822,6 @@
   min-width: 0;
 }
 
-/* Onglets de la console (jusqu'à cinq) : ils défilent sur un téléphone
-   plutôt que d'élargir la page. */
-.groupe-console-onglets .admin-periode-toggle {
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.groupe-console-onglets .admin-periode-toggle button {
-  flex: none;
-  white-space: nowrap;
-}
 @media (max-width: 640px) {
   .int-modules li {
     grid-template-columns: 1fr auto;

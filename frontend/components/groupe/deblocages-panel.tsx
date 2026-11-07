@@ -93,17 +93,8 @@ export function DeblocagesPanel({ slug }: { slug: string }) {
   const peutOnboarder = !!d && d.statut === 'offre_envoyee' && d.offreAcceptee && !p;
 
   return (
-    <section className="groupe-panel glass-panel" aria-labelledby="groupe-deblocages-titre">
-      <header className="groupe-panel-entete">
-        <div>
-          <h2 id="groupe-deblocages-titre">Déblocages</h2>
-          <p>
-            Retrouvez un dossier ou un projet par son code pour faire ce que le parcours normal ne permet pas. Chaque
-            intervention exige un motif et entre au journal d’audit.
-          </p>
-        </div>
-      </header>
-
+    <section className="groupe-panel glass-panel" aria-label="Déblocages">
+      {/* Titre et explication : en-tête commun de la console (app/groupe). */}
       <form className="deb-recherche" onSubmit={chercher}>
         <Field label="Code du dossier ou du projet">
           <input

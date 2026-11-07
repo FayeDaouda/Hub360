@@ -4,9 +4,9 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { formatDate } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
 import { basculerMaintenance, basculerModule, getInterrupteurs, type Interrupteurs } from '@/lib/interrupteurs';
-import { Field, FieldError } from '@/components/ui/field';
+import { Field } from '@/components/ui/field';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/feedback';
+import { ErrorState, Skeleton } from '@/components/ui/feedback';
 import { Pill } from '@/components/ui/pill';
 
 type Bascule =
@@ -23,14 +23,27 @@ export function InterrupteursPanel({ slug }: { slug: string }) {
   const [etat, setEtat] = useState<Interrupteurs | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [bascule, setBascule] = useState<Bascule | null>(null);
+  const [essai, setEssai] = useState(0);
 
   useEffect(() => {
+    let annule = false;
     getInterrupteurs(slug)
-      .then(setEtat)
-      .catch((e) => setErreur(message(e, 'Impossible de charger les interrupteurs.')));
-  }, [slug]);
+      .then((e) => !annule && setEtat(e))
+      .catch(
+        (e) =>
+          !annule &&
+          setErreur(message(e, 'Impossible de charger les interrupteurs. Vérifiez votre connexion, puis réessayez.')),
+      );
+    return () => {
+      annule = true;
+    };
+  }, [slug, essai]);
 
-  if (erreur) return <FieldError>{erreur}</FieldError>;
+  const reessayer = () => {
+    setErreur(null);
+    setEssai((n) => n + 1);
+  };
+  if (erreur) return <ErrorState onRetry={reessayer}>{erreur}</ErrorState>;
   if (!etat) {
     return (
       <section className="groupe-panel glass-panel" aria-busy="true" aria-label="Chargement des interrupteurs">
@@ -41,17 +54,8 @@ export function InterrupteursPanel({ slug }: { slug: string }) {
 
   const m = etat.maintenance;
   return (
-    <section className="groupe-panel glass-panel" aria-labelledby="groupe-interrupteurs-titre">
-      <header className="groupe-panel-entete">
-        <div>
-          <h2 id="groupe-interrupteurs-titre">Interrupteurs</h2>
-          <p>
-            Coupez un module pour la société, ou fermez le HUB pour maintenance. Vous gardez l’accès à tout. Chaque
-            bascule exige un motif et entre au journal d’audit.
-          </p>
-        </div>
-      </header>
-
+    <section className="groupe-panel glass-panel" aria-label="Interrupteurs">
+      {/* Titre et explication : en-tête commun de la console (app/groupe). */}
       <article className="deb-carte">
         <h3>Maintenance du HUB entier</h3>
         <p className="deb-titre">

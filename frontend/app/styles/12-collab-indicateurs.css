@@ -51,6 +51,12 @@
   margin: 0;
   font-size: 0.9rem;
 }
+/* Sombre : le fond crème rendait « Réessayer » (texte clair) illisible. */
+:root[data-theme='dark'] .dash-erreur {
+  border-color: color-mix(in srgb, var(--attention) 35%, transparent);
+  background: color-mix(in srgb, var(--attention) 12%, var(--surface));
+  color: var(--attention-texte);
+}
 
 /* En-tête de panneau avec action à droite (titre + recherche). */
 .panel-tete {
