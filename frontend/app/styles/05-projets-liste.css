@@ -215,6 +215,10 @@
   background: var(--surface);
   border-color: var(--border-hover);
 }
+.glass-panel .field-input:focus {
+  /* La bordure d'accent du focus, que la règle ci-dessus écrasait. */
+  border-color: var(--argile);
+}
 .glass-panel .field-input:disabled {
   background: var(--surface-2);
 }

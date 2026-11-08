@@ -67,11 +67,13 @@ function ramener(bandeau: HTMLElement, actif: HTMLElement, doux: boolean) {
   }
 }
 
-export function useDefilementCoque() {
+// `barre` : la barre du haut de la coque (back-office par défaut ; la
+// console Administration du HUB a la sienne, .groupe-barre).
+export function useDefilementCoque(barreSelecteur = '.admin-topbar') {
   // Barres du haut et du bas : mesurées avant la peinture (pas de saut des
   // éléments collés). La navigation du bas est masquée hors téléphone (0).
   useLayoutEffect(() => {
-    const barre = document.querySelector<HTMLElement>('.admin-topbar');
+    const barre = document.querySelector<HTMLElement>(barreSelecteur);
     if (!barre) return;
     const nav = document.querySelector<HTMLElement>('.nav-mobile');
     const racine = document.documentElement;
@@ -88,7 +90,7 @@ export function useDefilementCoque() {
       racine.style.removeProperty('--ef-topbar-h');
       racine.style.removeProperty('--ef-nav-h');
     };
-  }, []);
+  }, [barreSelecteur]);
 
   useEffect(() => {
     const racine = document.documentElement;
@@ -206,4 +208,14 @@ export function useSectionEnLecture(ids: string[], repere?: RefObject<HTMLElemen
 export function allerA(id: string) {
   const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   document.getElementById(id)?.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth', block: 'start' });
+}
+
+/**
+ * Même règle de défilement pour une coque dont la barre du haut n'existe
+ * qu'après un chargement (console Administration du HUB, rendue une fois la
+ * session lue) : monté avec la barre, il la trouve déjà dans la page.
+ */
+export function DefilementCoque({ barre }: { barre: string }): null {
+  useDefilementCoque(barre);
+  return null;
 }

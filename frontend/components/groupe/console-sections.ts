@@ -61,7 +61,7 @@ export const GROUPES_CONSOLE: GroupeSections[] = [
         portee: 'societe',
         libelle: 'Journal d’audit',
         icone: History,
-        description: () => 'Traces enregistrées par le HUB, jamais modifiables. Une consultation couvre un an au plus.',
+        description: () => 'Qui a fait quoi, et quand : comptes, droits, finances, réglages, paie, interventions.',
       },
       {
         cle: 'deblocages',

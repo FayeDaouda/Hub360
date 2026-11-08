@@ -854,18 +854,428 @@
 .pi-progression .progress-track {
   flex: 1;
 }
-/* Pilotage › Journal d'audit. */
+/* Journal d'audit (Pilotage › Journal, Administration du HUB › Journal
+   d'audit) — refonte du 08/11/2026 : fil par jour, catégories colorées. */
+:root {
+  /* Catégories du journal : teintes de base des pastilles (rendu --pill-*). */
+  --pill-journal-comptes: #5847c9;
+  --pill-journal-droits: #2f62b8;
+  --pill-journal-finances: #1f7a68;
+  --pill-journal-reglages: #a8541b;
+  --pill-journal-rh: #b8374a;
+  --pill-journal-paie: #9c2f8a;
+  --pill-journal-pilotage: #0e7490;
+  --pill-journal-administration: #4f5577;
+}
+.pill--cat-journal-comptes,
+.pi-cat--comptes {
+  --pill-fond: var(--pill-journal-comptes);
+}
+.pill--cat-journal-droits,
+.pi-cat--droits {
+  --pill-fond: var(--pill-journal-droits);
+}
+.pill--cat-journal-finances,
+.pi-cat--finances {
+  --pill-fond: var(--pill-journal-finances);
+}
+.pill--cat-journal-reglages,
+.pi-cat--reglages {
+  --pill-fond: var(--pill-journal-reglages);
+}
+.pill--cat-journal-rh,
+.pi-cat--rh {
+  --pill-fond: var(--pill-journal-rh);
+}
+.pill--cat-journal-paie,
+.pi-cat--paie {
+  --pill-fond: var(--pill-journal-paie);
+}
+.pill--cat-journal-pilotage,
+.pi-cat--pilotage {
+  --pill-fond: var(--pill-journal-pilotage);
+}
+.pill--cat-journal-administration,
+.pi-cat--administration {
+  --pill-fond: var(--pill-journal-administration);
+}
+
+.pi-journal {
+  display: grid;
+  gap: var(--e-12);
+  /* « clip » et non « hidden » : les en-têtes de jour restent collés. */
+  overflow: clip;
+}
+.pi-journal > h2,
+.pi-journal > .pi-aide {
+  margin: 0;
+}
+.pi-journal[aria-busy='true'] .pi-jours {
+  opacity: 0.55;
+  transition: opacity var(--duree-court) var(--courbe);
+}
+
+/* Barre d'outils : période, recherche, auteur, export. */
 .pi-journal-outils {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.pi-periodes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+.pi-periodes button {
+  min-height: 32px;
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-13);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pi-periodes button:hover {
+  color: var(--text);
+}
+.pi-periodes button.is-active {
+  background: var(--surface);
+  box-shadow: var(--ombre-1);
+  color: var(--text);
+  font-weight: 600;
+}
+.pi-periodes button:focus-visible,
+.pi-trace-plus:focus-visible,
+.pi-journal-outils .field-input:focus-visible,
+.pi-journal-dates .field-input:focus-visible,
+.pi-trace:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.pi-journal-recherche {
+  flex: 1 1 14rem;
+  max-width: 380px;
+}
+.pi-journal-recherche .field-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+.pi-journal-outils .field-input {
+  box-sizing: border-box;
+  height: 40px;
+}
+.pi-journal-outils .pi-journal-auteur {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 11rem;
+  max-width: 16rem;
+  padding-right: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    right 0.95rem center,
+    right 0.7rem center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  appearance: none;
+}
+.pi-journal-outils .bouton-export {
+  margin-left: auto;
+}
+
+/* Dates choisies. */
+.pi-journal-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+.pi-journal-dates .field {
+  flex: 0 1 11rem;
+}
+.pi-journal-dates-erreur {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* Catégories : pastilles à point de couleur, nombre de traces ; une seule
+   rangée qui défile (fondu du bord : 22-finances.css sur téléphone, ici au-delà). */
+.pi-journal-categories {
+  flex-wrap: nowrap;
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pi-journal-categories > * {
+  flex: none;
+}
+@media (min-width: 721px) {
+  .pi-journal-categories::after {
+    content: '';
+    position: sticky;
+    right: 0;
+    flex: none;
+    width: 2rem;
+    margin-left: -2rem;
+    background: linear-gradient(to right, transparent, var(--surface-donnees));
+    pointer-events: none;
+  }
+  .pi-journal-categories[data-bord='fin']::after,
+  .pi-journal-categories:not([data-bord])::after {
+    opacity: 0;
+  }
+}
+.pi-journal-categories button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 32px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pi-journal-categories button:hover {
+  border-color: var(--border-hover);
+  background: var(--surface);
+  color: var(--text);
+}
+.pi-journal-categories button.is-active {
+  border-color: color-mix(in srgb, var(--pill-fond, var(--action)) 55%, transparent);
+  background: color-mix(in srgb, var(--pill-fond, var(--action)) var(--pill-teinte), var(--surface));
+  color: var(--text);
+  font-weight: 600;
+}
+.pi-cat-point {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pill-fond);
+}
+:root[data-theme='dark'] .pi-cat-point {
+  background: color-mix(in srgb, var(--pill-fond), white 30%);
+}
+/* Catégorie sans trace : texte discret (lisible, AA) et point gris ; toujours
+   cliquable (le nombre dit pourquoi). */
+.pi-journal-categories button.is-vide:not(.is-active) {
+  color: var(--text-subtle);
+}
+.pi-journal-categories button.is-vide:not(.is-active) .pi-cat-point {
+  background: var(--border-hover);
+}
+.pi-cat-nombre {
+  color: var(--text-subtle);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.pi-journal-resume {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  min-height: 32px;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  font-variant-numeric: tabular-nums;
+}
+.pi-journal-erreur {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
+  border-radius: var(--r-10);
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+  color: var(--danger-texte);
+  font-size: var(--t-13);
+}
+.pi-journal-erreur p {
+  margin: 0;
+}
+.pi-journal-vide {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  padding-bottom: 1rem;
+}
+
+/* Fil : un bloc par jour, en-tête collé sous la barre du haut. */
+.pi-jours,
+.pi-traces {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pi-jours {
+  display: grid;
+  gap: var(--e-12);
+}
+.pi-jour-titre {
+  position: sticky;
+  top: var(--ef-topbar-h, 0px);
+  z-index: 2;
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--r-10);
+  background: linear-gradient(var(--surface-2), var(--surface-2)), var(--surface);
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.pi-trace {
+  display: grid;
+  grid-template-columns: 3rem 24px minmax(0, 1fr) auto;
+  align-items: start;
   gap: 0.75rem;
-  margin: 0.75rem 0;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
 }
-.pi-journal-outils .field {
-  flex: 1 1 10rem;
+.pi-trace:last-child {
+  border-bottom: 0;
 }
-.pi-journal-detail {
+.pi-trace:hover {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.pi-trace-heure {
+  padding-top: 2px;
+  color: var(--text-subtle);
+  font-size: var(--t-13);
+  font-variant-numeric: tabular-nums;
+}
+.pi-trace-hub {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-muted);
+}
+.pi-trace-corps {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.pi-trace-corps p {
+  margin: 0;
+}
+.pi-trace-titre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+.pi-trace-titre strong {
+  font-weight: 600;
+}
+.pi-trace-detail {
+  color: var(--text-muted);
+  font-size: var(--t-13);
   overflow-wrap: anywhere;
+}
+.pi-trace-detail.is-replie {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.pi-trace-plus {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lien);
+  font: inherit;
+  font-size: var(--t-13);
+  font-weight: 600;
+  cursor: pointer;
+}
+.pi-trace-motif {
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  overflow-wrap: anywhere;
+}
+.pi-trace-motif span {
+  margin-right: 0.3rem;
+  color: var(--text-subtle);
+  font-weight: 600;
+}
+.pi-trace-par {
+  max-width: 14rem;
+  overflow: hidden;
+  color: var(--text-subtle);
+  font-size: var(--t-13);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pi-journal-suite {
+  display: flex;
+  justify-content: center;
+}
+.pi-journal-note {
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+}
+
+/* Téléphone : heure, puis action, détail et auteur les uns sous les autres. */
+@media (max-width: 720px) {
+  /* Les cinq périodes sur une ligne, à parts égales. */
+  .pi-periodes {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+  }
+  .pi-periodes button {
+    padding: 0 0.2rem;
+    font-size: var(--t-12);
+  }
+  .pi-journal-recherche {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  /* Auteur et export sur la même ligne. */
+  .pi-journal-outils .pi-journal-auteur {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+  }
+  .pi-journal-outils .bouton-export {
+    margin-left: 0;
+  }
+  .pi-trace {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    gap: 0.25rem 0.6rem;
+    padding: 0.65rem 0.5rem;
+  }
+  .pi-trace-avatar {
+    display: none;
+  }
+  .pi-trace-par {
+    grid-column: 2;
+    max-width: none;
+  }
+}
+@media (pointer: coarse) {
+  .pi-periodes button,
+  .pi-journal-categories button {
+    min-height: 44px;
+  }
 }
 /* Reporting : analyse rédigée par l'émetteur, sous les rubriques chiffrées. */
 .pi-analyse {
