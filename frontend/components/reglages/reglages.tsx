@@ -16,6 +16,7 @@ import { ValeursPanel } from './valeurs-panel';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 import { ROLE_CIO } from '@hub/domain';
+import { confirmLeave } from '@/components/unsaved-changes-guard';
 
 const SECTIONS = ['gabarit', 'regles', 'objectifs', 'journal', 'signalements', 'administration'] as const;
 type Section = (typeof SECTIONS)[number];
@@ -57,7 +58,11 @@ export function Reglages({ slug }: { slug: string }) {
     : SECTIONS.includes(demande as Section)
       ? (demande as Section)
       : 'gabarit';
-  const choisir = (s: Section) => router.replace(`${pathname}?section=${s}`, { scroll: false });
+  // Droits non enregistrés (Administration) : la fenêtre de garde demande d'abord.
+  const choisir = async (s: Section) => {
+    if (s === section) return;
+    if (await confirmLeave()) router.replace(`${pathname}?section=${s}`, { scroll: false });
+  };
 
   const entete = (
     <div className="reg-titre">

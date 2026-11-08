@@ -12,6 +12,7 @@ import { definirSonActive, sonActive } from '@/lib/notification-sound';
 import { NotifPopups } from '@/components/notif-popups';
 import { usePreferencesNotifications } from '@/lib/preferences-notifications';
 import { activerPush, etatPush, rafraichirPush, type EtatPush } from '@/lib/push';
+import { confirmLeave, leaveTo } from '@/components/unsaved-changes-guard';
 
 // « (3) » devant le titre de l'onglet tant que des notifications attendent.
 const PREFIXE = /^\(\d+\+?\) /;
@@ -39,7 +40,8 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
     setOuvert(false);
     const cible = cibleNotification(slug, n, session);
     if ('conversation' in cible) ouvrirConversation(cible.conversation);
-    else router.push(cible.href);
+    // Changements non enregistrés : la fenêtre de garde demande d'abord.
+    else void confirmLeave().then((partir) => partir && leaveTo(router, cible.href));
   }
   const [ouvert, setOuvert] = useState(false);
   const boiteRef = useRef<HTMLDivElement>(null);

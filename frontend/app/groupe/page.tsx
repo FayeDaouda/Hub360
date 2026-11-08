@@ -22,6 +22,7 @@ import { definitionSection, sectionDepuisParametre } from '@/components/groupe/c
 import { AvisDroitsBandeau } from '@/components/avis-droits-bandeau';
 import { Pill } from '@/components/ui/pill';
 import { libelleRole } from '@/lib/groupe';
+import { confirmLeave, leaveTo } from '@/components/unsaved-changes-guard';
 
 // Administration du HUB — le CIO et l'Administrateur HUB, tous deux à carte
 // blanche (31/10/2026, cf. estAdministrateurHub). Les autres rôles sont
@@ -82,9 +83,11 @@ function ConsoleAdministration() {
 
   if (!session) return null;
 
-  function deconnexion() {
+  // Changements non enregistrés (droits) : la fenêtre de garde demande d'abord.
+  async function deconnexion() {
+    if (!(await confirmLeave())) return;
     clearSession();
-    router.push('/');
+    leaveTo(router, '/');
   }
 
   const slug = session.societe.slug;
@@ -142,7 +145,7 @@ function ConsoleAdministration() {
             <p>{definition.description(session.societe.nom)}</p>
           </header>
           {section === 'comptes' && <ComptesRolesPanel moiId={session.utilisateur.id} />}
-          {section === 'droits' && <RolesPanel slug={slug} />}
+          {section === 'droits' && <RolesPanel key={slug} slug={slug} />}
           {section === 'modules' && <ModulesPanel slug={slug} societe={session.societe.nom} />}
           {section === 'interrupteurs' && <InterrupteursPanel slug={slug} />}
           {section === 'journal' && <JournalAudit slug={slug} entete={false} />}
