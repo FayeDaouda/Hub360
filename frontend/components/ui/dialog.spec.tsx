@@ -122,3 +122,41 @@ describe('Modal — accessibilité, état actuel', () => {
     expect(ouvrir).not.toHaveFocus();
   });
 });
+
+describe('Modal · trapFocus', () => {
+  it('garde la tabulation dans la fenêtre : Tab boucle du dernier au premier, Maj+Tab l’inverse', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Derrière</button>
+        <Modal onClose={() => {}} labelledBy="titre" trapFocus>
+          <ModalHeader title="Titre" titleId="titre" onClose={() => {}} />
+          <input aria-label="Motif" />
+          <button type="button">Valider</button>
+        </Modal>
+      </>,
+    );
+    screen.getByRole('button', { name: 'Valider' }).focus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.getByRole('button', { name: 'Valider' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Derrière' })).not.toHaveFocus();
+  });
+
+  it('sans trapFocus, la tabulation n’est pas retenue (comportement d’avant)', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Modal onClose={() => {}} labelledBy="titre">
+          <ModalHeader title="Titre" titleId="titre" onClose={() => {}} />
+          <button type="button">Valider</button>
+        </Modal>
+        <button type="button">Après</button>
+      </>,
+    );
+    screen.getByRole('button', { name: 'Valider' }).focus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Après' })).toHaveFocus();
+  });
+});

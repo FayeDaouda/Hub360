@@ -151,7 +151,7 @@ function ConsoleAdministration() {
           {section === 'droits' && <RolesPanel key={slug} slug={slug} />}
           {section === 'modules' && <ModulesPanel slug={slug} societe={session.societe.nom} />}
           {section === 'journal' && <JournalAudit slug={slug} entete={false} />}
-          {section === 'deblocages' && <DeblocagesPanel slug={slug} />}
+          {section === 'deblocages' && <DeblocagesPanel key={slug} slug={slug} />}
         </main>
       </div>
     </div>

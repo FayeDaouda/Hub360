@@ -29,6 +29,9 @@ type DialogProps = {
   onKeyDown?: (e: ReactKeyboardEvent) => void;
   // Accès à la boîte (piège de tabulation de la confirmation).
   boxRef?: Ref<HTMLDivElement>;
+  // Tabulation gardée dans la fenêtre (Tab et Maj+Tab bouclent sur ses
+  // éléments) ; à activer fenêtre par fenêtre (08/11/2026).
+  trapFocus?: boolean;
   children: ReactNode;
 };
 
@@ -46,6 +49,7 @@ export function Dialog({
   describedBy,
   onKeyDown,
   boxRef,
+  trapFocus = false,
   children,
 }: DialogProps) {
   useEffect(() => {
@@ -66,13 +70,36 @@ export function Dialog({
         aria-labelledby={labelledBy}
         aria-describedby={describedBy}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={onKeyDown}
+        onKeyDown={(e) => {
+          onKeyDown?.(e);
+          if (trapFocus && !e.defaultPrevented) garderTabulation(e);
+        }}
       >
         {children}
       </Element>
     </div>
   );
   return portal ? createPortal(dialog, document.body) : dialog;
+}
+
+const FOCUSABLES =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// Tab sur le dernier élément → le premier ; Maj+Tab sur le premier → le dernier.
+function garderTabulation(e: ReactKeyboardEvent) {
+  if (e.key !== 'Tab') return;
+  const boite = e.currentTarget as HTMLElement;
+  const elements = [...boite.querySelectorAll<HTMLElement>(FOCUSABLES)];
+  if (!elements.length) return;
+  const premier = elements[0];
+  const dernier = elements[elements.length - 1];
+  if (e.shiftKey && document.activeElement === premier) {
+    e.preventDefault();
+    dernier.focus();
+  } else if (!e.shiftKey && document.activeElement === dernier) {
+    e.preventDefault();
+    premier.focus();
+  }
 }
 
 type PresetProps = Omit<DialogProps, 'backdropClassName' | 'className'> & {

@@ -749,21 +749,163 @@
   }
 }
 
-/* Administration du HUB › Déblocages (Administrateur HUB, 29/10/2026). */
+/* Administration du HUB › Déblocages (Administrateur HUB, 29/10/2026 ;
+   refonte du 08/11/2026) : recherche par code, cartes Dossier et Projet,
+   zone dangereuse à part, historique du code en fil. */
+.deb {
+  gap: 1.25rem;
+}
+.deb h2 {
+  margin: 0;
+}
 .deb-recherche {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 0.75rem;
 }
-.deb-recherche .field {
-  flex: 1 1 16rem;
-  max-width: 360px;
+.deb-recherche-champ {
+  display: grid;
+  flex: 1 1 20rem;
+  gap: 6px;
+  max-width: 34rem;
 }
+.deb-recherche .field-input {
+  box-sizing: border-box;
+  height: 48px;
+}
+.deb-recherche .btn-primary {
+  min-height: 48px;
+  padding-inline: 1.25rem;
+}
+.deb-code-saisie,
+.deb-code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.deb-code-saisie {
+  font-size: var(--t-16);
+  letter-spacing: 0.02em;
+}
+.deb-code {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.deb-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}
+
+/* Confirmation d'une intervention faite. */
+.deb-succes {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--border));
+  border-radius: var(--r-10);
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+  color: var(--ok-texte);
+  font-size: var(--t-13);
+  font-weight: 500;
+}
+.deb-succes svg {
+  flex: none;
+}
+.deb-introuvable {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  text-align: center;
+}
+.deb-introuvable .empty-state,
+.deb-introuvable > :first-child {
+  padding-bottom: 0;
+}
+/* Erreur de recherche ou des récents, avec « Réessayer ». */
+.deb-erreur {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.deb-erreur p {
+  margin: 0;
+}
+
+/* Blocs titrés (récents, historique). */
+.deb-bloc {
+  display: grid;
+  gap: 0.6rem;
+}
+.deb-sous-titre {
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Interventions récentes : une ligne cliquable par intervention. */
+.deb-recents {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+  list-style: none;
+}
+.deb-recents li + li {
+  border-top: 1px solid var(--border);
+}
+.deb-recent {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.deb-recent:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+.deb-recent:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.deb-recents li:first-child .deb-recent {
+  border-radius: var(--r-14) var(--r-14) 0 0;
+}
+.deb-recents li:last-child .deb-recent {
+  border-radius: 0 0 var(--r-14) var(--r-14);
+}
+.deb-recent-trace {
+  justify-self: end;
+  color: var(--text-subtle);
+  font-size: var(--t-13);
+  white-space: nowrap;
+}
+.deb-recent-motif {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  overflow-wrap: anywhere;
+}
+
+/* Cartes Dossier CRM et Projet. */
 .deb-grille {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: 1rem;
+  gap: var(--e-12);
 }
 .deb-carte {
   display: grid;
@@ -771,61 +913,161 @@
   gap: 0.75rem;
   padding: 1rem 1.1rem;
   border: 1px solid var(--border);
-  border-radius: var(--r-14, 14px);
+  border-radius: var(--r-14);
   background: var(--surface);
 }
-.deb-carte h3,
-.deb-sous-titre {
-  margin: 0;
+.deb-carte-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.deb-carte-tete h2 {
+  color: var(--text-subtle);
   font-size: var(--t-12);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-subtle);
 }
-.deb-titre {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
+.deb-identite {
+  display: grid;
+  gap: 2px;
   margin: 0;
+}
+.deb-identite .deb-code {
+  font-size: var(--t-16);
 }
 .deb-faits {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.25rem 1rem;
+  gap: 0.3rem 1rem;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--t-13);
 }
 .deb-faits dt {
-  color: var(--text-muted);
+  color: var(--text-subtle);
 }
 .deb-faits dd {
   margin: 0;
+  font-weight: 500;
 }
 .deb-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
 }
-.deb-note {
+
+/* Zone dangereuse : la suppression définitive, à part des autres actions. */
+.deb-danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+  border-radius: var(--r-14);
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+.deb-danger-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-10);
+  background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+  color: var(--danger-texte);
+}
+.deb-danger-texte {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: 2px;
+  min-width: 0;
+}
+.deb-danger-texte h2 {
+  color: var(--danger-texte);
+  font-size: var(--t-16);
+  font-weight: 600;
+}
+.deb-danger-texte p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: var(--t-13);
 }
+
+/* Historique du code : un point de couleur par type d'intervention. */
 .deb-historique {
   display: grid;
-  gap: 0.4rem;
-  margin: 0.5rem 0 0;
-  padding-left: 1.1rem;
-  font-size: 0.9rem;
+  margin: 0;
+  padding: 0.25rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+  list-style: none;
 }
+.deb-evenement {
+  --pill-fond: var(--pill-neutre);
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+.deb-evenement + .deb-evenement {
+  border-top: 1px solid var(--border);
+}
+.deb-evenement--succes {
+  --pill-fond: var(--pill-succes);
+}
+.deb-evenement--info {
+  --pill-fond: var(--pill-info);
+}
+.deb-evenement--azur {
+  --pill-fond: var(--pill-azur);
+}
+.deb-evenement--attention {
+  --pill-fond: var(--pill-attention);
+}
+.deb-evenement--risque {
+  --pill-fond: var(--pill-risque);
+}
+.deb-point {
+  width: 10px;
+  height: 10px;
+  margin-top: 0.35rem;
+  border-radius: 50%;
+  background: var(--pill-fond);
+}
+:root[data-theme='dark'] .deb-point {
+  background: color-mix(in srgb, var(--pill-fond), white 30%);
+}
+.deb-evenement p {
+  margin: 0;
+}
+.deb-evenement-titre {
+  overflow-wrap: anywhere;
+}
+.deb-motif {
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  overflow-wrap: anywhere;
+}
+.deb-trace {
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+}
+
+/* Fenêtre d'intervention. */
 .deb-modale {
   display: grid;
   gap: 0.85rem;
 }
 .deb-modale > p {
   margin: 0;
+}
+.deb-motif-aide {
+  margin: -0.5rem 0 0;
 }
 .deb-cellules {
   display: grid;
@@ -841,20 +1083,43 @@
   align-items: center;
   gap: 0.5rem;
 }
-
-/* Déblocages : suppression définitive, à part des autres interventions. */
-.deb-danger {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--danger-texte) 35%, transparent);
-  border-radius: var(--r-14);
+.deb-cellules .deb-note {
+  white-space: nowrap;
 }
-.deb-danger .deb-note {
-  flex: 1 1 18rem;
+
+@media (max-width: 720px) {
+  .deb-recherche .btn-primary {
+    flex: 1 1 100%;
+  }
+  /* Boutons pleine largeur : texte centré ; cibles tactiles de 44 px. */
+  .deb .btn-primary,
+  .deb .btn-ghost,
+  .deb .btn-danger {
+    justify-content: center;
+    min-height: 44px;
+  }
+  /* La fenêtre défile déjà : toutes les cellules visibles, lignes de 44 px. */
+  .deb-cellules {
+    max-height: none;
+    overflow: visible;
+  }
+  .deb-cellules label {
+    min-height: 44px;
+  }
+  /* Zone dangereuse : l'icône ne prend pas une ligne à elle seule. */
+  .deb-danger-icone {
+    display: none;
+  }
+  .deb-recent {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .deb-recent-trace {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .deb-danger .btn-danger {
+    flex: 1 1 100%;
+  }
 }
 
 /* --- Administration du HUB › Modules (refonte du 08/11/2026) -------------
