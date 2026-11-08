@@ -21,7 +21,6 @@ const SECTIONS: [string, SectionConsole][] = [
   ['Comptes & rôles', 'comptes'],
   ['Droits des rôles', 'droits'],
   ['Modules', 'modules'],
-  ['Interrupteurs', 'interrupteurs'],
   ['Journal d’audit', 'journal'],
   ['Déblocages', 'deblocages'],
 ];
@@ -32,7 +31,7 @@ beforeEach(() => {
 });
 
 describe('NavigationConsole', () => {
-  it('liste les 6 sections en liens vers leur adresse', () => {
+  it('liste les 5 sections en liens vers leur adresse', () => {
     render(<NavigationConsole session={SESSION} active="comptes" />);
     const nav = screen.getByRole('navigation', { name: 'Sections de l’administration' });
     for (const [libelle, cle] of SECTIONS) {

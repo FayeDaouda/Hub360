@@ -1,13 +1,18 @@
 import { apiAuth } from './client-api';
 
-// Interrupteurs de l'Administrateur HUB (Administration du HUB › Interrupteurs) :
+// Interrupteurs de l'Administrateur HUB et du CIO (Administration du HUB › Modules) :
 //   GET /societes/:slug/interrupteurs                 modules de la société et maintenance du HUB
 //   PUT /societes/:slug/interrupteurs/modules/:cle    { actif, motif }
 //   PUT /societes/:slug/interrupteurs/maintenance     { actif, message, motif }
 
 export type Interrupteurs = {
   modules: { cle: string; nom: string; actif: boolean; desactiveLe: string | null; motif: string | null }[];
-  maintenance: { actif: boolean; message: string };
+  maintenance: {
+    actif: boolean;
+    message: string;
+    // Dernière fermeture ou réouverture du HUB (null : jamais basculée).
+    depuis: { le: string; par: string | null } | null;
+  };
 };
 
 const base = (slug: string) => `/societes/${slug}/interrupteurs`;

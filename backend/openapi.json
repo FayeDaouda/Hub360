@@ -18901,6 +18901,23 @@
           "motif"
         ]
       },
+      "BasculeMaintenanceDto": {
+        "type": "object",
+        "properties": {
+          "le": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "par": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "le",
+          "par"
+        ]
+      },
       "EtatMaintenanceDto": {
         "type": "object",
         "properties": {
@@ -18909,11 +18926,21 @@
           },
           "message": {
             "type": "string"
+          },
+          "depuis": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BasculeMaintenanceDto"
+              }
+            ]
           }
         },
         "required": [
           "actif",
-          "message"
+          "message",
+          "depuis"
         ]
       },
       "InterrupteursDto": {

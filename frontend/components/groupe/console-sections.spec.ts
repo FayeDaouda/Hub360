@@ -20,6 +20,10 @@ describe('sections de l’Administration du HUB', () => {
     expect(sectionDepuisParametre('constructor')).toBe(SECTION_PAR_DEFAUT);
   });
 
+  it('mène l’ancienne adresse « Interrupteurs » vers « Modules »', () => {
+    expect(sectionDepuisParametre('interrupteurs')).toBe('modules');
+  });
+
   it('garde l’adresse nue pour la section par défaut', () => {
     expect(lienSection(SECTION_PAR_DEFAUT)).toBe('/groupe');
     expect(lienSection('droits')).toBe('/groupe?onglet=droits');
@@ -33,7 +37,7 @@ describe('sections de l’Administration du HUB', () => {
   });
 
   it('rattache chaque section à son groupe et nomme la société dans les explications', () => {
-    expect(definitionSection('interrupteurs').groupe).toBe('Plateforme');
+    expect(definitionSection('modules').groupe).toBe('Plateforme');
     expect(definitionSection('droits').description('Grey Concrete')).toContain('Grey Concrete');
   });
 });

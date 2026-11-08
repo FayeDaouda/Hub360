@@ -58,8 +58,22 @@ export class SwitchesService {
         const d = byKey.get(m.cle);
         return { cle: m.cle, nom: m.nom, actif: !d, desactiveLe: d?.createdAt ?? null, motif: d?.motif ?? null };
       }),
-      maintenance: { actif: !!maintenance?.actif, message: maintenance?.message ?? '' },
+      maintenance: {
+        actif: !!maintenance?.actif,
+        message: maintenance?.message ?? '',
+        depuis: maintenance ? { le: maintenance.modifieLe, par: await this.auteur(maintenance.parId) } : null,
+      },
     };
+  }
+
+  // Auteur de la dernière bascule de maintenance, nommé comme au journal
+  // d'audit. La maintenance vaut pour tout le HUB : sa trace ne se lit pas
+  // dans le journal d'une société (elle est inscrite dans celui de la société
+  // de connexion de l'auteur).
+  private async auteur(parId: string | null): Promise<string | null> {
+    if (!parId) return null;
+    const u = await this.prisma.utilisateur.findUnique({ where: { id: parId }, select: { prenom: true, nom: true } });
+    return u ? `${u.prenom} ${u.nom}`.trim() : 'compte supprimé';
   }
 
   async setModule(companyId: string, moduleKey: string, active: boolean, motif: string, actorId: string) {
@@ -95,6 +109,11 @@ export class SwitchesService {
   // Le HUB entier ; l'intervention est inscrite au journal de la société de
   // connexion de l'Administrateur HUB.
   async setMaintenance(companyId: string, active: boolean, message: string, motif: string, actorId: string) {
+    // Déjà dans cet état (deux administrateurs en même temps) : rien n'est
+    // écrit, ni la ligne (sa trace « par … le … » reste celle de la vraie
+    // bascule) ni une intervention au journal qui n'en serait pas une.
+    const current = await this.prisma.maintenanceHub.findUnique({ where: { id: 'hub' } });
+    if (!!current?.actif === active) return this.state(companyId);
     await this.prisma.$transaction([
       this.prisma.maintenanceHub.upsert({
         where: { id: 'hub' },
