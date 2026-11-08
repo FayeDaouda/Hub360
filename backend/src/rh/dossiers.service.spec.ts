@@ -148,12 +148,14 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
     dossier: unknown;
     actif?: boolean;
     roles?: string[];
+    motDePasseHash?: string | null;
     dernierEvenement?: unknown;
     taches?: unknown[];
   }) {
     const majCompte = jest.fn((a: unknown) => a);
     const evenement = jest.fn((a: unknown) => a);
     const majTache = jest.fn((a: unknown) => a);
+    const annulerLiens = jest.fn((a: unknown) => a);
     const notifications = { envoyer: jest.fn(), comptesDe: jest.fn().mockResolvedValue(['U7']) };
     const majDossier = jest.fn(() => ({
       ...VIDE,
@@ -168,11 +170,13 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
       utilisateur: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           actif: o.actif ?? true,
+          motDePasseHash: o.motDePasseHash === undefined ? 'h' : o.motDePasseHash,
           roles: (o.roles ?? ['Salarié']).map((nom) => ({ role: { nom } })),
         }),
         update: majCompte,
       },
       evenementCompte: { create: evenement, findFirst: jest.fn().mockResolvedValue(o.dernierEvenement ?? null) },
+      invitation: { updateMany: annulerLiens },
       tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? []), update: majTache },
       evenementTacheProjet: { create: jest.fn((a: unknown) => a) },
       collaborateur: { findMany: jest.fn().mockResolvedValue([{ id: 'C7', prenom: 'Awa', nom: 'Diop' }]) },
@@ -183,6 +187,7 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
       majCompte,
       evenement,
       majTache,
+      annulerLiens,
       notifications,
     };
   }
@@ -218,6 +223,42 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
     const { s, majCompte } = svc({ dossier: direct, actif: false, roles: ['holding_admin'] });
     await expect(s.archiver('D1', false, 'RH1')).rejects.toThrow("compte d'administration");
     expect(majCompte).not.toHaveBeenCalled();
+  });
+
+  it('le départ annule les liens en attente et coupe aussi un compte jamais activé (daté)', async () => {
+    const { s, annulerLiens, majCompte } = svc({ dossier: direct, actif: false, motDePasseHash: null });
+    await s.archiver('D1', true, 'RH1');
+    expect(annulerLiens).toHaveBeenCalledWith({
+      where: { utilisateurId: 'U9', usedAt: null },
+      data: { usedAt: expect.any(Date) },
+    });
+    expect(majCompte).toHaveBeenCalledWith({
+      where: { id: 'U9' },
+      data: expect.objectContaining({ actif: false, desactiveLe: expect.any(Date) }),
+    });
+  });
+
+  it('un compte déjà désactivé pour une autre raison n’est pas re-daté par le départ', async () => {
+    const { s, majCompte } = svc({ dossier: direct, actif: false, motDePasseHash: 'h' });
+    await s.archiver('D1', true, 'RH1');
+    expect(majCompte).not.toHaveBeenCalled();
+  });
+
+  it('désarchiver un invité jamais activé le remet en attente, pas actif', async () => {
+    const { s, majCompte } = svc({
+      dossier: direct,
+      actif: false,
+      motDePasseHash: null,
+      dernierEvenement: { type: 'compte_desactive', detail: 'Dossier RH archivé (départ)' },
+    });
+    await s.archiver('D1', false, 'RH1');
+    expect(majCompte).toHaveBeenCalledWith({ where: { id: 'U9' }, data: { desactiveLe: null, desactiveParId: null } });
+  });
+
+  it('le désarchivage ne touche pas aux liens', async () => {
+    const { s, annulerLiens } = svc({ dossier: direct, actif: false });
+    await s.archiver('D1', false, 'RH1');
+    expect(annulerLiens).not.toHaveBeenCalled();
   });
 
   it('dossier sans compte : archive sans toucher aux comptes', async () => {
