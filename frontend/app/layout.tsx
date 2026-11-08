@@ -29,11 +29,17 @@ export const metadata = {
   description: 'Portail de gestion de la holding',
   manifest: '/manifest.json', // pour la PWA
   icons: {
-    // Nouveau logo hub360° (refonte dark/light, sept. 2026) — icône seule,
-    // fond sombre inclus dans le fichier (lisible sur n'importe quel chrome
-    // de navigateur, pas besoin de variante par prefers-color-scheme).
-    icon: [{ url: '/logos/hub-icon-dark.png', type: 'image/png' }],
-    apple: '/logos/hub-icon-dark.png',
+    // Onglet : le H seul, sans fond. Le SVG adapte sa barre centrale au thème
+    // du navigateur ; le .ico (16/32/48 px) sert aux navigateurs sans favicon
+    // SVG. Ne pas mettre sizes: 'any' sur le .ico : Chrome le préférerait
+    // alors au SVG (Firefox, lui, prend la dernière icône déclarée).
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/logos/hub-favicon.svg', type: 'image/svg+xml' },
+    ],
+    // Écran d'accueil iOS : carré 180 px à fond plein (iOS noircit la
+    // transparence et arrondit lui-même les coins).
+    apple: '/icons/apple-touch-icon.png',
   },
 };
 
