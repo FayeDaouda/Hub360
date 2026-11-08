@@ -431,7 +431,7 @@ function ModaleBascule({
   }
 
   return (
-    <Modal onClose={onClose} busy={envoi} portal className="modal--sm" label={titre}>
+    <Modal onClose={onClose} busy={envoi} portal trapFocus className="modal--sm" label={titre}>
       <ModalHeader title={titre} onClose={onClose} closeDisabled={envoi} />
       <form className="modal-body deb-modale" onSubmit={valider}>
         {bascule.type === 'module' && (
