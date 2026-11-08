@@ -66,6 +66,7 @@ function mockPrisma(o: {
       create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...UTIL, id: 'UN', ...data })),
     },
     evenementCompte: { create: jest.fn().mockReturnValue('audit') },
+    invitation: { updateMany: jest.fn().mockReturnValue('liens') },
     dossierPersonnel: {
       findMany: jest.fn().mockResolvedValue(o.dossiers ?? []),
       findUnique: jest.fn().mockResolvedValue(o.dossier ?? null),
@@ -306,6 +307,19 @@ describe('ComptesGroupeService.changerActif', () => {
       data: expect.objectContaining({ type: 'compte_desactive' }),
     });
     expect(res.statut).toBe('desactive');
+    // Les liens en attente (nouveau mot de passe) ne le rallumeront pas.
+    expect(prisma.invitation.updateMany).toHaveBeenCalledWith({
+      where: { utilisateurId: 'U1', usedAt: null },
+      data: { usedAt: expect.any(Date) },
+    });
+    expect(tx.mock.calls[0][0]).toContain('liens');
+  });
+
+  it('réactiver ne touche pas aux liens', async () => {
+    const { svc, prisma, tx } = mockPrisma({ utilisateur: avecRoles('Salarié', { actif: false }) });
+    tx.mockResolvedValue([{ ...UTIL, actif: true }]);
+    await svc.changerActif('U1', true, 'CIO');
+    expect(prisma.invitation.updateMany).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -460,6 +474,20 @@ describe('ComptesGroupeService · comptes d’administration hors de portée', (
       doubleFacteur: false,
     });
     expect(tx).toHaveBeenCalledTimes(1);
+  });
+
+  it('pas de nouvelle invitation pour un invité coupé par un départ (dossier archivé)', async () => {
+    const { svc, invitation } = mockPrisma({
+      utilisateur: {
+        ...UTIL,
+        actif: false,
+        motDePasseHash: null,
+        desactiveLe: new Date(),
+        roles: [{ role: { nom: 'Salarié' } }],
+      },
+    });
+    await expect(svc.renvoyerInvitation('U1', 'CIO')).rejects.toThrow('coupé par un départ');
+    expect(invitation).not.toHaveBeenCalled();
   });
 
   it('une invitation ordinaire se renvoie toujours', async () => {

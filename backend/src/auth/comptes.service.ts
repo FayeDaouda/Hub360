@@ -53,20 +53,47 @@ export class ComptesService {
 
   // -- Définir le mot de passe (activation OU reset) ---------------------
   async definirMotDePasse(token: string, motDePasse: string, contexte: InvitationType): Promise<void> {
-    const inv = await this.consommer(token, contexte);
+    const inv = await this.lireJeton(token, contexte);
     const hash = await hacherMotDePasse(motDePasse);
-    const u = await this.prisma.utilisateur.update({
-      where: { id: inv.utilisateurId! },
-      data: {
-        motDePasseHash: hash,
-        actif: true,
-        // invalide toute session émise avant maintenant (reset surtout)
-        sessionsValidesDepuis: new Date(),
-      },
-      select: { email: true, prenom: true },
+    const maintenant = new Date();
+    // Un lien ne rallume jamais un compte coupé (départ, désactivation), même
+    // si la coupure tombe au même instant : dans une seule transaction, le
+    // lien n'est pris qu'une fois (usedAt encore vide), puis le compte n'est
+    // écrit que s'il est toujours dans l'état attendu :
+    // - invitation : pas désactivé depuis l'envoi du lien ;
+    // - nouveau mot de passe : actif, et il le reste (actif n'est pas écrit).
+    // Refusé : le lien est brûlé quand même, et la réponse est celle d'un
+    // lien expiré — rien n'est révélé sur le compte.
+    const accepte = await this.prisma.$transaction(async (tx) => {
+      const pris = await tx.invitation.updateMany({
+        where: { id: inv.id, usedAt: null },
+        data: { usedAt: maintenant },
+      });
+      if (pris.count !== 1) return false;
+      const maj = await tx.utilisateur.updateMany({
+        where:
+          contexte === 'invitation'
+            ? { id: inv.utilisateurId, OR: [{ desactiveLe: null }, { desactiveLe: { lt: inv.createdAt } }] }
+            : { id: inv.utilisateurId, actif: true },
+        data: {
+          motDePasseHash: hash,
+          // Activation : un état net (plus aucune trace d'une coupure passée).
+          ...(contexte === 'invitation' ? { actif: true, desactiveLe: null, desactiveParId: null } : {}),
+          // invalide toute session émise avant maintenant (reset surtout)
+          sessionsValidesDepuis: maintenant,
+        },
+      });
+      return maj.count === 1;
     });
-    await this.journal(inv.utilisateurId!, contexte === 'invitation' ? 'compte_active' : 'mdp_reinitialise', null, '');
-    if (contexte === 'reset') this.avertirSecurite(u, 'mot_de_passe_reinitialise');
+    if (!accepte) throw new BadRequestException('Lien invalide ou expiré');
+    await this.journal(inv.utilisateurId, contexte === 'invitation' ? 'compte_active' : 'mdp_reinitialise', null, '');
+    if (contexte === 'reset') {
+      const u = await this.prisma.utilisateur.findUnique({
+        where: { id: inv.utilisateurId },
+        select: { email: true, prenom: true },
+      });
+      if (u) this.avertirSecurite(u, 'mot_de_passe_reinitialise');
+    }
   }
 
   // Avis de sécurité à la personne (lot A) : envoyé sans retarder la réponse ;
@@ -96,7 +123,9 @@ export class ComptesService {
     return clair;
   }
 
-  private async consommer(token: string, type: InvitationType) {
+  // Lien reconnu, du bon type, ni utilisé ni expiré. Il n'est pris (usedAt)
+  // que dans la transaction de definirMotDePasse.
+  private async lireJeton(token: string, type: InvitationType) {
     const inv = await this.prisma.invitation.findUnique({
       where: { tokenHash: hacherJeton(token) },
     });
@@ -109,11 +138,7 @@ export class ComptesService {
     ) {
       throw new BadRequestException('Lien invalide ou expiré');
     }
-    await this.prisma.invitation.update({
-      where: { id: inv.id },
-      data: { usedAt: new Date() },
-    });
-    return inv;
+    return { ...inv, utilisateurId: inv.utilisateurId };
   }
 
   private construireLien(type: InvitationType, clair: string): string {

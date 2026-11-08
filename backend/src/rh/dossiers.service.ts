@@ -291,7 +291,7 @@ export class DossiersPersonnelService {
     if (utilisateurId) {
       const compte = await this.prisma.utilisateur.findUniqueOrThrow({
         where: { id: utilisateurId },
-        select: { actif: true, roles: { select: { role: { select: { nom: true } } } } },
+        select: { actif: true, motDePasseHash: true, roles: { select: { role: { select: { nom: true } } } } },
       });
       // Un compte d'administration (secours, Administrateur HUB) ne se
       // désactive jamais par un dossier RH : personne ne pourrait le rétablir
@@ -301,7 +301,22 @@ export class DossiersPersonnelService {
           "Ce dossier est relié à un compte d'administration : son archivage ne peut pas modifier ce compte.",
         );
       }
-      if (archive && compte.actif) {
+      // Départ : les liens en attente (invitation, nouveau mot de passe) ne
+      // servent plus — sinon un lien encore valable rallumerait le compte,
+      // y compris celui d'une personne invitée qui ne l'a jamais activé.
+      if (archive) {
+        ops.push(
+          this.prisma.invitation.updateMany({
+            where: { utilisateurId, usedAt: null },
+            data: { usedAt: maintenant },
+          }),
+        );
+      }
+      // Actif, ou invité jamais activé : coupé et daté. La date de coupure
+      // bloque aussi une activation en cours avec un lien d'avant le départ
+      // (comptes.service, definirMotDePasse). Un compte déjà désactivé pour
+      // une autre raison reste tel quel.
+      if (archive && (compte.actif || !compte.motDePasseHash)) {
         ops.push(
           this.prisma.utilisateur.update({
             where: { id: utilisateurId },
@@ -327,7 +342,10 @@ export class DossiersPersonnelService {
           ops.push(
             this.prisma.utilisateur.update({
               where: { id: utilisateurId },
-              data: { actif: true, desactiveLe: null, desactiveParId: null },
+              // Jamais activé : il redevient « invitation en attente », pas actif.
+              data: compte.motDePasseHash
+                ? { actif: true, desactiveLe: null, desactiveParId: null }
+                : { desactiveLe: null, desactiveParId: null },
             }),
             this.prisma.evenementCompte.create({
               data: { utilisateurId, type: 'compte_reactive', parId: acteurId, detail: 'Dossier RH désarchivé' },

@@ -51,6 +51,7 @@ const SELECT_UTILISATEUR = {
   nom: true,
   email: true,
   actif: true,
+  desactiveLe: true,
   motDePasseHash: true,
   totpActifLe: true,
   verrouilleJusquau: true,
@@ -298,6 +299,11 @@ export class ComptesGroupeService {
     if (!u) throw new NotFoundException('Compte introuvable.');
     refuserAdministration(u);
     if (statut(u) !== 'en_attente') throw new ConflictException('Ce compte est déjà activé.');
+    // Invité puis parti avant d'activer (dossier RH archivé) : pas de nouveau
+    // lien tant que le dossier n'est pas rouvert.
+    if (u.desactiveLe) {
+      throw new ConflictException('Ce compte a été coupé par un départ : rouvrez d’abord le dossier RH.');
+    }
     return this.comptes.envoyerInvitation(u.id, u.email, u.prenom, acteurId);
   }
 
@@ -330,6 +336,16 @@ export class ComptesGroupeService {
           detail: 'Administration du HUB',
         },
       }),
+      // Désactivé : un lien de nouveau mot de passe encore valable ne doit pas
+      // le rallumer.
+      ...(actif
+        ? []
+        : [
+            this.prisma.invitation.updateMany({
+              where: { utilisateurId, usedAt: null },
+              data: { usedAt: maintenant },
+            }),
+          ]),
     ]);
     return { id: maj.id, statut: statut(maj) };
   }
