@@ -56,7 +56,7 @@ describe('completude', () => {
 });
 
 describe('DossiersPersonnelService', () => {
-  function svc(o: { dernier?: unknown; collab?: unknown } = {}) {
+  function svc(o: { dernier?: unknown; collab?: unknown; compte?: unknown } = {}) {
     const create = jest.fn().mockImplementation(({ data }) =>
       Promise.resolve({
         ...VIDE,
@@ -72,9 +72,49 @@ describe('DossiersPersonnelService', () => {
       dossierPersonnel: { findFirst: jest.fn().mockResolvedValue(o.dernier ?? null), create },
       societe: { findFirst: jest.fn().mockResolvedValue({ id: 'S1' }) },
       collaborateur: { findUnique: jest.fn().mockResolvedValue(o.collab ?? null) },
+      utilisateur: { findUnique: jest.fn().mockResolvedValue(o.compte ?? null) },
     } as unknown as PrismaService;
     return { s: new DossiersPersonnelService(prisma, {} as never), create };
   }
+
+  const compte = (nom: string) => ({
+    _count: { collaborations: 0 },
+    dossierPersonnel: null,
+    roles: [{ role: { nom } }],
+  });
+
+  it.each(['Administrateur HUB (transverse)', 'holding_admin', 'societe_admin'])(
+    'refuse de relier un dossier au compte d’administration %s (08/11/2026)',
+    async (nom) => {
+      const { s, create } = svc({ compte: compte(nom) });
+      await expect(s.creer({ societeId: 'S1', utilisateurId: 'U9' }, 'U1')).rejects.toThrow(
+        "Un compte d'administration ne se relie pas à un dossier du personnel.",
+      );
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('refuse une fiche d’équipe dont le compte est un compte d’administration', async () => {
+    const { s, create } = svc({
+      collab: {
+        societeId: 'S1',
+        dossierPersonnel: null,
+        utilisateur: { roles: [{ role: { nom: 'Administrateur HUB (transverse)' } }] },
+      },
+    });
+    await expect(s.creer({ societeId: 'S1', collaborateurId: 'C1' }, 'U1')).rejects.toThrow(
+      "Un compte d'administration ne se relie pas à un dossier du personnel.",
+    );
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('relie toujours un dossier au compte d’un CIO ou d’un salarié', async () => {
+    for (const nom of ['CIO (transverse)', 'Salarié']) {
+      const { s, create } = svc({ compte: compte(nom) });
+      await s.creer({ societeId: 'S1', utilisateurId: 'U9' }, 'U1');
+      expect(create.mock.calls[0][0].data.utilisateurId).toBe('U9');
+    }
+  });
 
   it('matricule suivant dans la séquence groupe', async () => {
     const { s, create } = svc({ dernier: { matricule: 'GH-0012' } });
@@ -104,7 +144,13 @@ describe('DossiersPersonnelService', () => {
 });
 
 describe('DossiersPersonnelService.archiver — le départ coupe l’accès', () => {
-  function svc(o: { dossier: unknown; actif?: boolean; dernierEvenement?: unknown; taches?: unknown[] }) {
+  function svc(o: {
+    dossier: unknown;
+    actif?: boolean;
+    roles?: string[];
+    dernierEvenement?: unknown;
+    taches?: unknown[];
+  }) {
     const majCompte = jest.fn((a: unknown) => a);
     const evenement = jest.fn((a: unknown) => a);
     const majTache = jest.fn((a: unknown) => a);
@@ -120,7 +166,10 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
     const prisma = {
       dossierPersonnel: { findUnique: jest.fn().mockResolvedValue(o.dossier), update: majDossier },
       utilisateur: {
-        findUniqueOrThrow: jest.fn().mockResolvedValue({ actif: o.actif ?? true }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          actif: o.actif ?? true,
+          roles: (o.roles ?? ['Salarié']).map((nom) => ({ role: { nom } })),
+        }),
         update: majCompte,
       },
       evenementCompte: { create: evenement, findFirst: jest.fn().mockResolvedValue(o.dernierEvenement ?? null) },
@@ -153,6 +202,22 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
     expect(evenement).toHaveBeenCalledWith({
       data: expect.objectContaining({ utilisateurId: 'U9', type: 'compte_desactive' }),
     });
+  });
+
+  it.each([
+    ['compte direct', direct],
+    ['compte de la fiche d’équipe', parFiche],
+  ])('refuse d’archiver si le compte relié est un compte d’administration (%s)', async (_l, dossier) => {
+    const { s, majCompte, evenement } = svc({ dossier, roles: ['societe_admin'] });
+    await expect(s.archiver('D1', true, 'RH1')).rejects.toThrow("compte d'administration");
+    expect(majCompte).not.toHaveBeenCalled();
+    expect(evenement).not.toHaveBeenCalled();
+  });
+
+  it('refuse aussi de désarchiver un dossier relié à un compte d’administration', async () => {
+    const { s, majCompte } = svc({ dossier: direct, actif: false, roles: ['holding_admin'] });
+    await expect(s.archiver('D1', false, 'RH1')).rejects.toThrow("compte d'administration");
+    expect(majCompte).not.toHaveBeenCalled();
   });
 
   it('dossier sans compte : archive sans toucher aux comptes', async () => {

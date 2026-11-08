@@ -4,6 +4,7 @@ import { join } from 'path';
 import { CatalogueSource, importerCatalogue } from './catalogue';
 import { ETAPE, ETAPES_DETAILLEES, LIBELLES_MODULE } from '../src/rights/catalogue';
 import {
+  ADMINISTRATION_ROLES,
   ROLE_CEO,
   ROLE_CFO,
   ROLE_CIO,
@@ -12,9 +13,7 @@ import {
   ROLE_CTO,
   ROLE_DIR_GC,
   ROLE_EMPLOYEE,
-  ROLE_HOLDING_ADMIN,
   ROLE_HR,
-  ROLE_HUB_ADMIN,
   NO_RIGHTS,
   type RightSet,
 } from '@hub/domain';
@@ -210,7 +209,7 @@ export async function installerSocle(prisma: PrismaClient) {
   // champ nullable (societeId) — le where-unique généré le type `string`.
   // Administrateur HUB (29/10/2026) : sans ligne de matrice, ses droits
   // complets sont posés à la connexion (auth.service.ts).
-  for (const nom of [ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN, ROLE_HUB_ADMIN]) {
+  for (const nom of ADMINISTRATION_ROLES) {
     const existant = await prisma.role.findFirst({ where: { societeId: null, nom } });
     if (!existant) {
       await prisma.role.create({ data: { nom } });

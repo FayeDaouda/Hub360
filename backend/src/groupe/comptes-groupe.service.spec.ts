@@ -25,6 +25,9 @@ function mockPrisma(o: {
   role?: unknown;
   societe?: unknown;
   affectations?: unknown[];
+  // Toutes les affectations du compte (sociétés et transverses) ; à défaut,
+  // celles de la société.
+  toutesAffectations?: unknown[];
   utilisateur?: unknown;
   dossier?: unknown;
   cellule?: unknown;
@@ -45,7 +48,13 @@ function mockPrisma(o: {
       findMany: jest
         .fn()
         .mockImplementation(({ where }) =>
-          Promise.resolve(where.utilisateurId ? (o.affectations ?? []) : (o.affectationsListe ?? [])),
+          Promise.resolve(
+            where.utilisateurId && where.societeId
+              ? (o.affectations ?? [])
+              : where.utilisateurId
+                ? (o.toutesAffectations ?? o.affectations ?? [])
+                : (o.affectationsListe ?? []),
+          ),
         ),
       deleteMany: jest.fn().mockReturnValue('deleteMany'),
       create: jest.fn().mockReturnValue('create'),
@@ -164,6 +173,15 @@ describe('ComptesGroupeService.changerRole', () => {
   it('409 sur un compte d’administration', async () => {
     const { svc } = mockPrisma({ ...base, affectations: [{ roleId: 'RA', role: { id: 'RA', nom: 'societe_admin' } }] });
     await expect(svc.changerRole('U1', 'S1', 'R1', 'ADM')).rejects.toThrow(ConflictException);
+  });
+
+  it('409 sur un Administrateur HUB qui porte aussi un rôle ordinaire dans la société', async () => {
+    const { svc, tx } = mockPrisma({
+      ...base,
+      toutesAffectations: [{ role: { nom: 'collaborateur' } }, { role: { nom: 'Administrateur HUB (transverse)' } }],
+    });
+    await expect(svc.changerRole('U1', 'S1', 'R1', 'ADM')).rejects.toThrow('son rôle ne se modifie pas');
+    expect(tx).not.toHaveBeenCalled();
   });
 
   it('remplace l’affectation, coupe les sessions (maintenant, à la ms) et journalise', async () => {
@@ -303,7 +321,13 @@ describe('ComptesGroupeService.changerActif', () => {
 describe('ComptesGroupeService.reinitialiserDoubleFacteur', () => {
   it('retire la double authentification, coupe les sessions et prévient la personne (lot A)', async () => {
     const { svc, comptes } = mockPrisma({
-      utilisateur: { totpSecret: 'chiffré', totpActifLe: new Date(), email: 'awa@exemple.sn', prenom: 'Awa' },
+      utilisateur: {
+        totpSecret: 'chiffré',
+        totpActifLe: new Date(),
+        email: 'awa@exemple.sn',
+        prenom: 'Awa',
+        roles: [{ role: { nom: 'CFO' } }],
+      },
     });
     await expect(svc.reinitialiserDoubleFacteur('U1', 'CIO')).resolves.toEqual({ id: 'U1', doubleFacteur: false });
     expect(comptes.avertirSecurite).toHaveBeenCalledWith(
@@ -315,7 +339,9 @@ describe('ComptesGroupeService.reinitialiserDoubleFacteur', () => {
 
 describe('ComptesGroupeService.debloquer (lot C)', () => {
   it('débloque avant la fin : compteurs remis à zéro, trace au journal', async () => {
-    const { svc, prisma, tx } = mockPrisma({ utilisateur: { verrouilleJusquau: new Date(Date.now() + 600_000) } });
+    const { svc, prisma, tx } = mockPrisma({
+      utilisateur: { verrouilleJusquau: new Date(Date.now() + 600_000), roles: [{ role: { nom: 'CFO' } }] },
+    });
     await expect(svc.debloquer('U1', 'CIO')).resolves.toEqual({ id: 'U1', verrouilleJusquau: null });
     expect(prisma.utilisateur.update).toHaveBeenCalledWith({
       where: { id: 'U1' },
@@ -329,7 +355,7 @@ describe('ComptesGroupeService.debloquer (lot C)', () => {
   });
 
   it('compte non verrouillé (ou verrouillage échu) → 409 ; inconnu → 404', async () => {
-    const echu = mockPrisma({ utilisateur: { verrouilleJusquau: new Date(Date.now() - 1000) } });
+    const echu = mockPrisma({ utilisateur: { verrouilleJusquau: new Date(Date.now() - 1000), roles: [] } });
     await expect(echu.svc.debloquer('U1', 'CIO')).rejects.toThrow(ConflictException);
     await expect(mockPrisma({}).svc.debloquer('U1', 'CIO')).rejects.toThrow(NotFoundException);
   });
@@ -378,5 +404,69 @@ describe('ComptesGroupeService · sessions et mot de passe (Administration du HU
     ],
   ])('refus : %s', async (_l, appel) => {
     await expect(appel()).rejects.toThrow(ConflictException);
+  });
+});
+
+// Comptes d'administration (Administrateur HUB, comptes de secours) : aucune
+// action depuis l'Administration du HUB, pas plus sur le serveur qu'à
+// l'écran (08/11/2026). Le CIO, lui, reste un compte ordinaire.
+describe('ComptesGroupeService · comptes d’administration hors de portée', () => {
+  const ADMINISTRATION = ['Administrateur HUB (transverse)', 'holding_admin', 'societe_admin'];
+  const compteAdmin = (nom: string) => ({
+    ...UTIL,
+    motDePasseHash: null,
+    totpSecret: 'chiffré',
+    totpActifLe: new Date(),
+    verrouilleJusquau: new Date(Date.now() + 600_000),
+    roles: [{ role: { nom } }],
+  });
+
+  it.each(ADMINISTRATION)('%s : double authentification, déblocage et invitation refusés (409)', async (nom) => {
+    for (const appel of [
+      (svc: ComptesGroupeService) => svc.reinitialiserDoubleFacteur('U1', 'CIO'),
+      (svc: ComptesGroupeService) => svc.debloquer('U1', 'CIO'),
+      (svc: ComptesGroupeService) => svc.renvoyerInvitation('U1', 'CIO'),
+    ]) {
+      const { svc, tx, prisma, comptes, invitation } = mockPrisma({ utilisateur: compteAdmin(nom) });
+      await expect(appel(svc)).rejects.toThrow("Compte d'administration : il ne se gère pas depuis cet écran.");
+      // Rien n'est écrit, rien n'est envoyé.
+      expect(tx).not.toHaveBeenCalled();
+      expect(prisma.utilisateur.update).not.toHaveBeenCalled();
+      expect(comptes.avertirSecurite).not.toHaveBeenCalled();
+      expect(invitation).not.toHaveBeenCalled();
+    }
+  });
+
+  it('sa propre double authentification ne se retire pas depuis cet écran (409, sans lecture)', async () => {
+    const { svc, prisma } = mockPrisma({
+      utilisateur: { ...UTIL, totpActifLe: new Date(), roles: [{ role: { nom: 'CFO' } }] },
+    });
+    await expect(svc.reinitialiserDoubleFacteur('U1', 'U1')).rejects.toThrow(ConflictException);
+    expect(prisma.utilisateur.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('le CIO reste dépannable : sa double authentification se retire', async () => {
+    const { svc, tx } = mockPrisma({
+      utilisateur: {
+        totpSecret: 's',
+        totpActifLe: new Date(),
+        email: 'cio@x.sn',
+        prenom: 'C',
+        roles: [{ role: { nom: 'CIO (transverse)' } }],
+      },
+    });
+    await expect(svc.reinitialiserDoubleFacteur('U-CIO', 'ADMIN-HUB')).resolves.toEqual({
+      id: 'U-CIO',
+      doubleFacteur: false,
+    });
+    expect(tx).toHaveBeenCalledTimes(1);
+  });
+
+  it('une invitation ordinaire se renvoie toujours', async () => {
+    const { svc, invitation } = mockPrisma({
+      utilisateur: { ...UTIL, actif: false, motDePasseHash: null, roles: [{ role: { nom: 'Salarié' } }] },
+    });
+    await svc.renvoyerInvitation('U1', 'CIO');
+    expect(invitation).toHaveBeenCalledWith('U1', 'awa@x.sn', 'Awa', 'CIO');
   });
 });
