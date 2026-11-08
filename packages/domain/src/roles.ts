@@ -27,6 +27,13 @@ export const ROLE_HOLDING_ADMIN = 'holding_admin';
 // sociétés. Le compte endosse l'un des rôles ci-dessous (sélecteur du menu du
 // compte) et garde tous les modules au niveau « validation ».
 export const ROLE_HUB_ADMIN = 'Administrateur HUB (transverse)';
+
+// Comptes d'administration : comptes de secours et Administrateur HUB. Ni
+// l'Administration du HUB ni la RH ne les gèrent (rôle, activation, sessions,
+// double authentification, déblocage, invitation, dossier du personnel) —
+// décision du 08/11/2026. Le CIO n'en fait pas partie.
+export const ADMINISTRATION_ROLES: readonly string[] = [ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN, ROLE_HUB_ADMIN];
+export const isAdministrationRole = (name: string): boolean => ADMINISTRATION_ROLES.includes(name);
 export const ROLES_ENDOSSABLES = [
   ROLE_CEO,
   ROLE_CTO,

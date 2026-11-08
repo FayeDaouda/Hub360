@@ -4,7 +4,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { salaireAu } from './regles-salaire';
 import { DossierPersonnelDto, PieceDto, ReaffectationDto } from './dto';
-import { formatNumericMonth, todayIso } from '@hub/domain';
+import { ADMINISTRATION_ROLES, formatNumericMonth, isAdministrationRole, todayIso } from '@hub/domain';
 
 // Pièces attendues dans tout dossier (ordre d'affichage).
 export const PIECES_DOSSIER: TypePieceDossier[] = [
@@ -164,14 +164,25 @@ export class DossiersPersonnelService {
         orderBy: { nom: 'asc' },
       }),
       this.prisma.collaborateur.findMany({
-        where: { dossierPersonnel: null },
+        where: {
+          dossierPersonnel: null,
+          OR: [
+            { utilisateurId: null },
+            { utilisateur: { roles: { none: { role: { nom: { in: [...ADMINISTRATION_ROLES] } } } } } },
+          ],
+        },
         select: { id: true, prenom: true, nom: true, societeId: true, cellule: { select: { nom: true } } },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       }),
       // Comptes reliables directement : sans fiche d'équipe (sinon le lien
-      // passe par la fiche) et sans dossier.
+      // passe par la fiche), sans dossier, et jamais un compte
+      // d'administration (refusé à l'enregistrement, cf. valider).
       this.prisma.utilisateur.findMany({
-        where: { collaborations: { none: {} }, dossierPersonnel: null },
+        where: {
+          collaborations: { none: {} },
+          dossierPersonnel: null,
+          roles: { none: { role: { nom: { in: [...ADMINISTRATION_ROLES] } } } },
+        },
         select: { id: true, prenom: true, nom: true, email: true },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       }),
@@ -280,8 +291,16 @@ export class DossiersPersonnelService {
     if (utilisateurId) {
       const compte = await this.prisma.utilisateur.findUniqueOrThrow({
         where: { id: utilisateurId },
-        select: { actif: true },
+        select: { actif: true, roles: { select: { role: { select: { nom: true } } } } },
       });
+      // Un compte d'administration (secours, Administrateur HUB) ne se
+      // désactive jamais par un dossier RH : personne ne pourrait le rétablir
+      // depuis l'Administration du HUB (08/11/2026).
+      if (compte.roles.some((r) => isAdministrationRole(r.role.nom))) {
+        throw new ConflictException(
+          "Ce dossier est relié à un compte d'administration : son archivage ne peut pas modifier ce compte.",
+        );
+      }
       if (archive && compte.actif) {
         ops.push(
           this.prisma.utilisateur.update({
@@ -470,7 +489,11 @@ export class DossiersPersonnelService {
       if (collaborateurId !== null) {
         const c = await this.prisma.collaborateur.findUnique({
           where: { id: collaborateurId },
-          select: { societeId: true, dossierPersonnel: { select: { id: true } } },
+          select: {
+            societeId: true,
+            dossierPersonnel: { select: { id: true } },
+            utilisateur: { select: { roles: { select: { role: { select: { nom: true } } } } } },
+          },
         });
         const societeCible = societeId ?? (id ? (await this.charger(id)).societeId : null);
         if (!c || c.societeId !== societeCible) {
@@ -478,6 +501,9 @@ export class DossiersPersonnelService {
         }
         if (c.dossierPersonnel && c.dossierPersonnel.id !== id) {
           throw new ConflictException("Cette fiche d'équipe a déjà un dossier.");
+        }
+        if (c.utilisateur?.roles.some((r) => isAdministrationRole(r.role.nom))) {
+          throw new ConflictException("Un compte d'administration ne se relie pas à un dossier du personnel.");
         }
       }
       data.collaborateurId = collaborateurId;
@@ -493,9 +519,16 @@ export class DossiersPersonnelService {
       }
       const u = await this.prisma.utilisateur.findUnique({
         where: { id: utilisateurId },
-        select: { _count: { select: { collaborations: true } }, dossierPersonnel: { select: { id: true } } },
+        select: {
+          _count: { select: { collaborations: true } },
+          dossierPersonnel: { select: { id: true } },
+          roles: { select: { role: { select: { nom: true } } } },
+        },
       });
       if (!u) throw new BadRequestException('Compte introuvable.');
+      if (u.roles.some((r) => isAdministrationRole(r.role.nom))) {
+        throw new ConflictException("Un compte d'administration ne se relie pas à un dossier du personnel.");
+      }
       if (u._count.collaborations > 0) {
         throw new ConflictException("Ce compte a une fiche d'équipe : reliez le dossier à la fiche.");
       }

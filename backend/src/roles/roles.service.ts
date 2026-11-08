@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  ADMINISTRATION_ROLES,
   decodeRights,
   describeRightsChange,
   encodeRights,
@@ -7,9 +8,6 @@ import {
   RIGHTS,
   ROLE_CEO,
   ROLE_CIO,
-  ROLE_COMPANY_ADMIN,
-  ROLE_HOLDING_ADMIN,
-  ROLE_HUB_ADMIN,
   type Right,
   type RightSet,
 } from '@hub/domain';
@@ -23,7 +21,7 @@ const libelleRole = (nom: string) => nom.replace(/\s*\(transverse\)$/, '');
 // rôle socle « collaborateur » gardent leurs droits fixés au socle ;
 // l'Administrateur HUB et le CIO ont carte blanche (31/10/2026). Aucune de
 // ces lignes ne se règle depuis la matrice.
-const HORS_MATRICE = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN, ROLE_HUB_ADMIN, 'collaborateur']);
+const HORS_MATRICE = new Set([...ADMINISTRATION_ROLES, 'collaborateur']);
 
 export type Libelles = Partial<Record<Right, string>>;
 

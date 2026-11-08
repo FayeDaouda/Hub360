@@ -3,7 +3,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ComptesService } from '../auth/comptes.service';
 import { estVerrouille } from '../auth/verrouillage';
-import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC, ROLE_EMPLOYEE, ROLE_HOLDING_ADMIN, ROLE_HUB_ADMIN } from '@hub/domain';
+import { ADMINISTRATION_ROLES, isAdministrationRole, ROLE_DIR_GC, ROLE_EMPLOYEE } from '@hub/domain';
 
 // Comptes & rôles du HUB (sept. 2026) — le CIO ou l'Administrateur HUB
 // (cf. AdministrationHubGuard) attribue à
@@ -21,7 +21,16 @@ import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC, ROLE_EMPLOYEE, ROLE_HOLDING_ADMIN, ROL
 //   20/10/2026, D19) — la rémunération saisie par le CIO a été retirée.
 
 // L'Administrateur HUB (29/10/2026) : ni attribué, ni modifié, ni désactivé ici.
-const ROLES_ADMINISTRATION = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN, ROLE_HUB_ADMIN]);
+
+// Les comptes d'administration (Administrateur HUB, comptes de secours) ne se
+// gèrent pas depuis cet écran : aucune action, quelle qu'elle soit (rôle,
+// activation, sessions, mot de passe, double authentification, déblocage,
+// invitation). Leur secours passe par leurs codes de secours ou le serveur.
+const AVEC_ROLES = { roles: { select: { role: { select: { nom: true } } } } } as const;
+const MESSAGE_ADMINISTRATION = "Compte d'administration : il ne se gère pas depuis cet écran.";
+function refuserAdministration(u: { roles: { role: { nom: string } }[] }, message = MESSAGE_ADMINISTRATION): void {
+  if (u.roles.some((r) => isAdministrationRole(r.role.nom))) throw new ConflictException(message);
+}
 
 type StatutCompte = 'actif' | 'en_attente' | 'desactive';
 
@@ -61,7 +70,7 @@ function versCompte(u: UtilisateurLu, role: { id: string; nom: string }) {
     email: u.email,
     statut: statut(u),
     role: { id: role.id, nom: role.nom },
-    administration: ROLES_ADMINISTRATION.has(role.nom),
+    administration: isAdministrationRole(role.nom),
     doubleFacteur: !!u.totpActifLe,
     // Verrouillage en cours (lot C) : fin, pour le bouton « Débloquer ».
     verrouilleJusquau:
@@ -85,7 +94,7 @@ export class ComptesGroupeService {
         orderBy: { nom: 'asc' },
       }),
       this.prisma.role.findMany({
-        where: { supprimeLe: null, nom: { notIn: [...ROLES_ADMINISTRATION] } },
+        where: { supprimeLe: null, nom: { notIn: [...ADMINISTRATION_ROLES] } },
         select: { id: true, nom: true, societeId: true },
         orderBy: { nom: 'asc' },
       }),
@@ -120,7 +129,7 @@ export class ComptesGroupeService {
         for (const a of affectations) {
           if (a.societeId !== societe.id) continue;
           const deja = parPersonne.get(a.utilisateur.id);
-          if (!deja || ROLES_ADMINISTRATION.has(a.role.nom)) parPersonne.set(a.utilisateur.id, a);
+          if (!deja || isAdministrationRole(a.role.nom)) parPersonne.set(a.utilisateur.id, a);
         }
         const comptes = [...parPersonne.values()]
           .map((a) => versCompte(a.utilisateur, a.role))
@@ -143,17 +152,23 @@ export class ComptesGroupeService {
     if (utilisateurId === acteurId) {
       throw new ConflictException('Vous ne pouvez pas modifier votre propre rôle.');
     }
-    const [role, societe, affectations] = await Promise.all([
+    const [role, societe, affectations, toutesAffectations] = await Promise.all([
       this.prisma.role.findFirst({ where: { id: roleId, supprimeLe: null } }),
       this.prisma.societe.findUnique({ where: { id: societeId }, select: { id: true, nom: true } }),
       this.prisma.utilisateurSocieteRole.findMany({
         where: { utilisateurId, societeId },
         include: { role: { select: { id: true, nom: true } } },
       }),
+      // Toutes ses affectations, transverses comprises : un Administrateur HUB
+      // qui porte aussi un rôle ordinaire dans une société reste hors de portée.
+      this.prisma.utilisateurSocieteRole.findMany({
+        where: { utilisateurId },
+        select: { role: { select: { nom: true } } },
+      }),
     ]);
     if (!role) throw new NotFoundException('Rôle introuvable.');
     if (!societe) throw new NotFoundException('Société introuvable.');
-    if (ROLES_ADMINISTRATION.has(role.nom)) {
+    if (isAdministrationRole(role.nom)) {
       throw new BadRequestException("Les rôles d'administration ne s'attribuent pas depuis cet écran.");
     }
     if (role.societeId !== null && role.societeId !== societeId) {
@@ -162,9 +177,10 @@ export class ComptesGroupeService {
     if (affectations.length === 0) {
       throw new NotFoundException("Ce compte n'est pas rattaché à cette société.");
     }
-    if (affectations.some((a) => ROLES_ADMINISTRATION.has(a.role.nom))) {
-      throw new ConflictException("Compte d'administration : son rôle ne se modifie pas depuis cet écran.");
-    }
+    refuserAdministration(
+      { roles: toutesAffectations },
+      "Compte d'administration : son rôle ne se modifie pas depuis cet écran.",
+    );
 
     const inchange = affectations.length === 1 && affectations[0].roleId === roleId;
     if (!inchange) {
@@ -225,7 +241,7 @@ export class ComptesGroupeService {
       this.prisma.role.findFirst({ where: { id: dto.roleId, supprimeLe: null } }),
       this.prisma.utilisateur.findUnique({ where: { email }, select: { id: true } }),
     ]);
-    if (!role || ROLES_ADMINISTRATION.has(role.nom)) throw new BadRequestException('Rôle invalide.');
+    if (!role || isAdministrationRole(role.nom)) throw new BadRequestException('Rôle invalide.');
     if (role.societeId !== null && role.societeId !== dossier.societeId) {
       throw new BadRequestException('Ce rôle appartient à une autre société.');
     }
@@ -275,8 +291,12 @@ export class ComptesGroupeService {
   }
 
   async renvoyerInvitation(utilisateurId: string, acteurId: string) {
-    const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: SELECT_UTILISATEUR });
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { ...SELECT_UTILISATEUR, ...AVEC_ROLES },
+    });
     if (!u) throw new NotFoundException('Compte introuvable.');
+    refuserAdministration(u);
     if (statut(u) !== 'en_attente') throw new ConflictException('Ce compte est déjà activé.');
     return this.comptes.envoyerInvitation(u.id, u.email, u.prenom, acteurId);
   }
@@ -287,12 +307,10 @@ export class ComptesGroupeService {
     if (utilisateurId === acteurId) throw new ConflictException('Vous ne pouvez pas désactiver votre propre compte.');
     const u = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
-      select: { ...SELECT_UTILISATEUR, roles: { select: { role: { select: { nom: true } } } } },
+      select: { ...SELECT_UTILISATEUR, ...AVEC_ROLES },
     });
     if (!u) throw new NotFoundException('Compte introuvable.');
-    if (u.roles.some((r) => ROLES_ADMINISTRATION.has(r.role.nom))) {
-      throw new ConflictException("Compte d'administration : il ne se désactive pas depuis cet écran.");
-    }
+    refuserAdministration(u, "Compte d'administration : il ne se désactive pas depuis cet écran.");
     if (!u.motDePasseHash) throw new ConflictException("Invitation en attente : le compte n'est pas encore activé.");
     if (u.actif === actif) return { id: u.id, statut: statut(u) };
     const maintenant = new Date();
@@ -319,11 +337,15 @@ export class ComptesGroupeService {
   // Téléphone perdu ou changé : la double authentification est retirée et
   // les sessions coupées ; la personne la réactive à sa prochaine connexion.
   async reinitialiserDoubleFacteur(utilisateurId: string, acteurId: string) {
+    if (utilisateurId === acteurId) {
+      throw new ConflictException('Votre propre double authentification ne se retire pas depuis cet écran.');
+    }
     const u = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
-      select: { totpSecret: true, totpActifLe: true, email: true, prenom: true },
+      select: { totpSecret: true, totpActifLe: true, email: true, prenom: true, ...AVEC_ROLES },
     });
     if (!u) throw new NotFoundException('Compte introuvable.');
+    refuserAdministration(u);
     if (!u.totpActifLe && !u.totpSecret)
       throw new ConflictException('Double authentification non activée sur ce compte.');
     const maintenant = new Date();
@@ -351,12 +373,10 @@ export class ComptesGroupeService {
   private async compteOrdinaire(utilisateurId: string) {
     const u = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
-      select: { ...SELECT_UTILISATEUR, roles: { select: { role: { select: { nom: true } } } } },
+      select: { ...SELECT_UTILISATEUR, ...AVEC_ROLES },
     });
     if (!u) throw new NotFoundException('Compte introuvable.');
-    if (u.roles.some((r) => ROLES_ADMINISTRATION.has(r.role.nom))) {
-      throw new ConflictException("Compte d'administration : il ne se gère pas depuis cet écran.");
-    }
+    refuserAdministration(u);
     return u;
   }
 
@@ -398,9 +418,10 @@ export class ComptesGroupeService {
   async debloquer(utilisateurId: string, acteurId: string) {
     const u = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
-      select: { verrouilleJusquau: true },
+      select: { verrouilleJusquau: true, ...AVEC_ROLES },
     });
     if (!u) throw new NotFoundException('Compte introuvable.');
+    refuserAdministration(u);
     if (!estVerrouille(u.verrouilleJusquau)) throw new ConflictException('Ce compte n’est pas verrouillé.');
     await this.prisma.$transaction([
       this.prisma.utilisateur.update({
