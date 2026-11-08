@@ -1763,3 +1763,35 @@ button:focus-visible .repli-icone {
   font-size: var(--t-13);
   color: var(--text-muted);
 }
+
+/* Fenêtre « Modifications non enregistrées » (components/unsaved-changes-guard.tsx) :
+   assez large pour ses trois choix sur une ligne ; sur téléphone, un panneau
+   bas à sa hauteur, boutons pleine largeur, action principale en bas. */
+.modal.garde-fenetre {
+  width: min(39rem, calc(100vw - 2rem));
+  max-width: none;
+}
+.garde-fenetre .garde-quitter {
+  color: var(--danger-texte);
+}
+@media (max-width: 640px) {
+  .modal-backdrop:has(.garde-fenetre) {
+    align-items: flex-end;
+  }
+  .modal.garde-fenetre {
+    width: 100%;
+    min-height: 0;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .garde-fenetre .modal-actions {
+    flex-direction: column;
+  }
+  .garde-fenetre .modal-actions button {
+    justify-content: center;
+    width: 100%;
+  }
+  .garde-fenetre .modal-actions .btn-primary {
+    order: 3;
+  }
+}

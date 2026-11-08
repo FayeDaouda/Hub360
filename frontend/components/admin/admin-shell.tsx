@@ -38,6 +38,7 @@ import { ThemeToggle } from '@/components/admin/theme-toggle';
 import { NavigationMobile } from '@/components/admin/navigation-mobile';
 import { useDefilementCoque } from '@/lib/defilement';
 import { AvisDroitsBandeau } from '@/components/avis-droits-bandeau';
+import { confirmLeave, leaveTo } from '@/components/unsaved-changes-guard';
 
 type NavItem = {
   cle: string;
@@ -153,9 +154,11 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
     });
   }
 
-  function deconnexion() {
+  // Changements non enregistrés (droits) : la fenêtre de garde demande d'abord.
+  async function deconnexion() {
+    if (!(await confirmLeave())) return;
     clearSession();
-    router.push('/');
+    leaveTo(router, '/');
   }
 
   return (

@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import { chercher, GROUPES, lienResultat, type ResultatRecherche } from '@/lib/recherche';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { confirmLeave, leaveTo } from '@/components/unsaved-changes-guard';
 
 const DELAI_SAISIE_MS = 250;
 const LONGUEUR_MIN = 2;
@@ -97,7 +98,8 @@ function Palette({
   function ouvrir(r: ResultatRecherche) {
     onClose();
     const lien = lienResultat(slug, r);
-    if (lien) router.push(lien);
+    // Changements non enregistrés : la fenêtre de garde demande d'abord.
+    if (lien) void confirmLeave().then((partir) => partir && leaveTo(router, lien));
     else onContact(r.id);
   }
 

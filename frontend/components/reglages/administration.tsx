@@ -6,11 +6,12 @@ import { LocalitesPanel } from '@/components/admin/localites-panel';
 import { ParametresContratPanel } from '@/components/admin/parametres-contrat-panel';
 import { estAdministrateurHub } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
+import { confirmLeave } from '@/components/unsaved-changes-guard';
 
 type Onglet = 'roles' | 'localites' | 'contrats';
 
 const ONGLETS: { cle: Onglet; libelle: string }[] = [
-  { cle: 'roles', libelle: 'Rôles & permissions' },
+  { cle: 'roles', libelle: 'Droits des rôles' },
   { cle: 'localites', libelle: 'Localités' },
   { cle: 'contrats', libelle: 'Contrats' },
 ];
@@ -35,7 +36,10 @@ export function Administration({ slug }: { slug: string }) {
               type="button"
               className={o.cle === onglet ? 'is-active' : ''}
               aria-pressed={o.cle === onglet}
-              onClick={() => setOnglet(o.cle)}
+              // Droits non enregistrés : la fenêtre de garde demande d'abord.
+              onClick={async () => {
+                if (o.cle !== onglet && (await confirmLeave())) setOnglet(o.cle);
+              }}
             >
               {o.libelle}
             </button>
@@ -43,7 +47,7 @@ export function Administration({ slug }: { slug: string }) {
         </div>
       </div>
 
-      {matrice && onglet === 'roles' && <RolesPanel slug={slug} />}
+      {matrice && onglet === 'roles' && <RolesPanel key={slug} slug={slug} />}
       {onglet === 'localites' && <LocalitesPanel slug={slug} />}
       {onglet === 'contrats' && <ParametresContratPanel slug={slug} />}
     </>

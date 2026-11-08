@@ -58,6 +58,17 @@
   display: grid;
   gap: var(--e-16);
 }
+/* Le verre (.glass-panel) rogne en overflow:hidden, ce qui empêche la barre
+   d'enregistrement de coller en bas de l'écran : clip rogne sans créer de
+   conteneur de défilement. */
+.panel.droits {
+  overflow: clip;
+}
+/* Au-dessus du reflet du verre (::before), qui délavait la légende. */
+.droits-legende {
+  position: relative;
+  z-index: 1;
+}
 .droits-intro {
   margin: 0 0 var(--e-8);
   color: var(--text-muted);
@@ -66,26 +77,80 @@
 .droits-sens {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--e-8) var(--e-16);
+  gap: var(--e-8) 1.25rem;
   margin: 0;
   font-size: var(--t-13);
 }
 .droits-sens div {
   display: flex;
-  gap: var(--e-4);
+  align-items: center;
+  gap: var(--e-8);
 }
 .droits-sens dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-8);
   font-weight: 600;
 }
 .droits-sens dd {
   margin: 0;
   color: var(--text-muted);
 }
-.droits-sens dd::before {
-  content: '— ';
+
+/* Lettre d'un droit (refonte du 08/11/2026) : L, E, V, S aux couleurs des
+   droits du HUB (pastilles lecture / écriture / validation ; suppression en
+   rouge). Pleine = accordé ; contour = possible mais pas accordé. */
+.droit-lettre {
+  --droit: var(--pill-neutre);
+  --droit-encre: color-mix(in srgb, var(--droit), var(--pill-encre));
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--droit) 45%, var(--border));
+  border-radius: 8px;
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background var(--duree-court) var(--courbe),
+    border-color var(--duree-court) var(--courbe),
+    color var(--duree-court) var(--courbe);
+}
+.droit-lettre--lecture {
+  --droit: var(--pill-lecture);
+}
+.droit-lettre--ecriture {
+  --droit: var(--pill-ecriture);
+}
+.droit-lettre--validation {
+  --droit: var(--pill-validation);
+}
+.droit-lettre--suppression {
+  --droit: var(--pill-risque);
+}
+.droit-lettre--plein {
+  border-color: var(--droit);
+  background: var(--droit);
+  color: #fff;
+}
+/* Droit sans objet pour l'étape (en-tête de colonne). */
+.droit-lettre.is-sans-objet {
+  opacity: 0.35;
+}
+.droit-lettre--mini {
+  width: 20px;
+  height: 20px;
+  border-color: color-mix(in srgb, var(--droit) 30%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--droit) 14%, transparent);
+  color: var(--droit-encre);
+  font-size: 11px;
 }
 
-/* Choix du module : pastilles qui passent à la ligne (téléphone compris). */
+/* Choix du module : pastilles qui passent à la ligne (défilent sur téléphone). */
 .droits-modules {
   display: flex;
   flex-wrap: wrap;
@@ -102,6 +167,7 @@
   color: var(--text-muted);
   font: inherit;
   font-size: var(--t-13);
+  white-space: nowrap;
   cursor: pointer;
 }
 .droits-module:hover {
@@ -128,29 +194,88 @@
   text-align: center;
 }
 
-/* Une étape : son nom, la phrase de chaque droit, puis les rôles. */
-.droits-etape {
+/* Étapes en accordéon : une seule ouverte, un résumé quand elle est fermée. */
+.droits-etapes {
   display: grid;
-  gap: var(--e-12);
-  padding: var(--e-16);
+  gap: var(--e-8);
+}
+.droits-etape {
   border: 1px solid var(--border);
   border-radius: var(--r-14);
   background: var(--surface);
+  transition:
+    border-color var(--duree-court) var(--courbe),
+    box-shadow var(--duree-court) var(--courbe);
 }
-.droits-etape-tete {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--e-8);
+.droits-etape.is-ouverte {
+  border-color: var(--border-hover);
+  box-shadow: var(--ombre-1);
 }
-.droits-etape-tete h3 {
+.droits-etape-titre {
   margin: 0;
-  font-size: var(--t-16);
+  border-radius: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.droits-etape-entete {
+  display: flex;
+  align-items: center;
+  gap: var(--e-12);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--e-12) var(--e-16);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.droits-etape-entete:hover {
+  background: var(--surface-2);
+}
+.droits-etape.is-ouverte .droits-etape-entete {
+  border-radius: var(--r-14) var(--r-14) 0 0;
+}
+.droits-etape-entete:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.droits-etape-chevron {
+  flex: none;
+  color: var(--text-subtle);
+  transition: transform var(--duree-moyen) var(--courbe);
+}
+.is-ouverte .droits-etape-chevron {
+  transform: rotate(90deg);
+}
+.droits-etape-texte {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
 }
 .droits-etape-nom {
+  font-size: var(--t-14);
+  font-weight: 600;
+}
+.droits-etape-resume {
   color: var(--text-muted);
   font-size: var(--t-13);
+  font-weight: 400;
 }
+.droits-etape-applicables {
+  display: inline-flex;
+  gap: 4px;
+}
+.droits-etape-corps {
+  display: grid;
+  gap: var(--e-12);
+  padding: var(--e-12) var(--e-16) var(--e-16);
+  border-top: 1px solid var(--border);
+}
+
 .droits-phrases {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -163,40 +288,66 @@
   background: var(--surface-2);
 }
 .droits-phrases dt {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
   font-size: var(--t-12);
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .droits-phrases dd {
-  margin: var(--e-4) 0 0;
+  margin: var(--e-8) 0 0;
   font-size: var(--t-13);
 }
 .droits-phrases .is-sans-objet {
   color: var(--text-subtle);
 }
 
+/* Grille rôles × droits : la colonne des rôles reste visible au défilement. */
+.droits-grille {
+  overflow-x: auto;
+}
+/* Toute la largeur de la carte ; les quatre colonnes de droits à droite,
+   sous les lettres de l'en-tête d'étape. */
 .droits-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: var(--t-14);
 }
 .droits-table th,
 .droits-table td {
-  padding: var(--e-8);
+  padding: 6px var(--e-8);
   border-top: 1px solid var(--border);
   text-align: center;
 }
 .droits-table thead th {
   border-top: none;
+  padding-bottom: var(--e-8);
   color: var(--text-muted);
   font-size: var(--t-12);
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.droits-table th:not(:first-child),
+.droits-table td {
+  width: 72px;
+}
+.droits-table td.droits-carte-blanche {
+  width: auto;
 }
 .droits-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 12rem;
+  background: var(--surface);
   text-align: left;
+}
+.droits-table tbody tr:hover > * {
+  background: color-mix(in srgb, var(--text) 3%, var(--surface));
 }
 .droits-role {
   font-weight: 500;
@@ -204,40 +355,61 @@
 .droits-role .pill {
   margin-left: var(--e-8);
 }
-.droits-table td.is-modifie {
-  background: color-mix(in oklch, var(--attention) 16%, transparent);
-}
 .droits-carte-blanche {
+  height: 52px; /* même rythme que les lignes de cases */
   color: var(--text-muted);
   font-style: italic;
 }
+/* Case : une vraie case à cocher (clavier, lecteur d'écran), invisible,
+   sous sa lettre. */
 .droits-case {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--e-8);
-  min-width: 44px;
-  min-height: 32px;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
   cursor: pointer;
 }
 .droits-case input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--action);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
   cursor: pointer;
+}
+.droits-case input:disabled {
+  cursor: progress;
+}
+.droits-case:hover .droit-lettre {
+  border-color: var(--droit);
+  color: var(--droit-encre);
+}
+.droits-case input:checked + .droit-lettre {
+  border-color: var(--droit);
+  background: var(--droit);
+  color: #fff;
+}
+.droits-case input:focus-visible + .droit-lettre {
+  outline: 2px solid var(--focus);
+  outline-offset: 6px;
+}
+/* Contraste forcé (Windows) : l'état coché ne repose pas que sur le fond. */
+@media (forced-colors: active) {
+  .droits-case input:checked + .droit-lettre {
+    border: 3px solid Highlight;
+  }
+}
+/* Case modifiée, pas encore enregistrée : anneau ambre. */
+.droits-table td.is-modifie .droit-lettre {
+  box-shadow:
+    0 0 0 3px var(--surface),
+    0 0 0 5px var(--attention);
 }
 .droits-case.is-sans-objet {
   color: var(--text-subtle);
   cursor: default;
-}
-/* Le mot du droit sert sur téléphone, où l'en-tête du tableau disparaît. */
-.droits-case-mot {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 /* Barre d'enregistrement : collée en bas tant qu'il reste des cases à enregistrer. */
@@ -248,7 +420,7 @@
 .droits-barre.is-visible {
   position: sticky;
   bottom: var(--e-16);
-  z-index: 2;
+  z-index: 3;
   padding: var(--e-12) var(--e-16);
   border: 1px solid var(--border);
   border-radius: var(--r-14);
@@ -261,7 +433,14 @@
   align-items: center;
   gap: var(--e-8) var(--e-12);
 }
-.droits-barre-actions span {
+.droits-barre-point {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--attention);
+}
+.droits-barre-texte {
   flex: 1;
   min-width: 12rem;
   font-size: var(--t-14);
@@ -273,48 +452,47 @@
   }
 }
 
-/* Téléphone : chaque rôle devient une carte, ses quatre droits en 2 × 2
-   avec leur mot écrit (plus d'en-tête de colonnes). */
+/* Téléphone : la grille garde ses colonnes (rôle + quatre cases), les
+   modules défilent, les phrases s'empilent. */
 @media (max-width: 720px) {
-  .droits-etape {
+  .droits-modules {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Bord droit fondu : il reste des modules à droite. */
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+    padding-right: 2rem;
+  }
+  .droits-module {
+    min-height: 44px;
+  }
+  .droits-etape-entete {
     padding: var(--e-12);
+  }
+  .droits-etape-applicables {
+    display: none;
+  }
+  .droits-etape-corps {
+    padding: var(--e-8);
   }
   .droits-phrases {
     grid-template-columns: minmax(0, 1fr);
   }
-  .droits-table thead {
-    display: none;
-  }
-  .droits-table,
-  .droits-table tbody {
-    display: block;
-  }
-  .droits-table tr {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: var(--e-8) 0;
-    border-top: 1px solid var(--border);
+  .droits-table {
+    min-width: 100%;
   }
   .droits-table th,
   .droits-table td {
-    border-top: none;
-    padding: var(--e-4);
-    text-align: left;
+    width: auto;
+    padding: 4px 0;
   }
-  .droits-table .droits-role,
-  .droits-table .droits-carte-blanche {
-    grid-column: 1 / -1;
+  .droits-table th:first-child {
+    min-width: 6rem;
+    padding-right: 4px;
   }
   .droits-case {
-    justify-content: flex-start;
-    min-height: 44px;
-  }
-  .droits-case-mot {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip: auto;
+    width: 44px;
+    height: 44px;
   }
   .droits-barre.is-visible {
     /* Au-dessus de la navigation du bas (coque mobile). */
