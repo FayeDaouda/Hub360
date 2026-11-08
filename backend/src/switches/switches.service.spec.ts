@@ -6,7 +6,10 @@ import { SwitchesService } from './switches.service';
 // bascule est une intervention au journal, le cache est vidé à la bascule ;
 // la maintenance refuse tout le monde sauf l'Administrateur HUB.
 
-function setup(o: { coupes?: string[]; maintenance?: { actif: boolean; message: string } | null } = {}) {
+type Maintenance = { actif: boolean; message: string; parId?: string | null; modifieLe?: Date };
+function setup(
+  o: { coupes?: string[]; maintenance?: Maintenance | null; auteur?: { prenom: string; nom: string } | null } = {},
+) {
   const coupes = o.coupes ?? [];
   const prisma = {
     moduleDesactive: {
@@ -26,6 +29,7 @@ function setup(o: { coupes?: string[]; maintenance?: { actif: boolean; message: 
       upsert: jest.fn().mockReturnValue('upsert'),
     },
     interventionHub: { create: jest.fn().mockReturnValue('intervention') },
+    utilisateur: { findUnique: jest.fn().mockResolvedValue(o.auteur ?? null) },
     $transaction: jest.fn().mockResolvedValue([]),
   };
   return { svc: new SwitchesService(prisma as unknown as PrismaService), prisma };
@@ -66,6 +70,28 @@ describe('SwitchesService', () => {
     expect(actif.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('état : la maintenance porte sa dernière bascule, quelle que soit la société lue', async () => {
+    const le = new Date('2026-11-08T10:00:00Z');
+    const jamais = setup();
+    expect((await jamais.svc.state('S1')).maintenance).toEqual({ actif: false, message: '', depuis: null });
+
+    const ferme = setup({
+      maintenance: { actif: true, message: 'Ce soir', parId: 'U9', modifieLe: le },
+      auteur: { prenom: 'Awa', nom: 'Diop' },
+    });
+    expect((await ferme.svc.state('S2')).maintenance).toEqual({
+      actif: true,
+      message: 'Ce soir',
+      depuis: { le, par: 'Awa Diop' },
+    });
+    expect(ferme.prisma.utilisateur.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'U9' } }));
+
+    const supprime = setup({ maintenance: { actif: false, message: '', parId: 'U0', modifieLe: le } });
+    expect((await supprime.svc.state('S1')).maintenance.depuis).toEqual({ le, par: 'compte supprimé' });
+    const sansAuteur = setup({ maintenance: { actif: false, message: '', parId: null, modifieLe: le } });
+    expect((await sansAuteur.svc.state('S1')).maintenance.depuis).toEqual({ le, par: null });
+  });
+
   it('module inconnu → 404', async () => {
     const { svc, prisma } = setup();
     prisma.module.findUnique.mockResolvedValue(null);
@@ -79,6 +105,15 @@ describe('SwitchesService', () => {
     );
     await expect(ferme.svc.refuseDuringMaintenance(true)).resolves.toBeUndefined();
     await expect(setup().svc.refuseDuringMaintenance(false)).resolves.toBeUndefined();
+  });
+
+  it('maintenance déjà dans l’état demandé : ni écriture ni intervention au journal', async () => {
+    const ferme = setup({ maintenance: { actif: true, message: 'Ce soir', parId: 'U9', modifieLe: new Date() } });
+    await ferme.svc.setMaintenance('S1', true, 'Autre message', 'Doublon', 'ADM');
+    expect(ferme.prisma.$transaction).not.toHaveBeenCalled();
+    const jamais = setup();
+    await jamais.svc.setMaintenance('S1', false, '', 'Doublon', 'ADM');
+    expect(jamais.prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('activer la maintenance : ligne unique, intervention au journal de la société de connexion', async () => {

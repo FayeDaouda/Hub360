@@ -56,7 +56,6 @@ export const SCREENS: Screen[] = [
   // Administration du HUB : une section par adresse (refonte du 07/11/2026).
   screen('cio', 'groupe-droits', () => '/groupe?onglet=droits'),
   screen('cio', 'groupe-modules', () => '/groupe?onglet=modules'),
-  screen('cio', 'groupe-interrupteurs', () => '/groupe?onglet=interrupteurs'),
   screen('cio', 'groupe-journal', () => '/groupe?onglet=journal'),
   screen('cio', 'groupe-deblocages', () => '/groupe?onglet=deblocages'),
 ];

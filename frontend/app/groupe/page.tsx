@@ -15,7 +15,6 @@ import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
 import { RolesPanel } from '@/components/admin/roles-panel';
 import { JournalAudit } from '@/components/pilotage/journal-audit';
 import { DeblocagesPanel } from '@/components/groupe/deblocages-panel';
-import { InterrupteursPanel } from '@/components/groupe/interrupteurs-panel';
 import { ModulesPanel } from '@/components/groupe/modules-panel';
 import { NavigationConsole, NavigationConsoleMobile } from '@/components/groupe/console-navigation';
 import { definitionSection, sectionDepuisParametre } from '@/components/groupe/console-sections';
@@ -147,7 +146,6 @@ function ConsoleAdministration() {
           {section === 'comptes' && <ComptesRolesPanel moiId={session.utilisateur.id} />}
           {section === 'droits' && <RolesPanel key={slug} slug={slug} />}
           {section === 'modules' && <ModulesPanel slug={slug} societe={session.societe.nom} />}
-          {section === 'interrupteurs' && <InterrupteursPanel slug={slug} />}
           {section === 'journal' && <JournalAudit slug={slug} entete={false} />}
           {section === 'deblocages' && <DeblocagesPanel slug={slug} />}
         </main>

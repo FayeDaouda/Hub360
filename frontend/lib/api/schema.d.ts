@@ -6405,9 +6405,15 @@ export interface components {
             desactiveLe: string | null;
             motif: string | null;
         };
+        BasculeMaintenanceDto: {
+            /** Format: date-time */
+            le: string;
+            par: string | null;
+        };
         EtatMaintenanceDto: {
             actif: boolean;
             message: string;
+            depuis: components["schemas"]["BasculeMaintenanceDto"] | null;
         };
         InterrupteursDto: {
             modules: components["schemas"]["ModuleInterrupteurDto"][];

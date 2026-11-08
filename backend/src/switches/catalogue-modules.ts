@@ -101,11 +101,11 @@ export const CATALOGUE_MODULES: FamilleModules[] = [
   {
     nom: 'Administration',
     modules: [
-      { nom: 'Paramétrage et droits', statut: 'en_service', note: 'Comptes, matrice, interrupteurs (CIO)' },
+      { nom: 'Paramétrage et droits', statut: 'en_service', note: 'Comptes, matrice, modules (CIO)' },
       { nom: 'Journal d’audit', statut: 'en_service', module: 'pilotage' },
       { nom: 'Sauvegardes et exports', statut: 'en_partie', note: 'Sauvegarde du serveur, exports Excel' },
       { nom: 'Intégrations (comptabilité, banque, signature)', statut: 'a_venir' },
-      { nom: 'Gestion des sociétés et entités', statut: 'en_partie', note: 'Portail, interrupteurs' },
+      { nom: 'Gestion des sociétés et entités', statut: 'en_partie', note: 'Portail, modules' },
     ],
   },
 ];

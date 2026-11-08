@@ -20,9 +20,18 @@ export class ModuleInterrupteurDto {
   motif!: string | null;
 }
 
+// Dernière bascule de la maintenance (fermeture ou réouverture du HUB).
+export class BasculeMaintenanceDto {
+  le!: Date;
+  // Nom de l'auteur ; « compte supprimé » s'il n'existe plus.
+  par!: string | null;
+}
+
 export class EtatMaintenanceDto {
   actif!: boolean;
   message!: string;
+  // null : jamais basculée.
+  depuis!: BasculeMaintenanceDto | null;
 }
 
 export class InterrupteursDto {
