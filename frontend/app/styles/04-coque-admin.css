@@ -1358,6 +1358,59 @@ button:focus-visible .repli-icone {
 .menu-actions-liste svg {
   color: var(--text-muted);
 }
+/* Variante « ⋯ » au bout d'une ligne : bouton carré, liste alignée à droite. */
+.menu-actions-bouton--icone {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: var(--r-10);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background var(--duree-court) var(--courbe),
+    color var(--duree-court) var(--courbe);
+}
+.menu-actions-bouton--icone:hover,
+.menu-actions-bouton--icone[aria-expanded='true'] {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.menu-actions-bouton--icone:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .menu-actions-bouton--icone {
+    width: 44px;
+    height: 44px;
+  }
+}
+.menu-actions-liste--droite {
+  right: 0;
+  left: auto;
+  min-width: 16rem;
+}
+.menu-actions-liste--haut {
+  top: auto;
+  bottom: calc(100% + var(--e-8));
+}
+.menu-actions-separee {
+  margin-top: var(--e-4);
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--border);
+}
+.menu-actions-liste .menu-actions-danger,
+.menu-actions-liste .menu-actions-danger svg {
+  color: var(--danger-texte);
+}
+.menu-actions-liste .menu-actions-danger:hover,
+.menu-actions-liste .menu-actions-danger:focus-visible {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
 
 /* --- Menu du compte (components/admin/menu-compte.tsx) ------------------- */
 .mc {
