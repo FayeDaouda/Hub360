@@ -14,6 +14,7 @@ import { AideGlobale } from '@/components/admin/aide-globale';
 import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
 import { RolesPanel } from '@/components/admin/roles-panel';
 import { JournalAudit } from '@/components/pilotage/journal-audit';
+import { DefilementCoque } from '@/lib/defilement';
 import { DeblocagesPanel } from '@/components/groupe/deblocages-panel';
 import { ModulesPanel } from '@/components/groupe/modules-panel';
 import { NavigationConsole, NavigationConsoleMobile } from '@/components/groupe/console-navigation';
@@ -128,6 +129,9 @@ function ConsoleAdministration() {
           <MenuCompte session={session} base={`/admin/${slug}`} onDeconnexion={deconnexion} />
         </div>
       </header>
+
+      {/* Hauteur de la barre (en-têtes collés), fondu des bandeaux qui défilent. */}
+      <DefilementCoque barre=".groupe-barre" />
 
       <div className="groupe-cadre">
         <NavigationConsole session={session} active={section} />
