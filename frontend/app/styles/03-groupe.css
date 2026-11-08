@@ -5,7 +5,6 @@
    ========================================================================== */
 .groupe-espace {
   --gs-ok: var(--sauge-fonce);
-  --gs-attente: var(--ocre-fonce);
   --gs-erreur: #b3261e;
 
   /* Palette de la console (refonte du 07/11/2026, maquette validée) :
@@ -29,7 +28,6 @@
 }
 :root[data-theme='dark'] .groupe-espace {
   --gs-ok: oklch(80% 0.15 142);
-  --gs-attente: oklch(84% 0.13 82);
   --gs-erreur: #ff9b91;
 
   --admin-fond: #080a14;
@@ -238,6 +236,11 @@
   gap: 1.25rem;
   min-width: 0;
 }
+/* Un panneau ne s'élargit pas au-delà du contenu pour un long e-mail : il
+   rétrécit, et le texte se coupe par des points de suspension. */
+.groupe-contenu > * {
+  min-width: 0;
+}
 .groupe-contenu:focus {
   outline: none; /* cible du lien d'évitement */
 }
@@ -292,48 +295,11 @@
    le contenu non positionné — champ de recherche délavé en sombre. */
 .groupe-panel > * {
   position: relative;
+  min-width: 0; /* grille : ne pas s'élargir au contenu (long e-mail) */
 }
-.groupe-panel-entete {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem 2rem;
-}
-
-.groupe-resume {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 0;
-}
-.groupe-resume > div {
-  min-width: 118px;
-  padding: 0.65rem 0.9rem;
-  border-radius: var(--radius-md);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-}
-.groupe-resume dt {
-  color: var(--text-muted);
-  font-size: var(--t-12);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-.groupe-resume dd {
-  display: grid;
-  margin: 0.2rem 0 0;
-  font-family: var(--font-titre);
-  font-size: 1.15rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.groupe-resume small {
-  color: var(--text-muted);
-  font-family: var(--font-sans);
-  font-size: var(--t-12);
-  font-weight: 500;
+/* Comptes : le menu « ⋯ » des dernières lignes dépasse du panneau. */
+.groupe-panel--comptes {
+  overflow: visible;
 }
 
 .groupe-onglets {
@@ -371,23 +337,122 @@
   outline-offset: 2px;
 }
 
+/* Barre d'outils : recherche, rôle, compteur, « Nouveau compte ». */
+.groupe-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
 .groupe-recherche {
-  max-width: 360px;
+  flex: 1 1 16rem;
+  max-width: 380px;
 }
 /* Gris par défaut du navigateur (#757575) illisible sur le verre sombre. */
 .groupe-recherche .field-input::placeholder {
   color: var(--text-muted);
   opacity: 1;
 }
+.groupe-outils .field-input,
+.groupe-outils .btn-primary {
+  box-sizing: border-box;
+  height: 40px;
+}
+.groupe-outils .groupe-filtre-role {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 11rem;
+  padding-right: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    right 0.95rem center,
+    right 0.7rem center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  appearance: none;
+  cursor: pointer;
+}
+/* Cinq tuiles-filtres compactes (icône · libellé · nombre) sur une ligne,
+   à toute largeur de contenu ; en dessous de 820px, la rangée défile. */
+.groupe-panel--comptes .kpi-strip {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+}
+.groupe-panel--comptes .kpi-strip .kpi-tuile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'icone libelle valeur';
+  align-items: center;
+  column-gap: var(--e-12);
+  padding: var(--e-12) var(--e-16);
+}
+.groupe-panel--comptes .kpi-tuile-tete {
+  grid-area: icone;
+}
+.groupe-panel--comptes .kpi-tuile-icone {
+  margin-bottom: 0;
+}
+.groupe-panel--comptes .kpi-strip .kpi-tuile-label {
+  grid-area: libelle;
+  align-self: center;
+  margin: 0;
+  line-height: 1.3;
+}
+.groupe-panel--comptes .kpi-tuile-valeur {
+  grid-area: valeur;
+  margin: 0;
+  font-size: 1.5rem;
+}
+/* Filtre engagé : fond teinté et bordure (le contour décalé reste au focus). */
+.groupe-panel--comptes .kpi-tuile--actif:not(.kpi-tuile--alerte) {
+  outline: none;
+  border-color: var(--action);
+  background: color-mix(in srgb, var(--action) 8%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--action);
+}
+/* Sur l'aplat rouge (verrouillés), un anneau extérieur bien visible. */
+.groupe-panel--comptes .kpi-tuile--alerte.kpi-tuile--actif {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--danger);
+}
+.groupe-compteur {
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  font-variant-numeric: tabular-nums;
+}
+.groupe-nouveau {
+  margin-left: auto;
+}
+.groupe-vide {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0 1rem;
+}
+.groupe-vide .empty-state {
+  padding: 1.5rem 0 0;
+}
 
+/* Tableau : une ligne compacte par compte, actions dans le menu « ⋯ ». */
 .groupe-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed; /* les colonnes ne sautent pas quand on filtre */
+}
+.groupe-table th:nth-child(2) {
+  width: 13rem;
+}
+.groupe-table th:nth-child(3) {
+  width: 16rem;
 }
 .groupe-table th {
-  padding: 0.7rem 0.6rem;
+  padding: 0.6rem 0.75rem;
   border-bottom: 1px solid var(--border);
-  color: var(--text-muted);
+  color: var(--text-subtle);
   font-size: var(--t-12);
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -396,24 +461,24 @@
   white-space: nowrap;
 }
 .groupe-table td {
-  padding: 0.75rem 0.6rem;
+  padding: 0.65rem 0.75rem;
   border-bottom: 1px solid var(--border);
-  font-size: 0.88rem;
+  font-size: var(--t-14);
   vertical-align: middle;
 }
-.groupe-table tr:last-child td {
+.groupe-table tbody tr {
+  transition: background var(--duree-court) var(--courbe);
+}
+.groupe-table tbody tr:hover {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+/* :where : ne pas peser plus lourd que les règles des cartes (mobile). */
+.groupe-table :where(tr:last-child) td {
   border-bottom: none;
 }
-.groupe-table th:first-child,
-.groupe-table td:first-child {
-  padding-left: 0;
-}
-.groupe-table th:last-child,
-.groupe-table td:last-child {
-  padding-right: 0;
-}
-.groupe-col-salaire {
-  width: 230px;
+.groupe-table .groupe-col-actions {
+  width: 52px;
+  text-align: right;
 }
 
 .groupe-personne {
@@ -422,72 +487,41 @@
   gap: 0.75rem;
   min-width: 0;
 }
+.groupe-personne-texte {
+  min-width: 0;
+}
 .groupe-personne strong {
   display: block;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .groupe-moi {
   margin-left: 0.45rem;
   padding: 0.05rem 0.45rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--violet-hub) 18%, transparent);
-  color: var(--text);
+  background: color-mix(in srgb, var(--action) 14%, transparent);
+  color: var(--gs-nav-actif);
   font-size: var(--t-12);
   font-weight: 600;
-  vertical-align: 0.1em;
 }
 .groupe-email {
   display: block;
+  overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.78rem;
-  overflow-wrap: anywhere;
-}
-.groupe-avatar {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--violet-hub), var(--cyan-hub));
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.groupe-action-compte {
-  display: block;
-  margin-top: 0.4rem;
-}
-.groupe-statut {
-  justify-self: start; /* en carte (mobile), ne s'étire pas sur la largeur */
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-size: var(--t-12);
-  font-weight: 600;
+  font-size: var(--t-13);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.groupe-statut::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
+.groupe-statuts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
 }
-.groupe-statut--actif {
-  color: var(--gs-ok);
-  background: color-mix(in srgb, var(--gs-ok) 14%, transparent);
-}
-.groupe-statut--en_attente {
-  color: var(--gs-attente);
-  background: color-mix(in srgb, var(--gs-attente) 16%, transparent);
-}
-.groupe-statut--desactive {
-  color: var(--text-muted);
-  border: 1px solid var(--border);
+.groupe-statuts + .groupe-etat {
+  margin-top: 0.3rem;
 }
 
 .groupe-cellule-action {
@@ -497,11 +531,11 @@
 }
 
 .groupe-role-select {
-  min-width: 190px;
+  min-width: 170px;
   padding: 0.45rem 2rem 0.45rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background-color: var(--glass-bg);
+  background-color: var(--surface);
   background-image:
     linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
@@ -512,17 +546,20 @@
   background-repeat: no-repeat;
   color: var(--text);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--t-13);
   font-weight: 600;
   cursor: pointer;
   appearance: none;
+}
+.groupe-role-select:hover {
+  border-color: var(--border-hover);
 }
 .groupe-role-select:disabled {
   cursor: progress;
   opacity: 0.6;
 }
 .groupe-role-select:focus-visible {
-  outline: 2px solid var(--argile);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 
@@ -534,53 +571,9 @@
   border: 1px dashed var(--border);
   border-radius: 10px;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: var(--t-13);
   font-weight: 600;
   white-space: nowrap;
-}
-
-.groupe-salaire {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  max-width: 210px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--glass-bg);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-.groupe-salaire:focus-within {
-  border-color: var(--argile);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--argile) 18%, transparent);
-}
-.groupe-salaire.est-invalide {
-  border-color: var(--gs-erreur);
-}
-.groupe-salaire-saisie {
-  flex: 1;
-  min-width: 0;
-  padding: 0.45rem 0.45rem 0.45rem 0.7rem;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.95rem;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-.groupe-salaire-saisie::placeholder {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-}
-.groupe-salaire-devise {
-  padding-right: 0.7rem;
-  color: var(--text-muted);
-  font-size: var(--t-12);
-  font-weight: 600;
-  letter-spacing: 0.04em;
 }
 
 .groupe-etat {
@@ -617,24 +610,56 @@
   flex: none;
   margin-top: 0.1rem;
 }
-.groupe-squelette-titre {
-  width: 40%;
-  height: 1.6rem;
+.groupe-squelette-tuiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+.groupe-squelette-tuile {
+  height: 60px;
+}
+.groupe-squelette-outils {
+  display: flex;
+  gap: 0.6rem;
+}
+.groupe-squelette-outils > * {
+  height: 40px;
 }
 .groupe-squelette-ligne {
-  height: 3rem;
+  height: 60px;
 }
 
 /* Écrans tactiles : 16px minimum dans les champs, sinon iOS zoome au focus. */
 @media (pointer: coarse) {
-  .groupe-salaire-saisie,
   .groupe-role-select {
     font-size: 16px;
+    font-weight: 500; /* pas plus fort que le nom de la personne */
   }
 }
 
+@container console (max-width: 820px) {
+  .groupe-panel--comptes .kpi-strip {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(10.5rem, 1fr);
+    overflow-x: auto;
+    padding: 6px 4px; /* l'anneau du filtre actif n'est pas rogné */
+    margin: -6px -4px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+  .groupe-panel--comptes .kpi-tuile {
+    scroll-snap-align: start;
+  }
+  /* La règle mobile commune étale la 5e tuile sur toute la ligne : ici,
+     chaque tuile garde sa place dans la rangée. */
+  .groupe-panel--comptes .kpi-strip > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
 /* Contenu de moins de 760px (fenêtre étroite, ou menu latéral à côté) :
-   chaque compte devient une carte (libellés tirés de data-libelle). */
+   chaque compte devient une carte (libellés tirés de data-libelle), le menu
+   « ⋯ » en haut à droite. */
 @container console (max-width: 760px) {
   .groupe-table thead {
     display: none;
@@ -647,25 +672,24 @@
     width: 100%;
   }
   .groupe-table tr {
-    margin-bottom: 0.75rem;
-    padding: 0.9rem 1rem;
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    background: var(--glass-bg);
+    position: relative;
+    margin-bottom: 0.6rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--r-14);
+    background: var(--surface);
   }
-  .groupe-table td,
-  .groupe-table td:first-child,
-  .groupe-table td:last-child {
+  .groupe-table td {
     display: grid;
-    grid-template-columns: 7.5rem minmax(0, 1fr);
+    grid-template-columns: 6rem minmax(0, 1fr);
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.4rem 0;
+    gap: 0.6rem;
+    padding: 0.35rem 0;
     border: 0;
   }
   .groupe-table td::before {
     content: attr(data-libelle);
-    color: var(--text-muted);
+    color: var(--text-subtle);
     font-size: var(--t-12);
     font-weight: 600;
     letter-spacing: 0.05em;
@@ -673,18 +697,32 @@
   }
   .groupe-table td[data-libelle='Personne'] {
     display: block;
-    padding-bottom: 0.6rem;
+    padding: 0 0 0.5rem;
   }
-  .groupe-table td[data-libelle='Personne']::before {
+  /* Place du « ⋯ » réservée seulement quand la ligne a un menu. */
+  .groupe-table tr:has(.menu-actions) td[data-libelle='Personne'] {
+    padding-right: 3rem;
+  }
+  /* En carte, l'e-mail (l'identifiant) se lit en entier. */
+  .groupe-personne strong,
+  .groupe-email {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .groupe-table td[data-libelle='Personne']::before,
+  .groupe-table .groupe-col-actions::before {
     content: none;
   }
-  .groupe-col-salaire {
+  .groupe-table .groupe-col-actions {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    display: block;
     width: auto;
+    padding: 0;
   }
-  .groupe-role-select,
-  .groupe-salaire {
+  .groupe-role-select {
     width: 100%;
-    max-width: none;
     min-width: 0;
   }
   .groupe-cellule-action {
@@ -696,14 +734,18 @@
 }
 
 @container console (max-width: 500px) {
-  .groupe-table td,
-  .groupe-table td:first-child,
-  .groupe-table td:last-child {
+  .groupe-table td {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.35rem;
   }
-  .groupe-resume > div {
-    flex: 1 1 40%;
+  .groupe-outils > *,
+  .groupe-outils .groupe-filtre-role {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .groupe-nouveau {
+    justify-content: center;
+    margin-left: 0;
   }
 }
 
