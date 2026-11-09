@@ -214,6 +214,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                 type="button"
                 className="btn-primary"
                 disabled={enCours}
+                data-action-principale=""
                 onClick={() => agir(() => preparerContrat(slug, projet.id))}
               >
                 Préparer le contrat

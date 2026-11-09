@@ -209,6 +209,9 @@
   --attention-texte: #f2b640;
   --danger-texte: #ff6b70;
   --info-texte: #4fd1e8;
+  /* Teinte iris (notes « Renvoyé par… », pastilles) : sombre, texte clair. */
+  --iris-tint: color-mix(in srgb, #5b5be8 22%, #12162a);
+  --iris-fonce: #c9c8ff;
 
   --hub-logo-encre: #ffffff;
   --hub-logo-exposant: #0394b9;

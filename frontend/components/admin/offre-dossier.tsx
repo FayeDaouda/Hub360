@@ -171,7 +171,11 @@ export function OffreDossier({
           {/* Maquette : bloqué tant que la fiche n'est pas complète (le serveur
               refuse aussi — le tarif CO dépend des planches et de la catégorie). */}
           {modifiable && !offre && fiche.faits === fiche.total && (
-            <Link className={depuisFinances ? 'btn-primary' : 'btn-ghost btn-ghost--sm'} href={lienOffre()}>
+            <Link
+              className={depuisFinances ? 'btn-primary' : 'btn-ghost btn-ghost--sm'}
+              href={lienOffre()}
+              data-action-principale=""
+            >
               {libelleCreer}
             </Link>
           )}
@@ -207,6 +211,7 @@ export function OffreDossier({
                 type="button"
                 className={offre.relanceAFaire ? 'btn-primary' : 'btn-ghost btn-ghost--sm'}
                 disabled={enCours}
+                data-action-principale={offre.relanceAFaire ? '' : undefined}
                 onClick={() => relancer(offre)}
                 title="Envoie un rappel au client avec un nouveau lien (l’ancien ne marchera plus)"
               >
