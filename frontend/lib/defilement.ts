@@ -13,14 +13,13 @@ import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 //   (--outils-h) pour coller l'en-tête de colonnes dessous, et
 //   `data-entete-colle` seulement si le tableau tient en largeur (sinon il
 //   garde son défilement horizontal, en-tête non collé) ;
-// - bandeaux (onglets, filtres, étapes, liste des projets) : l'élément actif
+// - bandeaux (onglets, filtres, étapes) : l'élément actif
 //   ramené à l'écran quand il change ;
 // - bandeaux et zones qui défilent : `data-bord` (debut / milieu / fin, à
 //   l'horizontale) et `data-bord-y` (haut / milieu / bas) pour le fondu des
 //   bords qui annonce la suite (01-fondations.css).
 
-const BANDEAUX =
-  '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul, .reg-etapes, .eq-raccourcis-liste, .fin-filtres';
+const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .reg-etapes, .eq-raccourcis-liste, .fin-filtres';
 const ZONES = '.po-dossier-defile, .eq-cote';
 const OUTILS = '.liste-collee-outils';
 const TABLEAUX = '.liste-collee .admin-table-wrap, .liste-collee .admin-table';

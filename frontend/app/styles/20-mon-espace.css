@@ -306,24 +306,8 @@
   }
 }
 
-/* Projets · revue Salarié (19/10/2026) : liste compacte sous 3 projets,
-   « Seulement mes tâches », tâches à moi par étape, cartes closes repliées. */
-.po-colonnes--compacte {
-  grid-template-columns: minmax(0, 1fr);
-}
-.po-projets-ligne {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-.po-projet--ligne {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: auto;
-  padding: 0.55rem 0.85rem;
-  background: color-mix(in oklch, var(--surface) 70%, transparent);
-}
+/* Projets · revue Salarié (19/10/2026) : « Seulement mes tâches », tâches
+   à moi par étape, cartes closes repliées. */
 .po-etape-pied {
   display: flex;
   flex-wrap: wrap;
@@ -411,9 +395,9 @@
 }
 
 /* Projets · gabarit, desktop (lot S1 du défilement, 24/10/2026) : l'espace
-   de travail tient dans la fenêtre, sous la barre du haut collée. Deux
-   colonnes qui défilent chacune : « Projets ouverts » (liste) et le dossier,
-   d'un seul tenant (en-tête, étapes, cartes) — les étapes restent collées en
+   de travail tient dans la fenêtre, sous la barre du haut collée. Sous le
+   sélecteur de projet (09/11/2026), le dossier défile d'un seul tenant
+   (en-tête, étapes, cartes) — les étapes restent collées en
    haut du dossier pour changer d'étape sans remonter. Fondu en bas tant
    qu'il y a une suite (data-bord-y, lib/defilement.ts). --po-haut = haut de
    la page, mesuré (projets-ouverts.tsx). Tablette, mobile et fenêtres
@@ -432,34 +416,18 @@
   .po > * {
     flex: none;
   }
+  /* Sélecteur de projet (une ligne), puis le dossier qui défile. */
   .po > .po-colonnes {
     flex: 1;
     min-height: 0;
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     align-items: stretch;
   }
-  .po > .po-colonnes.po-colonnes--compacte {
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-  .po-liste,
   .po-dossier {
     display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
-  }
-  .po-liste > * {
-    flex: none;
-  }
-  .po-liste > ul {
-    flex: 1;
-    min-height: 0;
-    align-content: start;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 0.3rem;
-  }
-  .po-dossier {
     padding: 0;
   }
   .po-dossier > .skeleton {
