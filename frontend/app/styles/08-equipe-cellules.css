@@ -8,6 +8,10 @@
   color: #b3261e;
   margin-right: auto;
 }
+/* Sombre : le rouge du clair tombe à 2,7:1 ; celui du thème sombre est lisible. */
+:root[data-theme='dark'] .btn-ghost--danger {
+  color: var(--danger-texte);
+}
 
 /* Rangée de raccourcis d'accueil (admin & collaborateur) */
 .actions-rapides {

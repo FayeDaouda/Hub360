@@ -46,17 +46,20 @@ export function MenuActions({
     const surClic = (e: MouseEvent) => {
       if (!racine.current?.contains(e.target as Node)) setOuvert(false);
     };
+    // À la capture, sans propagation : dans un tiroir ou une fenêtre, Échap
+    // referme le menu seulement, pas ce qui le contient.
     const surTouche = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.stopPropagation();
         setOuvert(false);
         bouton.current?.focus();
       }
     };
     document.addEventListener('mousedown', surClic);
-    document.addEventListener('keydown', surTouche);
+    document.addEventListener('keydown', surTouche, true);
     return () => {
       document.removeEventListener('mousedown', surClic);
-      document.removeEventListener('keydown', surTouche);
+      document.removeEventListener('keydown', surTouche, true);
     };
   }, [ouvert]);
 

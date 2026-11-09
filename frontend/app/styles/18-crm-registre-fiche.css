@@ -202,11 +202,6 @@
   font-family: var(--font-mono);
   font-size: 1.6rem;
 }
-.fiche-crm-client {
-  margin: 0.2rem 0 0;
-  font-size: 1.15rem;
-  font-weight: 600;
-}
 .fiche-crm-meta {
   margin: 0.25rem 0 0;
   color: var(--text-muted);
@@ -246,40 +241,6 @@
 }
 :root[data-theme='dark'] .fiche-crm-badge--ok {
   color: var(--sauge);
-}
-.fiche-crm-etapes {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.fiche-crm-etapes li {
-  display: grid;
-  gap: 0.45rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-.fiche-crm-etapes li::before {
-  content: '';
-  height: 5px;
-  border-radius: 999px;
-  background: var(--border);
-}
-.fiche-crm-etapes li.is-fait,
-.fiche-crm-etapes li.is-courant {
-  color: var(--text);
-}
-.fiche-crm-etapes li.is-fait::before {
-  background: var(--accent);
-}
-.fiche-crm-etapes li.is-courant::before {
-  background: var(--iris);
-}
-.fiche-crm-etapes.is-perdu li::before {
-  background: var(--border);
 }
 .fiche-crm-note {
   margin: 0;
@@ -453,32 +414,6 @@
   font-weight: 600;
   cursor: not-allowed;
 }
-.fiche-crm-archive {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.9rem 1.25rem;
-  padding: 1rem 1.1rem;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-}
-.fiche-crm-archive > p {
-  flex: 1 1 18rem;
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 0.88rem;
-}
-.fiche-crm-archive .btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-.fiche-crm-archive-confirmer {
-  display: grid;
-  flex: 1 1 100%;
-  gap: 0.6rem;
-}
 @media (max-width: 640px) {
   .fiche-crm {
     padding: 1.1rem 1rem 1.5rem;
@@ -494,7 +429,608 @@
     transform: rotate(90deg);
     justify-self: center;
   }
-  .fiche-crm-etapes li {
+}
+
+/* --- Fiche du dossier CRM (refonte du 09/11/2026) ---------------------------
+   En-tête et onglets fixes, corps qui défile, pied avec l'action suivante.
+   Tout est rattaché à .fiche-dossier : .fiche-crm est la classe de tous les
+   tiroirs du HUB (Finances, RH…), qui ne changent pas. */
+.fiche-crm.fiche-dossier {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(50rem, 100vw);
+  padding: 0;
+  overflow: hidden;
+}
+.fiche-dossier-tete {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  padding: 1.25rem 1.6rem 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  transition: box-shadow var(--duree-court) var(--courbe);
+}
+/* Dès qu'on défile : une ombre sous l'en-tête, qui reste en place. */
+.fiche-dossier.is-defile .fiche-dossier-tete {
+  box-shadow: 0 12px 24px -16px rgba(20, 20, 60, 0.45);
+}
+:root[data-theme='dark'] .fiche-dossier.is-defile .fiche-dossier-tete {
+  box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.6);
+}
+/* Au défilement, l'en-tête se compacte : code, statut et onglets restent ;
+   la jauge et le propriétaire reviennent en haut de la fiche. */
+.fiche-dossier.is-defile .fiche-dossier-bandeau {
+  max-height: 0;
+  margin-top: 0;
+  padding-block: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+.fiche-dossier-titre {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.fiche-dossier-identite {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.fiche-dossier-code-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.fiche-dossier .fiche-crm-code {
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.fiche-dossier-meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-14);
+}
+.fiche-dossier-meta strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.fiche-dossier-outils {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Bandeau : complétude de la fiche et propriétaire. */
+.fiche-dossier-bandeau {
+  display: flex;
+  max-height: 14rem;
+  overflow: hidden;
+  transition:
+    max-height 0.25s var(--courbe),
+    margin 0.25s var(--courbe),
+    padding 0.25s var(--courbe),
+    opacity 0.2s var(--courbe),
+    visibility 0.25s;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+}
+.fiche-dossier-jauge {
+  display: grid;
+  flex: 1;
+  gap: 0.45rem;
+  min-width: 0;
+}
+.fiche-dossier-jauge-texte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--t-13);
+  font-weight: 600;
+}
+.fiche-dossier-manque {
+  color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .fiche-dossier-manque {
+  color: var(--ocre);
+}
+.fiche-dossier-lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lien);
+  font: inherit;
+  font-size: var(--t-13);
+  font-weight: 600;
+  cursor: pointer;
+}
+.fiche-dossier-lien:hover {
+  text-decoration: underline;
+}
+.fiche-dossier-manquants {
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+}
+.fiche-dossier-jauge-piste {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+.fiche-dossier-jauge-piste > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ocre);
+  transition: width 0.5s var(--courbe);
+}
+.fiche-dossier-jauge-piste > span.is-complete {
+  background: var(--ok);
+}
+.fiche-dossier-proprio {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.6rem;
+}
+.fiche-dossier-jauge + .fiche-dossier-proprio {
+  padding-left: 1rem;
+  border-left: 1px solid var(--border);
+}
+.fiche-dossier-proprio > span:last-child {
+  display: grid;
+  line-height: 1.25;
+}
+.fiche-dossier-proprio-libelle {
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+}
+.fiche-dossier-proprio strong {
+  font-size: var(--t-13);
+  font-weight: 600;
+}
+.fiche-dossier-proprio-vide {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border-hover);
+  color: var(--text-subtle);
+}
+
+/* Onglets : l'indicateur glisse d'une section à l'autre. */
+.fiche-dossier-onglets {
+  position: relative;
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fiche-dossier-onglets a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  height: 44px;
+  color: var(--text-subtle);
+  font-size: var(--t-14);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--duree-court) var(--courbe);
+}
+.fiche-dossier-onglets a:hover,
+.fiche-dossier-onglets a.is-actif {
+  color: var(--text);
+}
+.fiche-dossier-onglets a.is-actif {
+  font-weight: 600;
+}
+.fiche-dossier-onglets a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+.fiche-dossier-onglet-nombre {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ocre) 18%, var(--surface));
+  color: var(--ocre-fonce);
+  font-size: var(--t-12);
+  font-weight: 600;
+}
+:root[data-theme='dark'] .fiche-dossier-onglet-nombre {
+  color: var(--ocre);
+}
+.fiche-dossier-indicateur {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--action);
+  transition:
+    transform 0.28s var(--courbe),
+    width 0.28s var(--courbe);
+}
+
+/* Corps : seul à défiler, sections en cartes. */
+.fiche-dossier-corps {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 1.1rem;
+  min-height: 0;
+  padding: 1.25rem 1.6rem 2rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: color-mix(in srgb, var(--surface-2) 55%, var(--surface));
+}
+.fiche-dossier-bloc {
+  display: grid;
+  gap: 1.1rem;
+  scroll-margin-top: 0.75rem;
+}
+/* Focus posé par un onglet : la section se repère au halo, pas au contour. */
+.fiche-dossier-bloc:focus {
+  outline: none;
+}
+.fiche-dossier .fiche-crm-section {
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+  box-shadow: var(--ombre-1);
+}
+.fiche-dossier .fiche-crm-actions {
+  padding-top: 1.1rem;
+}
+/* Section rejointe par un onglet ou le pied : un bref halo pour la repérer. */
+.fiche-dossier-bloc.is-cible > .fiche-crm-section {
+  animation: fiche-dossier-cible 1s var(--courbe);
+}
+@keyframes fiche-dossier-cible {
+  from {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--action) 35%, transparent),
+      var(--ombre-1);
+  }
+}
+
+/* Situation : quatre étapes reliées, la courante en halo. */
+.fiche-dossier-situation-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.fiche-dossier-situation-titre {
+  margin: 0.2rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.fiche-dossier-frise {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fiche-dossier-frise li {
+  position: relative;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 0.4rem;
+  text-align: center;
+}
+/* Trait entre deux étapes : gris, rempli quand l'étape est atteinte. */
+.fiche-dossier-frise li:not(:first-child)::before,
+.fiche-dossier-frise li:not(:first-child)::after {
+  content: '';
+  position: absolute;
+  top: 17px;
+  right: calc(50% + 24px);
+  left: calc(-50% + 24px);
+  height: 3px;
+  border-radius: 3px;
+  background: var(--border);
+}
+.fiche-dossier-frise li:not(:first-child)::after {
+  background: var(--ok);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.fiche-dossier-frise li.is-fait:not(:first-child)::after,
+.fiche-dossier-frise li.is-courant:not(:first-child)::after {
+  transform: scaleX(1);
+  animation: fiche-dossier-remplir 0.6s var(--courbe) both;
+}
+.fiche-dossier-frise li.is-courant:not(:first-child)::after {
+  background: linear-gradient(90deg, var(--ok), var(--action));
+}
+@keyframes fiche-dossier-remplir {
+  from {
+    transform: scaleX(0);
+  }
+}
+.fiche-dossier-noeud {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--border-hover);
+  color: var(--text-subtle);
+  font-size: var(--t-14);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fiche-dossier-frise li.is-fait .fiche-dossier-noeud {
+  background: var(--ok);
+  box-shadow: none;
+  color: #fff;
+}
+.fiche-dossier-frise li.is-courant .fiche-dossier-noeud {
+  background: var(--action);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--action) 20%, transparent),
+    0 6px 16px color-mix(in srgb, var(--action) 35%, transparent);
+  color: #fff;
+  animation: fiche-dossier-halo 2.6s ease-in-out infinite;
+}
+@keyframes fiche-dossier-halo {
+  50% {
+    box-shadow:
+      0 0 0 8px color-mix(in srgb, var(--action) 10%, transparent),
+      0 6px 16px color-mix(in srgb, var(--action) 35%, transparent);
+  }
+}
+.fiche-dossier-etape {
+  color: var(--text-subtle);
+  font-size: var(--t-13);
+  font-weight: 600;
+}
+.fiche-dossier-frise li.is-fait .fiche-dossier-etape,
+.fiche-dossier-frise li.is-courant .fiche-dossier-etape {
+  color: var(--text);
+}
+.fiche-dossier-quand {
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+  white-space: nowrap;
+}
+.fiche-dossier-frise li.is-courant .fiche-dossier-quand {
+  color: var(--lien);
+  font-weight: 600;
+}
+
+/* Historique en fil, du plus récent au plus ancien. */
+.fiche-dossier .fiche-crm-passation {
+  margin-bottom: 0.4rem;
+}
+.fiche-dossier-fil {
+  gap: 0;
+}
+.fiche-dossier-fil li {
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+}
+.fiche-dossier-fil li + li {
+  border-top: 1px solid var(--border);
+}
+.fiche-dossier-point {
+  width: 10px;
+  height: 10px;
+  margin-top: 0.35rem;
+  border-radius: 50%;
+  background: var(--border-hover);
+}
+.fiche-dossier-fil li:first-child .fiche-dossier-point {
+  background: var(--action);
+}
+.fiche-dossier-evenement {
+  display: block;
+  font-size: var(--t-14);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.fiche-dossier-fil time {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--t-12);
+}
+
+/* Pied : la prochaine étape et son action, toujours visibles. */
+.fiche-dossier-pied {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1.6rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.fiche-dossier-prochaine {
+  display: grid;
+  flex: 1 1 16rem;
+  gap: 2px;
+  min-width: 0;
+}
+.fiche-dossier-prochaine > span {
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fiche-dossier-prochaine strong {
+  font-size: var(--t-14);
+  font-weight: 500;
+}
+.fiche-dossier-pied .btn-primary,
+.fiche-dossier-pied .btn-ghost {
+  gap: 0.4rem;
+  min-height: 44px;
+}
+
+/* Menus déroulants de la fiche : chevron du HUB (blanc sur la carte du
+   propriétaire, en dégradé iris). */
+.fiche-dossier select.field-input {
+  appearance: none;
+  padding-right: 2.4rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2362678a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-size: 16px 16px;
+  background-repeat: no-repeat;
+}
+:root[data-theme='dark'] .fiche-dossier select.field-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239196ba' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.fiche-dossier .fiche-crm-carte--proprio select.field-input,
+:root[data-theme='dark'] .fiche-dossier .fiche-crm-carte--proprio select.field-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.fiche-dossier select.field-input:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Téléphone : plein écran, bandeau en colonne, pied pleine largeur. */
+@media (max-width: 640px) {
+  .fiche-dossier-tete {
+    padding: 1rem 1rem 0;
+  }
+  .fiche-dossier .fiche-crm-code {
+    font-size: 1.3rem;
+  }
+  .fiche-dossier-bandeau {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+  .fiche-dossier-jauge + .fiche-dossier-proprio {
+    padding: 0.6rem 0 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+  .fiche-dossier-corps {
+    padding: 1rem 1rem 1.5rem;
+  }
+  .fiche-dossier .fiche-crm-section {
+    padding: 1rem;
+  }
+  .fiche-dossier-frise li:not(:first-child)::before,
+  .fiche-dossier-frise li:not(:first-child)::after {
+    top: 14px;
+    right: calc(50% + 19px);
+    left: calc(-50% + 19px);
+  }
+  .fiche-dossier-noeud {
+    width: 30px;
+    height: 30px;
     font-size: var(--t-12);
+  }
+  .fiche-dossier-etape {
+    font-size: var(--t-12);
+  }
+  .fiche-dossier-pied {
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  }
+  .fiche-dossier-pied .btn-primary,
+  .fiche-dossier-pied .btn-ghost {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fiche-dossier-indicateur,
+  .fiche-dossier-bandeau,
+  .fiche-dossier-jauge-piste > span {
+    transition: none;
+  }
+  .fiche-dossier-frise li.is-fait:not(:first-child)::after,
+  .fiche-dossier-frise li.is-courant:not(:first-child)::after,
+  .fiche-dossier-frise li.is-courant .fiche-dossier-noeud,
+  .fiche-dossier-bloc.is-cible > .fiche-crm-section {
+    animation: none;
+  }
+}
+
+/* Focus des champs de la fiche : bordure et anneau iris, y compris sur un
+   champ manquant (son ambre reprend la main hors focus) — c'est là que
+   mène « Compléter ». */
+.fiche-dossier .field-input:focus,
+.fiche-dossier .field-input.is-manquant:focus {
+  outline: none;
+  border-color: var(--action);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--action) 24%, transparent);
+}
+/* Carte du propriétaire (dégradé iris) : texte assez contrasté, focus blanc. */
+.fiche-dossier .fiche-crm-carte--proprio .fiche-crm-aide {
+  color: color-mix(in oklch, #fff 94%, transparent);
+}
+.fiche-dossier .fiche-crm-carte--proprio .field-input:focus {
+  border-color: #fff;
+  box-shadow: none;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+/* Badge « Validée · verrouillée » lisible en sombre. */
+:root[data-theme='dark'] .fiche-dossier .fiche-crm-badge--ok {
+  color: var(--ok-texte);
+}
+/* Menu « ⋯ » : fondu et léger glissement à l'ouverture. */
+.fiche-dossier .menu-actions-liste {
+  animation: fiche-dossier-menu 0.14s var(--courbe);
+}
+@keyframes fiche-dossier-menu {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (pointer: coarse) {
+  .fiche-dossier-lien,
+  .fiche-dossier .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media (max-width: 640px) {
+  /* Onglets qui défilent : fondu du bord droit, la suite s'annonce. */
+  .fiche-dossier-onglets {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  }
+  /* Pied : le bouton seul quand il y en a un (l'étape est dans la Situation). */
+  .fiche-dossier-pied:has(button) .fiche-dossier-prochaine {
+    display: none;
+  }
+  .fiche-dossier.is-defile .fiche-dossier-meta {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fiche-dossier .menu-actions-liste {
+    animation: none;
   }
 }

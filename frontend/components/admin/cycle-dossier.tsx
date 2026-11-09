@@ -125,6 +125,8 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
                   : `btn-ghost btn-ghost--sm${ACTIONS_CRM[a].ton === 'danger' ? ' btn-ghost--danger' : ''}`
               }
               disabled={blocages.some((b) => b.a === a)}
+              // Action de l'étape : reprise par le pied de la fiche.
+              data-action-principale={ACTIONS_CRM[a].ton === 'principal' ? '' : undefined}
               onClick={() => choisir(a)}
             >
               {ACTIONS_CRM[a].libelle}
