@@ -43,7 +43,8 @@ export function MentionRow({
         ...(m.tacheId ? { tacheId: m.tacheId } : { carteId: m.carteId }),
         parentId: m.racineId,
         texte: reply!.trim(),
-        mentionneId: m.auteurId,
+        // La réponse prévient l'auteur de la mention.
+        mentionIds: m.auteurId ? [m.auteurId] : [],
       });
       await markMentionRead(slug, m.id);
     });

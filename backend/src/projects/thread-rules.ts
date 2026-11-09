@@ -2,11 +2,12 @@
 // personne ; le commentaire reste ouvert jusqu'à une réponse ou sa résolution
 // par l'auteur ». Règles pures, testées.
 
-export type ThreadComment = { mentionneId: string | null; resoluLe: Date | null; reponses: number };
+// mentions : nombre de personnes citées (@) dans le commentaire.
+export type ThreadComment = { mentions: number; resoluLe: Date | null; reponses: number };
 
 // Ouvert = une mention en attente : ni réponse, ni résolution.
 export function isOpenComment(c: ThreadComment): boolean {
-  return !!c.mentionneId && !c.resoluLe && c.reponses === 0;
+  return c.mentions > 0 && !c.resoluLe && c.reponses === 0;
 }
 
 // Seul l'auteur résout, et seulement un commentaire encore ouvert.

@@ -1,7 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiExtraModels } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
+import { ThrottleParCompteGuard } from '../commun/throttle-par-compte.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { PermissionGuard } from '../commun/permission.guard';
 import {
@@ -83,10 +97,15 @@ export class OpenProjectsController {
     return this.boards.board(req.user.societeId, req.user);
   }
 
+  // ?projet= (obligatoire, 09/11/2026) : seulement qui peut lire ce projet ;
+  // il faut pouvoir le lire soi-même pour le demander. Pas d'annuaire de
+  // toute la société.
   @Get('mentionnables')
   @RequiertPermission('projets', 'lecture')
-  mentionable(@Req() req: R): Promise<MentionablePersonDto[]> {
-    return this.threads.mentionable(req.user.societeId);
+  async mentionable(@Req() req: R, @Query('projet') projectId?: string): Promise<MentionablePersonDto[]> {
+    if (!projectId) throw new BadRequestException('Indique le projet (?projet=).');
+    await this.threads.checkRead(req.user.societeId, req.user, projectId);
+    return this.threads.mentionable(req.user.societeId, projectId);
   }
 
   // Tableau de production (Dir. GC : ses projets ; les autres : tous) — la
@@ -355,8 +374,12 @@ export class OpenProjectsController {
   }
 
   // Écriture sur Projets, ou Salarié sur un de ses projets (cf. checkWrite).
+  // Débit limité (09/11/2026) : chaque commentaire peut prévenir jusqu'à 20
+  // personnes — pas d'avalanche de notifications ; compté par compte.
   @Post(':id/fil')
   @RequiertPermission('projets', 'lecture')
+  @UseGuards(ThrottleParCompteGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   async postComment(
     @Req() req: R,
     @Param('id') projectId: string,

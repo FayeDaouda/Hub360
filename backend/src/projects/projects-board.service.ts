@@ -168,16 +168,15 @@ export class ProjectsBoardService {
   private async openMentions(projectIds: string[]) {
     if (!projectIds.length) return 0;
     const roots = await this.prisma.commentaireProjet.findMany({
-      where: { projetId: { in: projectIds }, parentId: null, mentionneId: { not: null }, resoluLe: null },
+      where: { projetId: { in: projectIds }, parentId: null, mentions: { some: {} }, resoluLe: null },
       select: {
         carteId: true,
         tacheId: true,
-        mentionneId: true,
         resoluLe: true,
-        _count: { select: { reponses: true } },
+        _count: { select: { reponses: true, mentions: true } },
       },
     });
-    const open = roots.filter((r) => isOpenComment({ ...r, reponses: r._count.reponses }));
+    const open = roots.filter((r) => isOpenComment({ ...r, mentions: r._count.mentions, reponses: r._count.reponses }));
     return new Set(open.map((r) => r.tacheId ?? r.carteId)).size;
   }
 

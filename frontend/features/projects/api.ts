@@ -156,8 +156,12 @@ export const decideTsRequest = (slug: string, projetId: string, demandeId: strin
   });
 
 // --- Fils de discussion et mentions -----------------------------------------------------
-export const getMentionablePeople = (slug: string) =>
-  apiSociete<ReponseApi<Route<'/mentionnables'>, 'get'>>(slug, '/projets-ouverts/mentionnables');
+// Personnes à citer (@) : celles qui peuvent lire le projet (09/11/2026).
+export const getMentionablePeople = (slug: string, projetId: string) =>
+  apiSociete<ReponseApi<Route<'/mentionnables'>, 'get'>>(
+    slug,
+    `/projets-ouverts/mentionnables?projet=${encodeURIComponent(projetId)}`,
+  );
 
 export const getMyMentions = (slug: string) => apiSociete<MyMention[]>(slug, '/projets-ouverts/mes-mentions');
 
@@ -176,7 +180,7 @@ export function getThread(slug: string, projetId: string, cible: ThreadTarget) {
 export const postComment = (
   slug: string,
   projetId: string,
-  corps: ThreadTarget & { texte: string; mentionneId?: string | null; parentId?: string },
+  corps: ThreadTarget & { texte: string; mentionIds?: string[]; parentId?: string },
 ) =>
   apiSociete<ReponseApi<Route<'/{id}/fil'>, 'post'>>(slug, `/projets-ouverts/${projetId}/fil`, {
     method: 'POST',

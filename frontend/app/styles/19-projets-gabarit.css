@@ -596,9 +596,27 @@
   resize: vertical;
 }
 .po-fil-envoi {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  justify-content: flex-end;
   gap: 0.5rem;
+}
+/* Saisie avec mentions (« @ » propose les noms, liste au-dessus du champ,
+   même rendu que la messagerie : .pchat-mentions, 09-chat.css). */
+.mention-champ {
+  position: relative;
+}
+.pchat-mentions .mention-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.pchat-mentions .mention-option.is-actif {
+  background: color-mix(in oklch, var(--action) 12%, transparent);
 }
 /* Retard / avance : couleurs de statut (lisibles dans les deux thèmes), plus
    le fuchsia d'une catégorie. */

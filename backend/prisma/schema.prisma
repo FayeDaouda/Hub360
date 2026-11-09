@@ -137,32 +137,32 @@ model Utilisateur {
   createdAt             DateTime  @default(now()) @map("created_at")
 
   roles                    UtilisateurSocieteRole[]
-  rolesSupprimes           Role[]                   @relation("RoleSupprPar")
+  rolesSupprimes           Role[]                     @relation("RoleSupprPar")
   collaborations           Collaborateur[]
   dossierPersonnel         DossierPersonnel?
-  blocsEtudeSupprimes      BlocEtude[]              @relation("BlocEtudeSupprPar")
+  blocsEtudeSupprimes      BlocEtude[]                @relation("BlocEtudeSupprPar")
   invitations              Invitation[]
   notifications            Notification[]
   evenementsCompte         EvenementCompte[]
   messages                 Message[]
-  canauxDmP1               Canal[]                  @relation("CanalDmP1")
+  canauxDmP1               Canal[]                    @relation("CanalDmP1")
   membresCanal             MembreCanal[]
   reactionsMessage         ReactionMessage[]
   abonnementsPush          AbonnementPush[]
   // Préférences de notification (catégories, heures calmes) — @hub/domain.
-  preferencesNotifications Json?                    @map("preferences_notifications")
-  canauxDmP2               Canal[]                  @relation("CanalDmP2")
+  preferencesNotifications Json?                      @map("preferences_notifications")
+  canauxDmP2               Canal[]                    @relation("CanalDmP2")
   lecturesCanal            LectureCanal[]
-  dossiersCrees            DossierCrm[]             @relation("DossierCreePar")
-  dossiersApportes         DossierCrm[]             @relation("DossierApporteur")
-  dossiersPossedes         DossierCrm[]             @relation("DossierProprietaire")
-  dossiersArchives         DossierCrm[]             @relation("DossierArchivePar")
-  tachesProjetValidees     TacheProjet[]            @relation("TacheProjetValideePar")
-  evenementsTachesProjet   EvenementTacheProjet[]   @relation("EvenementTacheProjetPar")
-  commentairesProjet       CommentaireProjet[]      @relation("CommentaireProjetAuteur")
-  mentionsProjet           CommentaireProjet[]      @relation("CommentaireProjetMentionne")
-  transitionsDossier       DossierCrmTransition[]   @relation("TransitionDossierPar")
-  signalements             Signalement[]            @relation("SignalementAuteur")
+  dossiersCrees            DossierCrm[]               @relation("DossierCreePar")
+  dossiersApportes         DossierCrm[]               @relation("DossierApporteur")
+  dossiersPossedes         DossierCrm[]               @relation("DossierProprietaire")
+  dossiersArchives         DossierCrm[]               @relation("DossierArchivePar")
+  tachesProjetValidees     TacheProjet[]              @relation("TacheProjetValideePar")
+  evenementsTachesProjet   EvenementTacheProjet[]     @relation("EvenementTacheProjetPar")
+  commentairesProjet       CommentaireProjet[]        @relation("CommentaireProjetAuteur")
+  mentionsProjet           MentionCommentaireProjet[]
+  transitionsDossier       DossierCrmTransition[]     @relation("TransitionDossierPar")
+  signalements             Signalement[]              @relation("SignalementAuteur")
   avisDroits               RightsNotice[]
 
   @@map("utilisateurs")
@@ -2575,36 +2575,48 @@ model PieceRemiseTache {
 }
 
 // Fil de discussion d'un projet ouvert (maquette « Projets ») : par carte
-// (tacheId null) ou par tâche. Une @mention notifie la personne ; le
+// (tacheId null) ou par tâche. Une @mention notifie chaque personne citée
+// (plusieurs depuis le 09/11/2026, MentionCommentaireProjet) ; le
 // commentaire reste ouvert jusqu'à une réponse ou sa résolution par l'auteur.
 // Un seul niveau de réponse.
 model CommentaireProjet {
-  id           String    @id @default(uuid())
-  projetId     String    @map("projet_id")
-  carteId      String    @map("carte_id")
-  tacheId      String?   @map("tache_id")
-  parentId     String?   @map("parent_id") // réponse à ce commentaire
-  auteurId     String?   @map("auteur_id")
-  mentionneId  String?   @map("mentionne_id")
-  // La personne mentionnée l'a traitée (lue, ou y a répondu) depuis « Mes
-  // tâches » (revue Salarié 19/10/2026).
-  mentionLueLe DateTime? @map("mention_lue_le")
-  texte        String
-  resoluLe     DateTime? @map("resolu_le")
-  creeLe       DateTime  @default(now()) @map("cree_le")
+  id       String    @id @default(uuid())
+  projetId String    @map("projet_id")
+  carteId  String    @map("carte_id")
+  tacheId  String?   @map("tache_id")
+  parentId String?   @map("parent_id") // réponse à ce commentaire
+  auteurId String?   @map("auteur_id")
+  texte    String
+  resoluLe DateTime? @map("resolu_le")
+  creeLe   DateTime  @default(now()) @map("cree_le")
 
-  projet    Projet              @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  carte     CarteProjet         @relation(fields: [carteId], references: [id], onDelete: Cascade)
-  tache     TacheProjet?        @relation(fields: [tacheId], references: [id], onDelete: Cascade)
-  parent    CommentaireProjet?  @relation("ReponsesCommentaire", fields: [parentId], references: [id], onDelete: Cascade)
-  reponses  CommentaireProjet[] @relation("ReponsesCommentaire")
-  auteur    Utilisateur?        @relation("CommentaireProjetAuteur", fields: [auteurId], references: [id], onDelete: SetNull)
-  mentionne Utilisateur?        @relation("CommentaireProjetMentionne", fields: [mentionneId], references: [id], onDelete: SetNull)
+  projet   Projet                     @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  carte    CarteProjet                @relation(fields: [carteId], references: [id], onDelete: Cascade)
+  tache    TacheProjet?               @relation(fields: [tacheId], references: [id], onDelete: Cascade)
+  parent   CommentaireProjet?         @relation("ReponsesCommentaire", fields: [parentId], references: [id], onDelete: Cascade)
+  reponses CommentaireProjet[]        @relation("ReponsesCommentaire")
+  auteur   Utilisateur?               @relation("CommentaireProjetAuteur", fields: [auteurId], references: [id], onDelete: SetNull)
+  mentions MentionCommentaireProjet[]
 
   @@index([carteId, creeLe])
   @@index([tacheId, creeLe])
-  @@index([mentionneId, creeLe])
   @@map("commentaires_projet")
+}
+
+// Personne citée (@) dans un commentaire de fil de projet (09/11/2026 :
+// plusieurs par commentaire). lueLe : elle l'a traitée (lue, ou y a
+// répondu) depuis « Mes tâches » (revue Salarié 19/10/2026).
+model MentionCommentaireProjet {
+  commentaireId String    @map("commentaire_id")
+  utilisateurId String    @map("utilisateur_id")
+  lueLe         DateTime? @map("lue_le")
+
+  commentaire CommentaireProjet @relation(fields: [commentaireId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur       @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@id([commentaireId, utilisateurId])
+  @@index([utilisateurId])
+  @@map("mentions_commentaire_projet")
 }
 
 // Gabarit recopié dans un projet à son ouverture (maquette « Projets » du

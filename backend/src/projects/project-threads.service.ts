@@ -7,12 +7,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { nomPublic } from '../auth/profil';
+import { estRoleBackOffice } from '../commun/back-office.guard';
 import { aLaPermission } from '../commun/permission.guard';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RightsService } from '../rights/rights.service';
 import { canWriteThreads, employeeOfAccount, projectScope } from './review-rules';
 import { isOpenComment, resolutionRefusal } from './thread-rules';
-import { ROLE_EMPLOYEE } from '@hub/domain';
+import { ROLE_CIO, ROLE_EMPLOYEE, ROLE_HUB_ADMIN } from '@hub/domain';
 
 type Actor = { userId: string };
 type ThreadTarget = { carteId?: string; tacheId?: string };
@@ -20,6 +22,8 @@ type ThreadTarget = { carteId?: string; tacheId?: string };
 const displayName = (p: { prenom: string; nom: string; nomAffiche?: string | null } | null) =>
   p ? nomPublic(p) : null;
 const PERSON = { select: { id: true, prenom: true, nom: true, nomAffiche: true } } as const;
+// Personnes citées (@) d'un commentaire.
+const MENTIONS = { select: { utilisateur: PERSON } } as const;
 // « Mes tâches » : les mentions déjà traitées restent visibles 7 jours.
 const READ_MENTIONS_KEPT_MS = 7 * 86_400_000;
 
@@ -32,16 +36,75 @@ export class ProjectThreadsService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private rights: RightsService,
   ) {}
 
-  // « Mentionner… » : les comptes actifs de la société.
-  async mentionable(companyId: string) {
+  // « @ » (09/11/2026) : seulement les comptes qui peuvent lire le projet —
+  // on ne cite pas quelqu'un qui ne verrait ni le projet ni la discussion.
+  async mentionable(companyId: string, projectId: string) {
+    const readers = await this.projectReaders(companyId, projectId);
     const users = await this.prisma.utilisateur.findMany({
-      where: { actif: true, roles: { some: { societeId: companyId } } },
+      where: { actif: true, roles: { some: { societeId: companyId } }, id: { in: [...readers] } },
       select: { id: true, prenom: true, nom: true, nomAffiche: true },
       orderBy: [{ prenom: 'asc' }, { nom: 'asc' }],
     });
     return users.map((u) => ({ id: u.id, nom: displayName(u)! }));
+  }
+
+  // Comptes actifs de la société qui peuvent lire le projet — mêmes règles
+  // que les gardes et checkRead : back-office, Lecture de « projets » (carte
+  // blanche pour le CIO et l'Administrateur HUB), et pour le Salarié, le
+  // périmètre du projet (une tâche, chef ou membre d'une de ses équipes).
+  async projectReaders(companyId: string, projectId: string): Promise<Set<string>> {
+    const [rows, project] = await Promise.all([
+      this.prisma.utilisateurSocieteRole.findMany({
+        where: { societeId: companyId, utilisateur: { actif: true }, role: { supprimeLe: null } },
+        select: { utilisateurId: true, roleId: true, role: { select: { nom: true } } },
+      }),
+      this.prisma.projet.findFirst({
+        where: { id: projectId, societeId: companyId },
+        select: {
+          cartes: { select: { taches: { select: { assigneId: true } } } },
+          cellules: { select: { cellule: { select: { dispatcherId: true, membres: { select: { id: true } } } } } },
+        },
+      }),
+    ]);
+    if (!project) throw new NotFoundException('Projet introuvable');
+    // Salariés du périmètre : fiches collaborateur, puis leurs comptes.
+    const scope = new Set<string>();
+    project.cartes.forEach((c) => c.taches.forEach((t) => t.assigneId && scope.add(t.assigneId)));
+    project.cellules.forEach(({ cellule }) => {
+      if (cellule.dispatcherId) scope.add(cellule.dispatcherId);
+      cellule.membres.forEach((m) => scope.add(m.id));
+    });
+    const employees = scope.size
+      ? await this.prisma.collaborateur.findMany({
+          where: { societeId: companyId, id: { in: [...scope] } },
+          select: { utilisateurId: true, dossierPersonnel: { select: { utilisateurId: true } } },
+        })
+      : [];
+    const inScope = new Set(
+      employees.flatMap((e) => [e.utilisateurId, e.dossierPersonnel?.utilisateurId]).filter((x): x is string => !!x),
+    );
+    // Droits calculés une fois par rôle (plusieurs comptes partagent un rôle).
+    const roleRights = new Map<string, Promise<Record<string, string>>>();
+    const rightsOf = (roleId: string) => {
+      if (!roleRights.has(roleId)) roleRights.set(roleId, this.rights.forRole(roleId, companyId));
+      return roleRights.get(roleId)!;
+    };
+    const readers = new Set<string>();
+    for (const r of rows) {
+      const role = r.role.nom;
+      if (!estRoleBackOffice(role)) continue;
+      if (role === ROLE_CIO || role === ROLE_HUB_ADMIN) {
+        readers.add(r.utilisateurId);
+        continue;
+      }
+      if (!aLaPermission(await rightsOf(r.roleId), 'projets', 'lecture')) continue;
+      if (role === ROLE_EMPLOYEE && !inScope.has(r.utilisateurId)) continue;
+      readers.add(r.utilisateurId);
+    }
+    return readers;
   }
 
   // « Mes tâches » (revue Salarié 19/10/2026) : les @mentions qui me visent
@@ -51,14 +114,15 @@ export class ProjectThreadsService {
     const since = new Date(Date.now() - READ_MENTIONS_KEPT_MS);
     const comments = await this.prisma.commentaireProjet.findMany({
       where: {
-        mentionneId: userId,
         projet: { societeId: companyId },
-        OR: [{ mentionLueLe: null }, { creeLe: { gte: since } }],
+        mentions: { some: { utilisateurId: userId } },
+        OR: [{ mentions: { some: { utilisateurId: userId, lueLe: null } } }, { creeLe: { gte: since } }],
       },
       orderBy: { creeLe: 'desc' },
       take: 30,
       include: {
         auteur: PERSON,
+        mentions: { where: { utilisateurId: userId }, select: { lueLe: true } },
         projet: { select: { code: true } },
         carte: { select: { libelle: true } },
         tache: { select: { libelle: true } },
@@ -68,7 +132,7 @@ export class ProjectThreadsService {
       id: c.id,
       texte: c.texte,
       creeLe: c.creeLe,
-      lue: !!c.mentionLueLe,
+      lue: !!c.mentions[0]?.lueLe,
       auteur: displayName(c.auteur),
       auteurId: c.auteur?.id ?? null,
       projetId: c.projetId,
@@ -82,14 +146,18 @@ export class ProjectThreadsService {
 
   // Mention traitée (lue, ou répondue) ; la cloche suit pour ce projet.
   async markMentionRead(companyId: string, userId: string, commentId: string) {
-    const comment = await this.prisma.commentaireProjet.findFirst({
-      where: { id: commentId, mentionneId: userId, projet: { societeId: companyId } },
-      select: { id: true, projetId: true, mentionLueLe: true },
+    const mention = await this.prisma.mentionCommentaireProjet.findFirst({
+      where: { commentaireId: commentId, utilisateurId: userId, commentaire: { projet: { societeId: companyId } } },
+      select: { lueLe: true, commentaire: { select: { id: true, projetId: true } } },
     });
-    if (!comment) throw new NotFoundException('Mention introuvable.');
+    if (!mention) throw new NotFoundException('Mention introuvable.');
+    const comment = mention.commentaire;
     const now = new Date();
-    if (!comment.mentionLueLe)
-      await this.prisma.commentaireProjet.update({ where: { id: comment.id }, data: { mentionLueLe: now } });
+    if (!mention.lueLe)
+      await this.prisma.mentionCommentaireProjet.update({
+        where: { commentaireId_utilisateurId: { commentaireId: comment.id, utilisateurId: userId } },
+        data: { lueLe: now },
+      });
     await this.prisma.notification.updateMany({
       where: {
         destinataireId: userId,
@@ -111,13 +179,13 @@ export class ProjectThreadsService {
       orderBy: { creeLe: 'asc' },
       include: {
         auteur: PERSON,
-        mentionne: PERSON,
-        reponses: { orderBy: { creeLe: 'asc' }, include: { auteur: PERSON, mentionne: PERSON } },
+        mentions: MENTIONS,
+        reponses: { orderBy: { creeLe: 'asc' }, include: { auteur: PERSON, mentions: MENTIONS } },
       },
     });
     return roots.map((r) => ({
       ...this.format(r),
-      ouvert: isOpenComment({ ...r, reponses: r.reponses.length }),
+      ouvert: isOpenComment({ ...r, mentions: r.mentions.length, reponses: r.reponses.length }),
       reponses: r.reponses.map((x) => this.format(x)),
     }));
   }
@@ -157,7 +225,7 @@ export class ProjectThreadsService {
     companyId: string,
     actor: Actor,
     projectId: string,
-    dto: ThreadTarget & { parentId?: string; texte: string; mentionneId?: string | null },
+    dto: ThreadTarget & { parentId?: string; texte: string; mentionIds?: string[] },
   ) {
     const text = dto.texte.trim();
     if (!text) throw new BadRequestException('Le commentaire est vide.');
@@ -169,13 +237,13 @@ export class ProjectThreadsService {
       });
       if (!parent) throw new NotFoundException('Commentaire introuvable dans ce fil.');
     }
-    const mentioned = dto.mentionneId
-      ? await this.prisma.utilisateur.findFirst({
-          where: { id: dto.mentionneId, actif: true, roles: { some: { societeId: companyId } } },
-          select: { id: true },
-        })
-      : null;
-    if (dto.mentionneId && !mentioned) throw new NotFoundException('Personne mentionnée introuvable.');
+    // Personnes citées : qui peut lire le projet, chacune une fois ; l'auteur
+    // qui se cite n'attend pas sa propre réponse. Un compte parti, étranger
+    // à la société ou sans accès au projet est ignoré : la réponse à une
+    // mention dont l'auteur est parti part quand même, sans le prévenir.
+    const requested = [...new Set(dto.mentionIds ?? [])].filter((id) => id !== actor.userId);
+    const readers = requested.length ? await this.projectReaders(companyId, projectId) : new Set<string>();
+    const mentionIds = requested.filter((id) => readers.has(id));
 
     const created = await this.prisma.commentaireProjet.create({
       data: {
@@ -184,13 +252,13 @@ export class ProjectThreadsService {
         tacheId,
         parentId: dto.parentId ?? null,
         auteurId: actor.userId,
-        mentionneId: mentioned?.id ?? null,
         texte: text,
+        mentions: { create: mentionIds.map((utilisateurId) => ({ utilisateurId })) },
       },
       include: { auteur: PERSON },
     });
     // Best-effort : une notification manquée ne fait pas échouer la publication.
-    if (mentioned && mentioned.id !== actor.userId) {
+    if (mentionIds.length) {
       try {
         await this.notifications.pousser({
           societeId: companyId,
@@ -198,7 +266,7 @@ export class ProjectThreadsService {
           type: 'mention_projet',
           titre: `${displayName(created.auteur) ?? 'Quelqu’un'} vous mentionne · ${code} · ${libelle}`,
           parId: actor.userId,
-          destinataireIds: [mentioned.id],
+          destinataireIds: mentionIds,
         });
       } catch (e) {
         this.log.error(`Mention non notifiée (${created.id}) : ${e instanceof Error ? e.message : e}`);
@@ -210,10 +278,13 @@ export class ProjectThreadsService {
   async resolve(companyId: string, actor: Actor, projectId: string, commentId: string) {
     const comment = await this.prisma.commentaireProjet.findFirst({
       where: { id: commentId, projetId: projectId, projet: { societeId: companyId }, parentId: null },
-      select: { auteurId: true, mentionneId: true, resoluLe: true, _count: { select: { reponses: true } } },
+      select: { auteurId: true, resoluLe: true, _count: { select: { reponses: true, mentions: true } } },
     });
     if (!comment) throw new NotFoundException('Commentaire introuvable');
-    const refusal = resolutionRefusal({ ...comment, reponses: comment._count.reponses }, actor.userId);
+    const refusal = resolutionRefusal(
+      { ...comment, mentions: comment._count.mentions, reponses: comment._count.reponses },
+      actor.userId,
+    );
     if (refusal)
       throw comment.auteurId !== actor.userId ? new ForbiddenException(refusal) : new ConflictException(refusal);
     await this.prisma.commentaireProjet.update({ where: { id: commentId }, data: { resoluLe: new Date() } });
@@ -247,7 +318,7 @@ export class ProjectThreadsService {
     resoluLe: Date | null;
     auteurId: string | null;
     auteur: { prenom: string; nom: string; nomAffiche?: string | null } | null;
-    mentionne: { id: string; prenom: string; nom: string; nomAffiche?: string | null } | null;
+    mentions: { utilisateur: { id: string; prenom: string; nom: string; nomAffiche?: string | null } }[];
   }) {
     return {
       id: c.id,
@@ -255,7 +326,9 @@ export class ProjectThreadsService {
       le: c.creeLe,
       resoluLe: c.resoluLe,
       auteur: c.auteurId ? { id: c.auteurId, nom: displayName(c.auteur) } : null,
-      mentionne: c.mentionne ? { id: c.mentionne.id, nom: displayName(c.mentionne)! } : null,
+      mentions: c.mentions
+        .map((m) => ({ id: m.utilisateur.id, nom: displayName(m.utilisateur)! }))
+        .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
     };
   }
 }

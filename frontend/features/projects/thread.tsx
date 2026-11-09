@@ -4,6 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Infobulle } from '@/components/infobulle';
 import { FieldError } from '@/components/ui/field';
 import { Pill } from '@/components/ui/pill';
+import {
+  MentionText,
+  MentionTextarea,
+  citesName,
+  mentionIdsIn,
+  type MentionPerson,
+} from '@/components/ui/mention-textarea';
 import { formatDate } from '@hub/domain';
 import { getThread, postComment, resolveComment } from './api';
 import type { ThreadComment, ThreadRoot } from './types';
@@ -21,14 +28,16 @@ type Props = {
 };
 
 // Fil de discussion d'une carte ou d'une tâche (maquette « Projets ») : une
-// @mention notifie la personne ; le commentaire reste ouvert jusqu'à une
-// réponse ou sa résolution par l'auteur. Une autre cible = un autre fil :
+// @mention notifie chaque personne citée — « @ » propose les noms dans la
+// saisie (09/11/2026, comme la messagerie) ; le commentaire reste ouvert
+// jusqu'à une réponse ou sa résolution par l'auteur. Une autre cible = un autre fil :
 // l'appelant le remonte (key), sa saisie repart de zéro.
 export function ThreadView({ slug, projectId, cardId, taskId, meId, mentionable, onUpdate }: Props) {
   const target = taskId ? { tacheId: taskId } : { carteId: cardId! };
   const [thread, setThread] = useState<ThreadRoot[] | null>(null);
   const [text, setText] = useState('');
-  const [mention, setMention] = useState('');
+  // Personnes choisies dans la liste « @ » (la bonne, même avec un homonyme).
+  const [picked, setPicked] = useState<MentionPerson[]>([]);
   const [replyTo, setReplyTo] = useState<ThreadRoot | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,19 +73,23 @@ export function ThreadView({ slug, projectId, cardId, taskId, meId, mentionable,
     }
   }
 
+  // On ne se mentionne pas soi-même.
+  const people = (mentionable ?? []).filter((p) => p.id !== meId);
+
   async function publish() {
-    if (!text.trim()) return;
+    const texte = text.trim();
+    if (!texte) return;
     const ok = await act(() =>
       postComment(slug, projectId, {
         ...target,
-        texte: text.trim(),
-        mentionneId: mention || null,
+        texte,
+        mentionIds: mentionIdsIn(texte, people, picked),
         parentId: replyTo?.id,
       }),
     );
     if (ok) {
       setText('');
-      setMention('');
+      setPicked([]);
       setReplyTo(null);
     }
   }
@@ -86,8 +99,8 @@ export function ThreadView({ slug, projectId, cardId, taskId, meId, mentionable,
       <p className="tp-section">
         Discussion{thread && thread.length > 0 ? ` · ${thread.length}` : ''}{' '}
         <Infobulle>
-          Une @mention notifie la personne. Un commentaire reste ouvert jusqu’à une réponse, ou jusqu’à ce que son
-          auteur le marque résolu.
+          Tapez @ puis le début d’un nom pour mentionner quelqu’un : chaque personne citée est prévenue. Un commentaire
+          reste ouvert jusqu’à une réponse, ou jusqu’à ce que son auteur le marque résolu.
         </Infobulle>
       </p>
       {!thread ? (
@@ -97,10 +110,10 @@ export function ThreadView({ slug, projectId, cardId, taskId, meId, mentionable,
           <ul className="po-fil-liste">
             {thread.map((c) => (
               <li key={c.id} className={c.ouvert ? 'is-ouvert' : undefined}>
-                <Message m={c} />
+                <Message m={c} meId={meId} />
                 {c.reponses.map((r) => (
                   <div key={r.id} className="po-fil-reponse">
-                    <Message m={r} />
+                    <Message m={r} meId={meId} />
                   </div>
                 ))}
                 <div className="po-fil-actions">
@@ -137,33 +150,19 @@ export function ThreadView({ slug, projectId, cardId, taskId, meId, mentionable,
               </button>
             </p>
           )}
-          <textarea
+          <MentionTextarea
             className="field-input po-fil-texte"
-            aria-label="Écrire un commentaire"
-            placeholder="Écrire un commentaire…"
+            ariaLabel="Écrire un commentaire"
+            placeholder="Écrire un commentaire… (@ pour mentionner)"
             rows={3}
             maxLength={2000}
             value={text}
             disabled={busy}
-            onChange={(e) => setText(e.target.value)}
+            people={people}
+            onPick={(p) => setPicked((l) => (l.some((x) => x.id === p.id) ? l : [...l, p]))}
+            onChange={setText}
           />
           <div className="po-fil-envoi">
-            <select
-              className="field-input"
-              aria-label="Mentionner"
-              value={mention}
-              disabled={busy}
-              onChange={(e) => setMention(e.target.value)}
-            >
-              <option value="">Mentionner…</option>
-              {mentionable
-                .filter((p) => p.id !== meId)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nom}
-                  </option>
-                ))}
-            </select>
             <button type="button" className="btn-primary" disabled={busy || !text.trim()} onClick={publish}>
               Publier
             </button>
@@ -175,14 +174,25 @@ export function ThreadView({ slug, projectId, cardId, taskId, meId, mentionable,
   );
 }
 
-function Message({ m }: { m: ThreadComment }) {
+// Un commentaire : mentions surlignées dans le texte ; celles que le texte ne
+// cite pas (avant le 09/11/2026, on choisissait la personne à part) restent
+// affichées à côté de l'auteur.
+function Message({ m, meId }: { m: ThreadComment; meId: string }) {
+  const apart = m.mentions.filter((p) => !citesName(m.texte, p.nom));
   return (
     <div className="po-fil-message">
       <p className="po-aide">
         <strong>{m.auteur?.nom ?? 'Compte supprimé'}</strong> · {formatDate(m.le)}
-        {m.mentionne && <span className="po-fil-mention"> @{m.mentionne.nom}</span>}
+        {apart.map((p) => (
+          <span key={p.id} className="po-fil-mention">
+            {' '}
+            @{p.nom}
+          </span>
+        ))}
       </p>
-      <p>{m.texte}</p>
+      <p>
+        <MentionText text={m.texte} mentions={m.mentions} meId={meId} />
+      </p>
     </div>
   );
 }

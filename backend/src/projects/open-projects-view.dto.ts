@@ -94,7 +94,7 @@ export class ToDecideDto {
 }
 
 // --- Personnes ------------------------------------------------------------------------
-// GET …/mentionnables : comptes actifs de la société.
+// GET …/mentionnables : comptes actifs de la société (?projet= : ceux qui peuvent le lire).
 export class MentionablePersonDto {
   id!: string;
   nom!: string;
@@ -144,11 +144,12 @@ export class ThreadCommentDto {
   le!: Date;
   resoluLe!: Date | null;
   auteur!: CommentAuthorDto | null;
-  mentionne!: MentionedPersonDto | null;
+  // Personnes citées (@), dans l'ordre du nom.
+  mentions!: MentionedPersonDto[];
 }
 
 export class ThreadRootDto extends ThreadCommentDto {
-  ouvert!: boolean; // une réponse est attendue de la personne mentionnée
+  ouvert!: boolean; // une réponse est attendue d'une personne mentionnée
   reponses!: ThreadCommentDto[];
 }
 

@@ -74,13 +74,17 @@ export function useOpenProjects(slug: string, { canWriteThreads, employee }: Opt
   }, [slug, assignFor]);
   const assignable = assignFor && assignableOf?.id === assignFor ? assignableOf.list : null;
 
+  // Personnes à citer : celles qui peuvent lire le projet ouvert.
   useEffect(() => {
-    if (canWriteThreads) {
-      getMentionablePeople(slug)
-        .then(setMentionable)
-        .catch(() => setMentionable(null));
-    }
-  }, [slug, canWriteThreads]);
+    if (!canWriteThreads || !projectId) return;
+    let cancelled = false;
+    getMentionablePeople(slug, projectId)
+      .then((l) => !cancelled && setMentionable(l))
+      .catch(() => !cancelled && setMentionable(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, canWriteThreads, projectId]);
 
   // Après une écriture : le dossier et les tuiles relus, la tâche choisie gardée.
   const loadCounts = useCallback(() => {

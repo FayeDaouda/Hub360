@@ -3280,6 +3280,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "projet",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -15492,14 +15500,11 @@
               }
             ]
           },
-          "mentionne": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MentionedPersonDto"
-              }
-            ]
+          "mentions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MentionedPersonDto"
+            }
           }
         },
         "required": [
@@ -15508,7 +15513,7 @@
           "le",
           "resoluLe",
           "auteur",
-          "mentionne"
+          "mentions"
         ]
       },
       "ThreadRootDto": {
@@ -15547,14 +15552,11 @@
               }
             ]
           },
-          "mentionne": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MentionedPersonDto"
-              }
-            ]
+          "mentions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MentionedPersonDto"
+            }
           }
         },
         "required": [
@@ -15565,7 +15567,7 @@
           "le",
           "resoluLe",
           "auteur",
-          "mentionne"
+          "mentions"
         ]
       },
       "PostCommentDto": {
@@ -15585,9 +15587,12 @@
             "minLength": 1,
             "maxLength": 2000
           },
-          "mentionneId": {
-            "type": "string",
-            "nullable": true
+          "mentionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
           }
         },
         "required": [
