@@ -4763,15 +4763,12 @@ export interface components {
             localiteId: string;
             latitude?: number | null;
             longitude?: number | null;
-            /** @enum {string} */
-            type?: "equipement" | "hotelier" | "immeuble_bureaux" | "immeuble_mixte" | "immeuble_residentiel" | "local_commercial" | "villa";
             nbPlanches?: number;
             surfaceTerrain?: number;
             /** @enum {string} */
             standing?: "economique" | "grand" | "moyen";
             /** @enum {string} */
             gamme?: "importe" | "local" | "sur_mesure_importe";
-            programme?: string;
             client: components["schemas"]["ClientRefDto"];
             apporteur: components["schemas"]["ApporteurDto"];
             proprietaireId?: string;
@@ -4779,8 +4776,6 @@ export interface components {
         ModifierFicheDto: {
             /** @enum {string} */
             categorie?: "amenagement" | "conception" | "developpement";
-            /** @enum {string} */
-            type?: "equipement" | "hotelier" | "immeuble_bureaux" | "immeuble_mixte" | "immeuble_residentiel" | "local_commercial" | "villa";
             surfaceTerrain?: number;
             nbPlanches?: number;
             /** @enum {string} */

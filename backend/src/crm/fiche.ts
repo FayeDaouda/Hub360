@@ -1,4 +1,7 @@
-// Complétude de la fiche d'un dossier CRM (maquette du boss) : dix champs,
+// Complétude de la fiche d'un dossier CRM (maquette du boss) : neuf champs
+// depuis le 09/11/2026 (le type de projet a laissé place à la forme bâtie de
+// la Fiche Programme : le champ « programme » n'est rempli que par le résumé
+// d'une Fiche Programme complète, forme comprise — jamais saisi),
 // miroir de frontend/lib/crm.ts::completudeFiche. Un lead peut être créé
 // incomplet ; l'offre ne se crée, et le dossier ne se soumet au CFO, que sur
 // une fiche complète — elle se verrouille à la soumission, incomplète elle
@@ -8,7 +11,6 @@ export type ChampsFiche = {
   code: string;
   categorie: string | null;
   localiteId: string | null;
-  type: string | null;
   surfaceTerrain: number;
   nbPlanches: number;
   clientId: string;
@@ -17,14 +19,13 @@ export type ChampsFiche = {
   programme: string;
 };
 
-export const TOTAL_CHAMPS_FICHE = 10;
+export const TOTAL_CHAMPS_FICHE = 9;
 
 export function champsManquants(d: ChampsFiche): string[] {
   const champs: [string, boolean][] = [
     ['code projet', !!d.code],
     ['catégorie', !!d.categorie],
     ['localisation', !!d.localiteId],
-    ['type de projet', !!d.type],
     ['surface du terrain', d.surfaceTerrain > 0],
     ['n° de planches', d.nbPlanches > 0],
     ['client', !!d.clientId],

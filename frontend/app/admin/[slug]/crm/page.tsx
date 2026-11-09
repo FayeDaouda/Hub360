@@ -23,7 +23,6 @@ import { niveauSuffisant } from '@/lib/auth';
 import { type ActionCrm } from '@/lib/cycle-crm';
 import {
   STATUTS_CRM,
-  TYPES_BIEN,
   TYPES_CLIENT,
   type Client,
   type Localite,
@@ -32,6 +31,7 @@ import {
   type Projet,
   type StatutCrm,
 } from '@/lib/types';
+import { libelleOuvrage } from '@/lib/fiche-programme';
 import { daysSince, ETAPE, formatNumber, plural, ROLE_COO, yearOf } from '@hub/domain';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
@@ -478,7 +478,7 @@ export default function CrmPage(props: Props) {
                       { titre: 'Catégorie', valeur: (p) => libelleCategorie(p) },
                       { titre: 'Client', valeur: (p) => p.client.nom },
                       { titre: 'Localité', valeur: (p) => p.localite?.nom ?? p.localisation },
-                      { titre: 'Type', valeur: (p) => (p.type ? TYPES_BIEN[p.type] : null) },
+                      { titre: 'Type', valeur: (p) => libelleOuvrage(p.ficheProgramme?.forme, p.type) },
                       { titre: 'Programme', valeur: (p) => p.programme.trim() || null },
                       {
                         titre: 'Apporteur',
@@ -591,7 +591,7 @@ export default function CrmPage(props: Props) {
                               </span>
                             </td>
                             <td data-label="Type" className="crm-c-type">
-                              {projet.type ? TYPES_BIEN[projet.type] : '—'}
+                              {libelleOuvrage(projet.ficheProgramme?.forme, projet.type) ?? '—'}
                             </td>
                             <td data-label="Programme" className="crm-c-programme">
                               {projet.programme.trim() ? (

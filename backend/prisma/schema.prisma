@@ -816,6 +816,8 @@ model DossierCrm {
   localiteId             String?        @map("localite_id")
   latitude               Float? // pin géo optionnel, copié vers le Projet au pivot
   longitude              Float?
+  // Plus saisi depuis le 09/11/2026 (forme bâtie de la Fiche Programme) ;
+  // gardé pour les dossiers antérieurs.
   type                   TypeBien?
   nbPlanches             Int            @default(0) @map("nb_planches")
   surfaceTerrain         Int            @default(0) @map("surface_terrain")
@@ -1024,7 +1026,9 @@ model Projet {
   categorie        Categorie
   programme        String
   localisation     String
-  type             TypeBien
+  // Facultatif depuis le 09/11/2026 : la fiche ne demande plus le type, la
+  // forme bâtie de la Fiche Programme le remplace ; repris s'il existe.
+  type             TypeBien?
   clientId         String        @map("client_id")
   // localisation géo — pin posé à la main, copié du dossier au pivot
   latitude         Float?

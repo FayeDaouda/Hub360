@@ -34,6 +34,7 @@ import { echeanceDirecte, ErreurFactureDirecte, lignesFactureDirecte } from './f
 import { NotificationsService } from '../../notifications/notifications.service';
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { exigerMoisOuvert } from './cloture';
+import { formeDe } from '../../crm/fiche-programme';
 import { prochainNumeroLegal, verrouillerNumerotation } from './numerotation-base';
 import { formatAmount, formatMonthYear, ROLE_CFO, todayIso } from '@hub/domain';
 
@@ -335,14 +336,23 @@ export class FacturationService {
             code: true,
             programme: true,
             client: true,
-            dossierCrm: { select: { type: true, localite: { select: { nom: true } } } },
+            dossierCrm: { select: { type: true, ficheProgramme: true, localite: { select: { nom: true } } } },
           },
         },
         devisOrigine: {
           select: { numero: true, client: true, codeDossier: true, rangDossier: true, dateReponse: true },
         },
         devisEcheancier: { select: { numero: true, codeDossier: true, rangDossier: true, dateReponse: true } },
-        dossierCrm: { select: { id: true, code: true, client: true, type: true, localite: { select: { nom: true } } } },
+        dossierCrm: {
+          select: {
+            id: true,
+            code: true,
+            client: true,
+            type: true,
+            ficheProgramme: true,
+            localite: { select: { nom: true } },
+          },
+        },
         lignes: { orderBy: { ordre: 'asc' } },
         demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true, demandeLe: true } },
       },
@@ -438,6 +448,10 @@ export class FacturationService {
             f.projetId ? v.projetId === f.projetId : v.dossierCrmId === f.dossierCrmId,
           );
           return {
+            // Type de projet d'un dossier antérieur (plus saisi depuis le
+            // 09/11/2026), prioritaire à l'affichage pour qu'une facture émise
+            // garde sa désignation ; sinon la forme bâtie de la Fiche Programme.
+            forme: formeDe(lieu?.ficheProgramme),
             typeBien: lieu?.type ?? null,
             localite: lieu?.localite?.nom ?? null,
             tranche,
@@ -1129,6 +1143,7 @@ export class FacturationService {
           type: true,
           phase: true,
           client: { select: { id: true, nom: true } },
+          dossierCrm: { select: { ficheProgramme: true } },
         },
       }),
       this.lignesMensuelles(projetId),
@@ -1278,9 +1293,11 @@ export class FacturationService {
       };
     });
 
+    const { dossierCrm, ...enTete } = projet;
     return {
       projetId,
-      projet,
+      // Forme bâtie du programme (remplace le type de projet, 09/11/2026).
+      projet: { ...enTete, forme: formeDe(dossierCrm?.ficheProgramme) },
       factures: rendues,
       mensualites,
       etudes,

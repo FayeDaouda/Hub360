@@ -3,8 +3,12 @@
 // décrits, totaux, planches). Miroir de backend/src/crm/fiche-programme.ts —
 // le serveur recalcule et fait foi (résumé, planches enregistrées).
 
-export type Usage = 'residentiel' | 'commercial' | 'mixte';
-export type Forme = 'villa' | 'immeuble';
+import { TYPES_BIEN, type TypeBien } from './types';
+
+export type Usage = 'residentiel' | 'commercial' | 'mixte' | 'bureau';
+// Local commercial et équipement (09/11/2026) : décrits niveau par niveau,
+// comme l'immeuble ; seule la villa a sa propre branche.
+export type Forme = 'villa' | 'immeuble' | 'local_commercial' | 'equipement';
 export type TypologieVilla = 'F3' | 'F4' | 'F5' | 'F6' | 'F7+';
 export type Annexe = 'bureau' | 'chambre_service' | 'buanderie' | 'dependance';
 export type UsageNiveau = 'logements' | 'commerce' | 'bureaux' | 'parking';
@@ -37,8 +41,31 @@ export const FICHE_VIDE: FicheProgramme = {
   commodites: [],
 };
 
-export const USAGES: Record<Usage, string> = { residentiel: 'Résidentiel', commercial: 'Commercial', mixte: 'Mixte' };
-export const FORMES: Record<Forme, string> = { villa: 'Villa', immeuble: 'Immeuble' };
+export const USAGES: Record<Usage, string> = {
+  residentiel: 'Résidentiel',
+  commercial: 'Commercial',
+  mixte: 'Mixte',
+  bureau: 'Bureau',
+};
+export const FORMES: Record<Forme, string> = {
+  villa: 'Villa',
+  immeuble: 'Immeuble',
+  local_commercial: 'Local commercial',
+  equipement: 'Équipement',
+};
+
+// Nature de l'ouvrage affichée (registre, factures, Facturation). Le type de
+// projet d'un dossier antérieur au 09/11/2026 passe d'abord : une facture
+// déjà émise garde sa désignation (« Immeuble de bureaux — Ngor ») à la
+// réimpression. Sinon la forme bâtie du programme, figée avec la fiche à la
+// soumission au CFO, donc avant toute facture ; null si ni l'un ni l'autre.
+export function libelleOuvrage(forme: Forme | null | undefined, type: TypeBien | null | undefined): string | null {
+  if (type) return TYPES_BIEN[type];
+  return forme ? FORMES[forme] : null;
+}
+
+// Décrite niveau par niveau : toute forme choisie sauf la villa.
+export const avecComposition = (forme: Forme | null): boolean => forme !== null && forme !== 'villa';
 export const GABARITS = Array.from({ length: 16 }, (_, n) => ({
   valeur: n,
   libelle: n === 0 ? 'RDC (plain-pied)' : `R+${n}`,
@@ -189,7 +216,7 @@ export function totaux(f: FicheProgramme): { libelle: string; n: number }[] {
 const ligneComplete = (l: LigneComposition) => !!l.usage && (l.usage !== 'logements' || !!l.typologie.trim());
 
 // Programme décrit (mêmes règles que le serveur) : usage, forme, puis la
-// typologie de la villa ou une composition d'immeuble complète.
+// typologie de la villa ou, pour les autres formes, une composition complète.
 export function programmeComplet(f: FicheProgramme): boolean {
   if (!f.usage || !f.forme) return false;
   if (f.forme === 'villa') return !!f.typologieVilla;
@@ -198,9 +225,9 @@ export function programmeComplet(f: FicheProgramme): boolean {
 }
 
 // Planches déduites (hypothèse de travail, cf. backend) : villa = RDC +
-// étages + sous-sols ; immeuble = lignes de composition ; null sinon.
+// étages + sous-sols ; autres formes = lignes de composition ; null sinon.
 export function planchesCalculees(f: FicheProgramme): number | null {
   if (f.forme === 'villa') return f.gabarit + 1 + f.sousSols;
-  if (f.forme === 'immeuble' && programmeComplet(f)) return f.composition.length;
+  if (avecComposition(f.forme) && programmeComplet(f)) return f.composition.length;
   return null;
 }

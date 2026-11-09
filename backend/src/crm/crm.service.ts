@@ -125,12 +125,11 @@ export class CrmService {
           localiteId: localite.id,
           latitude: dto.latitude ?? null,
           longitude: dto.longitude ?? null,
-          type: dto.type ?? null,
           nbPlanches: dto.nbPlanches ?? 0,
           surfaceTerrain: dto.surfaceTerrain ?? 0,
           standing: dto.standing ?? null,
           gamme: dto.gamme ?? null,
-          programme: dto.programme?.trim() ?? '',
+          programme: '',
           // Toujours créé au début du cycle (plus de statut choisi à la
           // création : on ne saute plus d'étape) — première ligne du journal.
           statut: 'nouveau_projet',
@@ -344,7 +343,6 @@ export class CrmService {
       where: { id },
       data: {
         categorie: dto.categorie,
-        type: dto.type,
         surfaceTerrain: dto.surfaceTerrain,
         nbPlanches: planches,
         standing: dto.standing,

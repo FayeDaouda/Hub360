@@ -1,6 +1,8 @@
 // Fiche Programme dynamique d'un dossier CRM (doc « Création de projet côté
 // CRM » §3.4 et captures du boss) : les questions s'adaptent aux réponses —
-// la forme bâtie (villa / immeuble) fait bifurquer la suite. Stockée en JSON
+// la forme bâtie fait bifurquer la suite : la villa a sa typologie, les
+// autres formes (immeuble ; local commercial et équipement, ajoutés le
+// 09/11/2026) leur composition par niveau. Stockée en JSON
 // sur le dossier ; le résumé (colonne Programme) et le nombre de planches en
 // sont déduits. Fonctions pures, testées. Miroir des listes :
 // frontend/lib/fiche-programme.ts.
@@ -9,12 +11,18 @@
 // boss non reçue) — nombre de planches, « une planche = un plan-type, pas un
 // étage » :
 //  - villa : rez-de-chaussée + étages + sous-sols (chaque niveau est un plan) ;
-//  - immeuble : une planche par ligne de la composition (une ligne regroupe
-//    des niveaux identiques) ;
+//  - immeuble, local commercial, équipement : une planche par ligne de la
+//    composition (une ligne regroupe des niveaux identiques) ;
 //  - la toiture-terrasse accessible ne compte pas comme planche.
 
-export const USAGES = ['residentiel', 'commercial', 'mixte'] as const;
-export const FORMES = ['villa', 'immeuble'] as const;
+export const USAGES = ['residentiel', 'commercial', 'mixte', 'bureau'] as const;
+export const FORMES = ['villa', 'immeuble', 'local_commercial', 'equipement'] as const;
+export const LIBELLES_FORME: Record<(typeof FORMES)[number], string> = {
+  villa: 'Villa',
+  immeuble: 'Immeuble',
+  local_commercial: 'Local commercial',
+  equipement: 'Équipement',
+};
 export const GABARIT_MAX = 15; // R+15
 export const SOUS_SOLS_MAX = 3;
 export const TYPOLOGIES_VILLA = ['F3', 'F4', 'F5', 'F6', 'F7+'] as const;
@@ -107,7 +115,7 @@ const CLES_COMMODITES = new Set(COMMODITES.flatMap((g) => g.items.map(([cle]) =>
 
 type Un<T extends readonly string[]> = T[number];
 
-// Une ligne de « Composition par niveau » (immeuble) : niveaux de → à
+// Une ligne de « Composition par niveau » (toute forme sauf la villa) : niveaux de → à
 // (-3 … -1 = sous-sols, 0 = RDC, n = R+n), usage, typologie, nombre par niveau.
 export type LigneComposition = {
   de: number;
@@ -127,7 +135,7 @@ export type FicheProgramme = {
   typologieVilla: Un<typeof TYPOLOGIES_VILLA> | null;
   suiteParentale: boolean;
   annexes: Un<typeof ANNEXES>[];
-  // Immeuble
+  // Immeuble, local commercial, équipement
   composition: LigneComposition[];
   commodites: string[];
 };
@@ -160,9 +168,22 @@ function parmi<T extends readonly string[]>(liste: T, v: unknown, nom: string): 
   return v as Un<T>;
 }
 
+// Forme bâtie lue dans une Fiche Programme enregistrée (JSON) ; null si
+// elle n'est pas choisie ou si la fiche n'existe pas. Remplace le type de
+// projet dans les affichages depuis le 09/11/2026.
+export function formeDe(fiche: unknown): Un<typeof FORMES> | null {
+  const forme = fiche && typeof fiche === 'object' ? (fiche as Record<string, unknown>).forme : null;
+  return typeof forme === 'string' && (FORMES as readonly string[]).includes(forme)
+    ? (forme as Un<typeof FORMES>)
+    : null;
+}
+
+// Décrite niveau par niveau : toute forme choisie sauf la villa.
+export const avecComposition = (forme: FicheProgramme['forme']): boolean => forme !== null && forme !== 'villa';
+
 // Nettoie une fiche reçue : valeurs connues seulement, branche inutile
-// effacée (une villa n'a pas de composition, un immeuble pas de typologie de
-// villa), lignes de composition ramenées dans les niveaux existants.
+// effacée (une villa n'a pas de composition, les autres formes pas de
+// typologie de villa), lignes de composition ramenées dans les niveaux existants.
 export function normaliserFiche(brut: unknown): FicheProgramme {
   if (!brut || typeof brut !== 'object') throw new ErreurFicheProgramme('Fiche Programme invalide.');
   const f = brut as Record<string, unknown>;
@@ -171,25 +192,28 @@ export function normaliserFiche(brut: unknown): FicheProgramme {
   const sousSols = entier(f.sousSols, 0, SOUS_SOLS_MAX, 0, 'Sous-sols');
   const liste = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
-  const composition: LigneComposition[] =
-    forme !== 'immeuble'
-      ? []
-      : (Array.isArray(f.composition) ? f.composition : []).flatMap((l: unknown) => {
-          const r = (l ?? {}) as Record<string, unknown>;
-          const de = Math.max(entier(r.de, -SOUS_SOLS_MAX, GABARIT_MAX, 0, 'Composition · de'), -sousSols);
-          const a = Math.min(entier(r.a, -SOUS_SOLS_MAX, GABARIT_MAX, 0, 'Composition · à'), gabarit);
-          if (de > a) return [];
-          const typologie = typeof r.typologie === 'string' ? r.typologie.trim().slice(0, 20) : '';
-          return [
-            {
-              de,
-              a,
-              usage: parmi(USAGES_NIVEAU, r.usage, 'Composition · usage'),
-              typologie,
-              nb: entier(r.nb, 1, 999, 1, 'Composition · nombre'),
-            },
-          ];
-        });
+  // Une ligne regroupe des niveaux : jamais plus de lignes que de niveaux possibles.
+  if (Array.isArray(f.composition) && f.composition.length > GABARIT_MAX + SOUS_SOLS_MAX + 1) {
+    throw new ErreurFicheProgramme('Composition : une ligne par niveau au plus.');
+  }
+  const composition: LigneComposition[] = !avecComposition(forme)
+    ? []
+    : (Array.isArray(f.composition) ? f.composition : []).flatMap((l: unknown) => {
+        const r = (l ?? {}) as Record<string, unknown>;
+        const de = Math.max(entier(r.de, -SOUS_SOLS_MAX, GABARIT_MAX, 0, 'Composition · de'), -sousSols);
+        const a = Math.min(entier(r.a, -SOUS_SOLS_MAX, GABARIT_MAX, 0, 'Composition · à'), gabarit);
+        if (de > a) return [];
+        const typologie = typeof r.typologie === 'string' ? r.typologie.trim().slice(0, 20) : '';
+        return [
+          {
+            de,
+            a,
+            usage: parmi(USAGES_NIVEAU, r.usage, 'Composition · usage'),
+            typologie,
+            nb: entier(r.nb, 1, 999, 1, 'Composition · nombre'),
+          },
+        ];
+      });
 
   return {
     usage: parmi(USAGES, f.usage, 'Usage'),
@@ -217,7 +241,7 @@ export function niveaux(f: Pick<FicheProgramme, 'gabarit' | 'sousSols'>): number
 
 export const libelleNiveau = (n: number) => (n < 0 ? `SS${-n}` : n === 0 ? 'RDC' : `R+${n}`);
 
-// Niveaux d'un immeuble que la composition ne décrit pas, et ceux décrits
+// Niveaux (hors villa) que la composition ne décrit pas, et ceux décrits
 // plusieurs fois (deux lignes qui se chevauchent).
 export function controleComposition(f: FicheProgramme): { nonDecrits: number[]; enDouble: number[] } {
   const compte = new Map<number, number>();
@@ -234,7 +258,7 @@ export function controleComposition(f: FicheProgramme): { nonDecrits: number[]; 
 const ligneComplete = (l: LigneComposition) => !!l.usage && (l.usage !== 'logements' || !!l.typologie);
 
 // Programme décrit : usage, forme, puis la branche (typologie de la villa, ou
-// composition complète de l'immeuble sans niveau oublié ni en double).
+// composition complète sans niveau oublié ni en double).
 export function programmeComplet(f: FicheProgramme): boolean {
   if (!f.usage || !f.forme) return false;
   if (f.forme === 'villa') return !!f.typologieVilla;
@@ -246,11 +270,11 @@ export function programmeComplet(f: FicheProgramme): boolean {
 // calculer (forme inconnue, composition incomplète) : saisie manuelle alors.
 export function planchesCalculees(f: FicheProgramme): number | null {
   if (f.forme === 'villa') return f.gabarit + 1 + f.sousSols;
-  if (f.forme === 'immeuble' && programmeComplet(f)) return f.composition.length;
+  if (avecComposition(f.forme) && programmeComplet(f)) return f.composition.length;
   return null;
 }
 
-// Totaux d'un immeuble par usage et, pour les logements, par typologie.
+// Totaux d'une composition par usage et, pour les logements, par typologie.
 export function totaux(f: FicheProgramme): { logements: Map<string, number>; autres: Map<string, number> } {
   const logements = new Map<string, number>();
   const autres = new Map<string, number>();
@@ -282,7 +306,7 @@ const AUTRES: Record<string, [string, string]> = {
 export function resume(f: FicheProgramme): string {
   if (!programmeComplet(f)) return '';
   const hauteur = f.gabarit === 0 ? 'plain-pied' : `R+${f.gabarit}`;
-  const parties: string[] = [`${f.forme === 'villa' ? 'Villa' : 'Immeuble'} ${hauteur}`];
+  const parties: string[] = [`${LIBELLES_FORME[f.forme!]} ${hauteur}`];
   if (f.sousSols) parties.push(pluriel(f.sousSols, 'sous-sol', 'sous-sols'));
   if (f.forme === 'villa') {
     parties.push(f.typologieVilla!);

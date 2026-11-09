@@ -29,7 +29,6 @@ import {
   NATURES_DOSSIER,
   STATUTS_FACTURE,
   TAUX_TVA_DEFAUT,
-  TYPES_BIEN,
   type Facture,
   type Facturation,
   type JalonFacture,
@@ -38,6 +37,7 @@ import {
   STATUTS_REGLEMENT_BUREAU,
   type StatutReglementBureau,
 } from '@/lib/types';
+import { libelleOuvrage } from '@/lib/fiche-programme';
 import { daysSince, ETAPE, formatAmount, formatCompactAmount, todayIso } from '@hub/domain';
 import { useConfirmer } from '@/components/confirmation';
 import { Modal } from '@/components/ui/dialog';
@@ -179,7 +179,9 @@ export default function FacturationPage(props: Props) {
                 Facturation client
               </h2>
               <p className="projet-entete-meta">
-                {projet.programme} · {projet.client.nom} · {projet.localisation} · {TYPES_BIEN[projet.type]}
+                {[projet.programme, projet.client.nom, projet.localisation, libelleOuvrage(projet.forme, projet.type)]
+                  .filter(Boolean)
+                  .join(' · ')}
               </p>
             </div>
           </header>

@@ -132,7 +132,6 @@ describe('relanceFicheIncomplete', () => {
     code: 'FIL_ALM.26',
     categorie: null,
     localiteId: 'L1',
-    type: null,
     surfaceTerrain: 0,
     nbPlanches: 0,
     clientId: 'C1',
@@ -149,7 +148,7 @@ describe('relanceFicheIncomplete', () => {
 
   it('72 h passées, fiche incomplète → relance datée de l’échéance', () => {
     expect(relanceFicheIncomplete(LEAD, apres(80))).toEqual({
-      titre: 'FIL_ALM.26 — fiche 3/10 depuis plus de 72 h : à compléter avant l’offre',
+      titre: 'FIL_ALM.26 — fiche 3/9 depuis plus de 72 h : à compléter avant l’offre',
       date: apres(72),
     });
   });
@@ -158,7 +157,6 @@ describe('relanceFicheIncomplete', () => {
     const complete = {
       ...LEAD,
       categorie: 'conception',
-      type: 'villa',
       surfaceTerrain: 300,
       nbPlanches: 2,
       standing: 'moyen',

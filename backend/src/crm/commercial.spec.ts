@@ -12,7 +12,6 @@ const MAINTENANT = Date.parse('2026-10-22T09:00:00Z');
 const complet = {
   categorie: 'conception',
   localiteId: 'L1',
-  type: 'villa',
   surfaceTerrain: 300,
   nbPlanches: 2,
   clientId: 'C1',

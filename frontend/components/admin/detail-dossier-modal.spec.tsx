@@ -51,7 +51,7 @@ vi.mock('./caracteristiques-projet', () => ({
   CaracteristiquesProjet: () => (
     <div>
       <input aria-label="Catégorie (rempli)" className="is-rempli" />
-      <input aria-label="Type de projet" className="is-manquant" />
+      <input aria-label="Surface du terrain" className="is-manquant" />
     </div>
   ),
 }));
@@ -89,7 +89,7 @@ const LOCALITES = [
   { id: 'loc-ngo', nom: 'Ngor', code: 'NGO', zone: 'dakar', region: 'Dakar' },
 ].map((l) => ({ arrondissement: null, commune: null, codeVerrouille: false, ...l })) as Localite[];
 
-// Fiche complète (10/10), en « Nouveau projet », créée il y a 10 h.
+// Fiche complète (9/9), en « Nouveau projet », créée il y a 10 h.
 const projetComplet = (champs: Partial<Projet> = {}): Projet => ({
   id: 'p-1',
   code: 'DFS_ALM.26',
@@ -119,9 +119,9 @@ const projetComplet = (champs: Partial<Projet> = {}): Projet => ({
   ...champs,
 });
 
-// Trois champs manquants : type, standing, programme (7/10).
+// Trois champs manquants : surface, standing, programme (6/9).
 const projetIncomplet = (champs: Partial<Projet> = {}): Projet =>
-  projetComplet({ type: null, standing: null, programme: '', ...champs });
+  projetComplet({ surfaceTerrain: 0, standing: null, programme: '', ...champs });
 
 const ARCHIVE = { le: '2026-11-05T09:00:00Z', par: DIR_GC };
 
@@ -261,10 +261,10 @@ describe('DetailDossierModal', () => {
   });
 
   describe('jauge de complétude', () => {
-    it('affiche « Fiche 7/10 » et le nombre de champs à compléter', async () => {
+    it('affiche « Fiche 6/9 » et le nombre de champs à compléter', async () => {
       rendre(projetIncomplet());
       await historiqueCharge();
-      expect(screen.getByText(/Fiche 7\/10/)).toBeInTheDocument();
+      expect(screen.getByText(/Fiche 6\/9/)).toBeInTheDocument();
       expect(screen.getByText('3 champs à compléter')).toBeInTheDocument();
     });
 
@@ -278,9 +278,9 @@ describe('DetailDossierModal', () => {
       rendre(projetIncomplet());
       await historiqueCharge();
       const barre = screen.getByRole('progressbar', { name: 'Complétude de la fiche' });
-      expect(barre).toHaveAttribute('aria-valuenow', '7');
+      expect(barre).toHaveAttribute('aria-valuenow', '6');
       expect(barre).toHaveAttribute('aria-valuemin', '0');
-      expect(barre).toHaveAttribute('aria-valuemax', '10');
+      expect(barre).toHaveAttribute('aria-valuemax', '9');
     });
 
     it('masque la jauge une fois la fiche complète (la Situation le dit)', async () => {
@@ -309,7 +309,7 @@ describe('DetailDossierModal', () => {
       const { user } = rendre(projetIncomplet());
       await historiqueCharge();
       await user.click(screen.getByRole('button', { name: 'Compléter' }));
-      expect(screen.getByRole('textbox', { name: 'Type de projet' })).toHaveFocus();
+      expect(screen.getByRole('textbox', { name: 'Surface du terrain' })).toHaveFocus();
       expect(onglets().getByRole('link', { name: /^Fiche/ })).toHaveAttribute('aria-current', 'true');
     });
 
@@ -822,7 +822,7 @@ describe('DetailDossierModal', () => {
       await historiqueCharge();
       expect(within(pied()!).queryByRole('button', { name: 'Créer l’offre' })).not.toBeInTheDocument();
       await user.click(within(pied()!).getByRole('button', { name: 'Compléter la fiche' }));
-      expect(screen.getByRole('textbox', { name: 'Type de projet' })).toHaveFocus();
+      expect(screen.getByRole('textbox', { name: 'Surface du terrain' })).toHaveFocus();
     });
 
     it('n’a pas de bouton quand la fiche est incomplète mais non modifiable et sans action', async () => {
@@ -850,16 +850,17 @@ describe('DetailDossierModal', () => {
       rendre(projetComplet({ statut: 'en_validation', verrouillee: true }));
       await historiqueCharge();
       expect(screen.getByText('Verrouillé depuis l’émission de l’offre')).toBeInTheDocument();
-      expect(screen.getByText('Villa')).toBeInTheDocument();
       expect(screen.getByText('450 m²')).toBeInTheDocument();
-      expect(screen.queryByRole('textbox', { name: 'Type de projet' })).not.toBeInTheDocument();
+      // Le type de projet n'est plus un champ de la fiche (09/11/2026).
+      expect(screen.queryByText('Type de projet')).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox', { name: 'Surface du terrain' })).not.toBeInTheDocument();
     });
 
     it('annonce autant de champs dans le titre que la liste en affiche', async () => {
       rendre(projetComplet({ statut: 'en_validation', verrouillee: true }));
       await historiqueCharge();
       const lignes = document.querySelectorAll('.fiche-crm-champs > div');
-      expect(lignes).toHaveLength(10);
+      expect(lignes).toHaveLength(9);
       expect(screen.getByRole('heading', { name: `Les ${lignes.length} champs de la fiche` })).toBeInTheDocument();
     });
   });
