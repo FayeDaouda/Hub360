@@ -18,6 +18,9 @@ import { fullName, type Actor } from './project-query';
 export type AssignActor = Actor & { permissions?: Record<string, string> };
 // « all » : tout le monde ; sinon les cellules dont l'acteur est le chef.
 export type AssignScope = 'all' | { cellIds: string[] };
+// Membre (par son équipe) du périmètre d'assignation.
+const withinScope = (scope: AssignScope, cellId: string | null) =>
+  scope === 'all' || (!!cellId && scope.cellIds.includes(cellId));
 @Injectable()
 export class TaskAssignmentService {
   constructor(
@@ -83,11 +86,15 @@ export class TaskAssignmentService {
         id: true,
         libelle: true,
         statut: true,
+        assigne: { select: { celluleId: true } },
         projet: { select: { code: true } },
         carte: { select: { desactivation: true, taches: { select: { id: true, statut: true } } } },
       },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
+    if (!wholeCard && task.assigne && !withinScope(scope, task.assigne.celluleId)) {
+      throw new ForbiddenException('Cette tâche est assignée hors de votre équipe : seul le Dir. GC la réassigne.');
+    }
     const employee = await this.target(companyId, scope, employeeId);
 
     const disabled = !!task.carte.desactivation;
@@ -100,7 +107,7 @@ export class TaskAssignmentService {
       wholeCard,
     );
     if (!ids.length) throw new ConflictException('Aucune tâche ouverte à assigner dans cette carte.');
-    const changed = await this.apply(actor, ids, employee);
+    const changed = await this.apply(actor, ids, employee, scope);
     if (employee && changed > 0) {
       const others = changed > 1 ? ` (+ ${changed - 1} autre${changed > 2 ? 's' : ''})` : '';
       await this.notify(
@@ -141,7 +148,7 @@ export class TaskAssignmentService {
     const ids = card.taches.filter((t) => !unassignableReason({ ...t, cardDisabled: false })).map((t) => t.id);
     if (!ids.length) throw new ConflictException('Aucune tâche ouverte à assigner dans ce bloc.');
     const employee = await this.target(companyId, scope, employeeId);
-    const changed = await this.apply(actor, ids, employee);
+    const changed = await this.apply(actor, ids, employee, scope);
     if (employee && changed > 0) {
       await this.notify(
         companyId,
@@ -173,11 +180,22 @@ export class TaskAssignmentService {
 
   // Écrit l'assignation et l'historique de chaque tâche touchée. Garde en
   // base : une tâche validée entre-temps n'est pas réassignée.
-  private async apply(actor: AssignActor, ids: string[], employee: { id: string; prenom: string; nom: string } | null) {
+  // Un chef d'équipe ne touche qu'aux tâches sans assigné ou assignées à ses
+  // membres : il ne retire ni ne reprend le travail d'une autre équipe.
+  private async apply(
+    actor: AssignActor,
+    ids: string[],
+    employee: { id: string; prenom: string; nom: string } | null,
+    scope: AssignScope,
+  ) {
     const detail = employee ? `Assignée à ${fullName(employee)}` : 'Assignation retirée';
     return this.prisma.$transaction(async (tx) => {
       const targets = await tx.tacheProjet.findMany({
-        where: { id: { in: ids }, statut: { notIn: ['validee', 'non_necessaire'] } },
+        where: {
+          id: { in: ids },
+          statut: { notIn: ['validee', 'non_necessaire'] },
+          ...(scope === 'all' ? {} : { OR: [{ assigneId: null }, { assigne: { celluleId: { in: scope.cellIds } } }] }),
+        },
         select: { id: true },
       });
       const targetIds = targets.map((c) => c.id);

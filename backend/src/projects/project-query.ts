@@ -12,7 +12,9 @@ export const WITH_TASKS = {
       taches: {
         orderBy: { ordre: 'asc' },
         include: {
-          assigne: { select: { id: true, prenom: true, nom: true, cellule: { select: { nom: true } } } },
+          assigne: {
+            select: { id: true, prenom: true, nom: true, celluleId: true, cellule: { select: { nom: true } } },
+          },
           valideePar: { select: { prenom: true, nom: true } },
           prolongations: { orderBy: { demandeLe: 'desc' } },
           pieces: {

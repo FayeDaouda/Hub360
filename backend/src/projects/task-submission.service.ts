@@ -5,7 +5,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { formatDate, plural, todayIso, toIsoDay } from '@hub/domain';
+import { ETAPE, formatDate, plural, todayIso, toIsoDay } from '@hub/domain';
+import { aLaPermission } from '../commun/permission.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { Temps } from '../reglages/gabarit';
@@ -13,14 +14,16 @@ import type { SubmitTaskDto } from './open-projects.dto';
 import { workdaysAfter } from './work-calendar';
 import { submissionFileName } from './submission-file-name';
 import { decisionContext } from './decision-context';
-import { canQualify, employeeOfAccount } from './review-rules';
-import { CHIEF_CELL, chiefOf, versionLabel, type Actor } from './project-query';
+import { canQualify, employeeOfAccount, projectScope } from './review-rules';
+import { CHIEF_CELL, chiefOf, fullName, versionLabel, type Actor } from './project-query';
+import { canDeposit, depositsForSomeoneElse, type DepositActor } from './deposit-rules';
 import { ReviewCircuitService } from './review-circuit.service';
 import { reminderPossibleOn } from './task-reminder';
 import type { SubmissionResultDto } from './open-projects-view.dto';
 
-// Remise d'une tâche par la personne assignée, relance de son validateur et
-// accès aux fichiers déposés (maquette « Projets », vue Salarié ; Mes tâches).
+// Remise d'une tâche (par l'assigné, ou à sa place : deposit-rules.ts),
+// relance de son validateur et accès aux fichiers déposés (maquette
+// « Projets », vue Salarié ; Mes tâches).
 @Injectable()
 export class TaskSubmissionService {
   constructor(
@@ -29,19 +32,28 @@ export class TaskSubmissionService {
     private circuit: ReviewCircuitService,
   ) {}
 
-  // Seul l'assigné remet sa tâche, ouverte (carte non verrouillée), à faire
-  // ou en reprise. Sans temps atelier, le dépôt vaut validation (exception
-  // écrite au principe 4) ; sinon la remise vNN attend le chef d’équipe (ou le
-  // DPLG pour la tâche du chef).
+  // L'assigné remet sa tâche — ou, à sa place, l'Écriture de « Projets et
+  // cartes » ou le chef de son équipe (deposit-rules.ts) — ouverte (carte non
+  // verrouillée), à faire ou en reprise, sur un projet de son périmètre. Sans
+  // temps atelier, le dépôt vaut validation (exception écrite au principe 4) ;
+  // sinon la remise vNN attend le chef d’équipe (ou le DPLG pour la tâche du
+  // chef). `selfOnly` (Mon espace, route sans garde de permission) : l'assigné
+  // seulement.
   async submit(
     companyId: string,
     actor: Actor,
     projectId: string,
     taskId: string,
     body: SubmitTaskDto = {},
+    selfOnly = false,
   ): Promise<SubmissionResultDto> {
+    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
     const task = await this.prisma.tacheProjet.findFirst({
-      where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
+      where: {
+        id: taskId,
+        projetId: projectId,
+        projet: { societeId: companyId, ouvertLe: { not: null }, ...projectScope(actor.role, employeeId) },
+      },
       select: {
         id: true,
         libelle: true,
@@ -49,6 +61,7 @@ export class TaskSubmissionService {
         version: true,
         temps: true,
         assigneId: true,
+        assigne: { select: { prenom: true, nom: true, celluleId: true } },
         cle: true,
         fichierObligatoire: true,
         carte: {
@@ -66,9 +79,15 @@ export class TaskSubmissionService {
       },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
-    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
-    if (!employeeId || employeeId !== task.assigneId)
-      throw new ForbiddenException('Seule la personne assignée remet sa tâche.');
+    if (selfOnly && (!employeeId || employeeId !== task.assigneId))
+      throw new ForbiddenException('Seule la personne assignée remet sa tâche depuis Mon espace.');
+    const depositor = await this.depositActor(companyId, actor, projectId, employeeId, task.assigneId);
+    const target = { assigneId: task.assigneId, assigneCelluleId: task.assigne?.celluleId ?? null };
+    if (!canDeposit(depositor, target))
+      throw new ForbiddenException(
+        'Déposer cette tâche demande d’en être l’assigné, l’Écriture de « Projets et cartes », ou d’être chef de l’équipe de son assigné.',
+      );
+    const forSomeoneElse = depositsForSomeoneElse(depositor, target);
     if (task.statut !== 'a_faire' && task.statut !== 'reprise')
       throw new ConflictException('Cette tâche n’attend pas de remise.');
     if (task.carte.desactivation) throw new ConflictException('Carte désactivée : rien à déposer.');
@@ -103,9 +122,11 @@ export class TaskSubmissionService {
     }));
     const byDeposit = (task.temps as Temps).type === 'sans';
     const comment = body.commentaire?.trim();
+    const assigneeName = fullName(task.assigne);
     const detail = [
       `Remise ${vNN}`,
       files.length ? `${plural(files.length, 'fichier')}` : 'sans fichier joint',
+      ...(forSomeoneElse && assigneeName ? [`à la place de ${assigneeName}`] : []),
       ...(comment ? [`« ${comment} »`] : []),
     ].join(' · ');
     await this.prisma.$transaction(async (tx) => {
@@ -138,6 +159,8 @@ export class TaskSubmissionService {
 
     if (!byDeposit) {
       const ctx = await decisionContext(this.prisma, companyId, todayIso());
+      // Le circuit suit l'assigné, comme la validation (ruleFor, canDecide) :
+      // les personnes prévenues sont celles qui peuvent valider.
       await this.circuit.notify(
         companyId,
         projectId,
@@ -145,10 +168,44 @@ export class TaskSubmissionService {
         'tache_remise',
         `Remise ${vNN} à valider · ${task.projet.code} · ${task.libelle}`,
         actor.userId,
-        await this.circuit.reviewers(ctx, employeeId, chiefOf(task.projet)),
+        await this.circuit.reviewers(ctx, task.assigneId, chiefOf(task.projet)),
+      );
+    }
+    // Déposée par quelqu'un d'autre (chef d'équipe, Dir. GC…) : l'assigné le
+    // sait (son compte direct ou celui de son dossier RH). Types qui ouvrent
+    // « Mes tâches » chez lui, pas l'onglet « À valider ».
+    if (forSomeoneElse && task.assigneId) {
+      await this.circuit.notify(
+        companyId,
+        projectId,
+        task.projet.code,
+        byDeposit ? 'tache_validee' : 'tache_assignee',
+        `Remise ${vNN} déposée à votre place · ${task.projet.code} · ${task.libelle}`,
+        actor.userId,
+        await this.circuit.accountsOf([task.assigneId]),
       );
     }
     return { statut: byDeposit ? 'validee' : 'a_valider', version };
+  }
+
+  // Droits de dépôt de l'acteur sur ce projet (deposit-rules.ts). Les
+  // équipes dont il est chef ne sont lues que si elles peuvent servir.
+  private async depositActor(
+    companyId: string,
+    actor: Actor,
+    projectId: string,
+    employeeId: string | null,
+    assigneId: string | null,
+  ): Promise<DepositActor> {
+    const canWriteProjects = aLaPermission(actor.permissions, ETAPE.projets, 'ecriture');
+    const needsCells = !!employeeId && employeeId !== assigneId && !canWriteProjects;
+    const cells = needsCells
+      ? await this.prisma.projetCellule.findMany({
+          where: { projetId: projectId, projet: { societeId: companyId }, cellule: { dispatcherId: employeeId } },
+          select: { celluleId: true },
+        })
+      : [];
+    return { employeeId, canWriteProjects, chiefCellIds: cells.map((c) => c.celluleId) };
   }
 
   // Relance du validateur par l'assigné (Mes tâches, lot D, règle validée le

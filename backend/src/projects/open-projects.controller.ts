@@ -223,8 +223,9 @@ export class OpenProjectsController {
     return this.assignment.assign(req.user.societeId, req.user, projectId, taskId, dto.collaborateurId, !!dto.carte);
   }
 
-  // Remise par la personne assignée (vérifié par le service) — le Salarié n'a
-  // que la lecture sur Projets.
+  // Remise par l'assigné, ou à sa place par l'Écriture de « Projets et
+  // cartes » ou le chef de son équipe (vérifié par le service, deposit-rules.ts)
+  // — le Salarié n'a que la lecture sur Projets.
   @Post(':id/taches/:tacheId/remise')
   @RequiertPermission('projets', 'lecture')
   submit(

@@ -153,7 +153,8 @@ export class TasksService {
   }
 
   async submit(a: Actor, projectId: string, taskId: string, body: SubmitTaskDto = {}) {
-    await this.taskSubmission.submit(a.societeId, a, projectId, taskId, body);
+    // Mon espace : l'assigné seulement (la route n'a pas de garde de permission).
+    await this.taskSubmission.submit(a.societeId, a, projectId, taskId, body, true);
     return this.myTasks(a);
   }
 

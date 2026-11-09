@@ -98,6 +98,7 @@ describe('TaskAssignmentService · chef d’équipe', () => {
     const notifications = { envoyer: jest.fn(), comptesDe: jest.fn().mockResolvedValue([]) };
     return {
       prisma,
+      tx,
       s: new TaskAssignmentService(
         prisma as unknown as PrismaService,
         notifications as unknown as NotificationsService,
@@ -114,6 +115,24 @@ describe('TaskAssignmentService · chef d’équipe', () => {
   it('chef d’équipe : une personne d’une autre équipe → 403', async () => {
     const { s } = svc({ chefDe: ['CEL1'], membreDe: 'CEL2' });
     await expect(s.assign('S1', salarie, 'P1', 'T1', 'C1', false)).rejects.toThrow('membres de son équipe');
+  });
+
+  // Relecture sécurité (09/11/2026) : le chef ne retire ni ne reprend la
+  // tâche d'un membre d'une autre équipe (il pourrait ensuite la déposer).
+  it('chef d’équipe : tâche assignée hors de son équipe → 403, rien n’est écrit', async () => {
+    const { s, prisma } = svc({ chefDe: ['CEL1'] });
+    prisma.tacheProjet.findFirst.mockResolvedValue({ ...tache, assigne: { celluleId: 'CEL2' } });
+    await expect(s.assign('S1', salarie, 'P1', 'T1', null, false)).rejects.toThrow('hors de votre équipe');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('chef d’équipe : en base, seules les tâches sans assigné ou de ses membres sont touchées', async () => {
+    const { s, tx } = svc({ chefDe: ['CEL1'] });
+    await s.assign('S1', salarie, 'P1', 'T1', 'C1', false);
+    expect(tx.tacheProjet.findMany.mock.calls[0][0].where.OR).toEqual([
+      { assigneId: null },
+      { assigne: { celluleId: { in: ['CEL1'] } } },
+    ]);
   });
 
   it('Salarié chef d’aucune équipe du projet → 403', async () => {
