@@ -429,10 +429,90 @@ textarea.field-input {
    Carte du code en dégradé violet HUB, nature du client en bascule Argile,
    fiche apporteur cernée d'ambre tant qu'elle reste à remplir. */
 .nouveau-projet {
-  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  max-width: 1040px;
+  /* Toute la fenêtre tient à l'écran : le corps défile, le pied reste. */
+  max-height: calc(100dvh - 6rem);
 }
-.nouveau-projet .modal-body {
-  gap: 1.15rem;
+.nouveau-projet-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.nouveau-projet .nouveau-projet-corps {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 1.75rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.4rem 1.6rem;
+}
+.nouveau-projet-colonne {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-width: 0;
+}
+.nouveau-projet-pied {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.9rem 1.6rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.nouveau-projet-etat {
+  flex: 1 1 16rem;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}
+.nouveau-projet-etat .field-erreur {
+  margin: 0;
+}
+.nouveau-projet-pret {
+  color: var(--ok-texte);
+  font-weight: 500;
+}
+.nouveau-projet-boutons {
+  display: flex;
+  flex: none;
+  gap: 0.6rem;
+}
+/* Tablette : une colonne ; le pied reste en bas. */
+@media (max-width: 900px) {
+  .nouveau-projet .nouveau-projet-corps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Téléphone (fenêtre plein écran, 05-projets-liste.css) : hauteur de
+   l'écran, le corps défile et le pied reste collé en bas. */
+@media (max-width: 640px) {
+  .nouveau-projet {
+    height: 100dvh;
+    max-height: none;
+  }
+  .nouveau-projet .nouveau-projet-corps {
+    padding: 1.1rem;
+  }
+  .nouveau-projet-pied {
+    padding: 0.75rem 1.1rem calc(0.75rem + env(safe-area-inset-bottom));
+  }
+  .nouveau-projet-boutons {
+    width: 100%;
+  }
+  .nouveau-projet-boutons > * {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+  }
 }
 .nouveau-projet-label {
   font-size: 0.88rem;
@@ -447,8 +527,8 @@ textarea.field-input {
 }
 .nouveau-projet-code {
   display: grid;
-  gap: 0.4rem;
-  padding: 1.3rem 1.4rem;
+  gap: 0.3rem;
+  padding: 1rem 1.25rem;
   border-radius: var(--radius-lg);
   background: linear-gradient(120deg, var(--violet-hub), #8c93f2);
   color: #fff;
@@ -463,7 +543,7 @@ textarea.field-input {
 }
 .nouveau-projet-code-valeur {
   font-family: var(--font-mono);
-  font-size: clamp(1.9rem, 7vw, 2.6rem);
+  font-size: clamp(1.7rem, 6vw, 2.1rem);
   font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.15;
@@ -576,11 +656,11 @@ textarea.field-input {
 }
 .nouveau-projet-valider {
   justify-content: center;
-  width: 100%;
-  padding: 0.95rem 1rem;
+  min-height: 44px;
+  padding: 0 1.4rem;
   font-size: 0.95rem;
 }
-/* Tant qu'il manque quelque chose : bouton en pointillés qui dit quoi. */
+/* Tant qu'il manque quelque chose : bouton en pointillés ; le pied dit quoi. */
 .nouveau-projet-valider.is-bloque {
   background: none;
   border: 1px dashed var(--border-hover);
@@ -833,4 +913,41 @@ textarea.field-input {
 }
 .exec-sous-titre:first-of-type {
   margin-top: 0.5rem;
+}
+
+/* Menus déroulants de « Nouveau projet » : chevron du HUB à la place de
+   la flèche du système (la fiche du dossier aura sa propre règle). */
+.nouveau-projet select.field-input {
+  appearance: none;
+  padding-right: 2.4rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2362678a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-size: 16px 16px;
+  background-repeat: no-repeat;
+}
+:root[data-theme='dark'] .nouveau-projet select.field-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239196ba' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.nouveau-projet select.field-input:not(:disabled) {
+  cursor: pointer;
+}
+.nouveau-projet select.field-input:not(:disabled):not(:focus):not(.is-manquant):hover {
+  border-color: var(--text-subtle);
+}
+/* Un seul focus pour tous les champs de la fenêtre : bordure et anneau. */
+.nouveau-projet .field-input {
+  transition:
+    border-color var(--duree-court) var(--courbe),
+    box-shadow var(--duree-court) var(--courbe);
+}
+.nouveau-projet .field-input:focus-visible {
+  outline: none;
+  border-color: var(--action);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--action) 22%, transparent);
+}
+/* Colonne étroite (fenêtre de 900 à 1080 px) : fiche apporteur sur une colonne. */
+@media (min-width: 901px) and (max-width: 1080px) {
+  .nouveau-projet .fiche-apporteur-grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
