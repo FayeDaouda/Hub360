@@ -22,6 +22,7 @@ import {
 } from './project-query';
 import { ProjectStatesService } from './project-states.service';
 import { submissionBaseName } from './submission-file-name';
+import { canDeposit, type DepositActor } from './deposit-rules';
 
 type Chief = {
   id: string;
@@ -174,6 +175,12 @@ export class ProjectFileService {
       cto: await this.states.accountNames(ctx.ctoAccounts),
     };
     const me = decider.employeeId;
+    // Déposer (« cocher ») : même règle que TaskSubmissionService.submit.
+    const depositor: DepositActor = {
+      employeeId: me,
+      canWriteProjects: aLaPermission(actor.permissions, ETAPE.projets, 'ecriture'),
+      chiefCellIds: me ? p.cellules.filter((c) => c.cellule.dispatcher?.id === me).map((c) => c.celluleId) : [],
+    };
 
     return {
       id: p.id,
@@ -307,10 +314,10 @@ export class ProjectFileService {
                 chief?.id ?? null,
                 !!deliveryOn && pending.jusquau > deliveryOn,
               ),
-            // Remise par la personne assignée, carte ouverte (ni désactivée ni verrouillée).
+            // Remise par l'assigné ou à sa place (deposit-rules.ts), carte
+            // ouverte (ni désactivée ni verrouillée).
             peutRemettre:
-              !!me &&
-              t.assigneId === me &&
+              canDeposit(depositor, { assigneId: t.assigneId, assigneCelluleId: t.assigne?.celluleId ?? null }) &&
               (t.statut === 'a_faire' || t.statut === 'reprise') &&
               cardStates.get(c.id)!.code === 'ouverte',
             // Base du nom des fichiers du prochain dépôt (aperçu du formulaire).

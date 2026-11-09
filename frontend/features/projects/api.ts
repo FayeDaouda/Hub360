@@ -63,7 +63,8 @@ export const assignTask = (
     { method: 'PATCH', body: { collaborateurId, carte } },
   );
 
-// Remise par la personne assignée (sans temps atelier : le dépôt vaut validation).
+// Remise par l'assigné, ou à sa place par l'Écriture de « Projets et cartes » ou
+// le chef de son équipe (sans temps atelier : le dépôt vaut validation).
 export const submitProjectTask = (slug: string, projetId: string, tacheId: string, corps: ProjectSubmissionBody = {}) =>
   apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/remise'>, 'post'>>(
     slug,
