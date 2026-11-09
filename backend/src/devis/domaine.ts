@@ -38,9 +38,9 @@ export function statutDevisEffectif(
 
 // -- Offre d'un dossier CRM (étape F, règles validées sept. 2026) ------------
 
-// Validité fixe d'une offre CRM : on ne la saisit plus, elle court à partir
-// de l'envoi (validation DAF).
-export const VALIDITE_OFFRE_JOURS = 7;
+// Validité fixe d'une offre CRM : une seule version, dans @hub/domain (l'écran
+// en a besoin pour l'aperçu avant envoi).
+export { VALIDITE_OFFRE_JOURS } from '@hub/domain';
 // Jours après l'envoi où une relance devient « à faire » (bouton manuel —
 // pas de scheduler, même principe que les relances de factures).
 export const JOURS_RELANCE_OFFRE = [3, 6] as const;

@@ -9,6 +9,7 @@ import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import { STATUTS_CRM, type Projet, type TransitionDossier } from '@/lib/types';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
+import { ApercuOffre } from './apercu-offre';
 
 type Props = {
   slug: string;
@@ -21,6 +22,8 @@ type Props = {
 // rôle et commentaire de la DAF en cas de renvoi (le journal est dans la fiche). Toute action
 // passe par une confirmation qui dit ce qu'elle va provoquer — plusieurs
 // sont définitives (onboard crée le projet, perdu sort du pipeline).
+// Valider l'offre passe OBLIGATOIREMENT par son aperçu (09/11/2026) : le CFO
+// la lit telle que le client la recevra et la valide en bas du document.
 export function CycleDossier({ slug, projet, onAgir }: Props) {
   const session = useSessionCourante();
   const contresignature = useContresignature(slug, session);
@@ -29,6 +32,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
   const [texte, setTexte] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [apercu, setApercu] = useState(false);
 
   // Rechargé à chaque changement de statut (le journal vient de grandir).
   useEffect(() => {
@@ -57,6 +61,10 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
     .map((a) => ({ a, raison: raisonBlocage(a, projet) }))
     .filter((b): b is { a: ActionCrm; raison: string } => b.raison !== null);
   const def = action ? ACTIONS_CRM[action] : null;
+  // Offre soumise, visible pour qui a la Lecture de l'offre (clé `offre`).
+  const offreSoumise = projet.statut === 'en_validation' && 'offre' in projet ? (projet.offre ?? null) : null;
+  const peutValider = actions.includes('valider') && !blocages.some((b) => b.a === 'valider');
+  const peutRenvoyer = actions.includes('renvoyer') && !blocages.some((b) => b.a === 'renvoyer');
 
   // Dernier renvoi de la DAF, affiché tant que le dossier n'est pas resoumis.
   const dernier = historique?.[historique.length - 1];
@@ -85,9 +93,9 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
     }
   }
 
-  // Ni action possible ni note : le statut est déjà dans la barre « Situation »
-  // et le verrou en tête de fiche (maquette CTO, oct. 2026).
-  if (actions.length === 0 && !renvoi && !perte?.commentaire) return null;
+  // Ni action possible, ni note, ni offre à consulter : le statut est déjà
+  // dans la barre « Situation » et le verrou en tête de fiche (maquette CTO).
+  if (actions.length === 0 && !renvoi && !perte?.commentaire && !offreSoumise) return null;
 
   return (
     <section className="cycle-dossier" aria-label="Cycle commercial">
@@ -113,8 +121,14 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
         </p>
       )}
 
-      {!def && actions.length > 0 && (
+      {!def && (actions.length > 0 || offreSoumise) && (
         <div className="cycle-dossier-actions">
+          {/* Sans droit de décision (Dir. GC, COO…) : l'offre soumise se consulte. */}
+          {offreSoumise && !actions.includes('valider') && (
+            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setApercu(true)}>
+              Voir l’offre
+            </button>
+          )}
           {actions.map((a) => (
             <button
               key={a}
@@ -124,12 +138,13 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
                   ? 'btn-primary'
                   : `btn-ghost btn-ghost--sm${ACTIONS_CRM[a].ton === 'danger' ? ' btn-ghost--danger' : ''}`
               }
-              disabled={blocages.some((b) => b.a === a)}
+              disabled={blocages.some((b) => b.a === a) || (a === 'valider' && !offreSoumise)}
               // Action de l'étape : reprise par le pied de la fiche.
               data-action-principale={ACTIONS_CRM[a].ton === 'principal' ? '' : undefined}
-              onClick={() => choisir(a)}
+              // Valider = ouvrir l'aperçu : l'envoi se confirme en bas du document.
+              onClick={() => (a === 'valider' ? setApercu(true) : choisir(a))}
             >
-              {ACTIONS_CRM[a].libelle}
+              {a === 'valider' ? 'Voir l’offre et valider' : ACTIONS_CRM[a].libelle}
             </button>
           ))}
         </div>
@@ -140,6 +155,31 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
             {ACTIONS_CRM[b.a].libelle} : {b.raison}
           </p>
         ))}
+
+      {apercu && offreSoumise && (
+        <ApercuOffre
+          slug={slug}
+          offreId={offreSoumise.id}
+          dossierCode={projet.code}
+          decision={
+            peutValider
+              ? {
+                  onValider: async () => {
+                    await onAgir('valider');
+                    setApercu(false);
+                  },
+                  onRenvoyer: peutRenvoyer
+                    ? () => {
+                        setApercu(false);
+                        choisir('renvoyer');
+                      }
+                    : undefined,
+                }
+              : null
+          }
+          onClose={() => setApercu(false)}
+        />
+      )}
 
       {def && (
         <div className="field-bloc">

@@ -1,4 +1,4 @@
-import { ETAPE } from '@hub/domain';
+import { ETAPE, VALIDITE_OFFRE_JOURS } from '@hub/domain';
 import { niveauSuffisant } from './auth';
 import { completudeFiche } from './crm';
 import type { NiveauPermission, Projet, Session, StatutCrm } from './types';
@@ -35,8 +35,7 @@ export const ACTIONS_CRM: Record<ActionCrm, DefAction> = {
     de: ['en_validation'],
     module: 'finances_devis',
     niveau: 'validation',
-    consequence:
-      'L’offre est numérotée et envoyée au client (email + lien de réponse), valable 7 jours. Elle ne sera plus modifiable.',
+    consequence: `L’offre est numérotée et envoyée au client (email + lien de réponse), valable ${VALIDITE_OFFRE_JOURS} jours. Elle ne sera plus modifiable.`,
     ton: 'principal',
   },
   renvoyer: {
