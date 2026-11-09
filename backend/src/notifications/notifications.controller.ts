@@ -1,11 +1,13 @@
 import { Body, Controller, Delete, Get, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { NotificationsService } from './notifications.service';
 import { AbonnementPushDto, DesabonnementPushDto, LectureDto, PreferencesNotificationsDto } from './notifications.dto';
 import { PushService } from './push.service';
+import { TicketStore } from '../realtime/ticket.store';
 
-type R = { user: { societeId: string; userId: string } };
+type R = { user: { societeId: string; userId: string; societeSlug: string; role: string } };
 
 // Ouvert à tout membre de la société (garde « membre », pas « admin ») :
 // chacun lit / marque lues SES propres notifications — l'id vient du token,
@@ -16,7 +18,26 @@ export class NotificationsController {
   constructor(
     private notifications: NotificationsService,
     private push: PushService,
+    private tickets: TicketStore,
   ) {}
+
+  // Jeton court pour l'URL du flux temps réel (EventSource ne pose pas
+  // d'en-tête) — ouvert à tout membre, comme la cloche.
+  // Fréquence bornée : un onglet en demande un à chaque (re)connexion.
+  @Post('ticket')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  ticket(@Req() req: R) {
+    return {
+      token: this.tickets.emettre({
+        stream: 'notifications',
+        userId: req.user.userId,
+        societeId: req.user.societeId,
+        societeSlug: req.user.societeSlug,
+        role: req.user.role,
+      }),
+    };
+  }
 
   @Get()
   flux(@Req() req: R) {

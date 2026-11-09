@@ -1,5 +1,6 @@
 import type { FluxNotifications, NotificationItem, NotificationType, Session } from './types';
 import { apiSociete } from './client-api';
+import { API_URL, connectSseStream, type SseStreamState } from './sse-stream';
 import { niveauSuffisant } from './auth';
 import { sectionAccessible } from './acces-back-office';
 import { lienFacturationProjet } from './facturation';
@@ -11,6 +12,23 @@ import { categorieNotification } from '@hub/domain';
 // Les alertes dérivées (relance d'un lead CRM incomplet après 72 h) sont
 // calculées côté serveur (non stockées), renvoyées avec `derivee: true` en
 // tête du flux.
+
+// Temps réel (09/11/2026) : le serveur signale « tes notifications ont
+// changé » (nouvelle, remise à jour, lue ailleurs) ; le signal ne porte rien,
+// l'écran relit son flux. Retourne une fonction de fermeture.
+export function connecterFluxNotifications(opts: {
+  slug: string;
+  onSignal: () => void;
+  onEtat?: (etat: SseStreamState) => void;
+}): () => void {
+  return connectSseStream({
+    ticket: () => apiSociete<{ token: string }>(opts.slug, '/notifications/ticket', { method: 'POST', body: {} }),
+    url: (token) => `${API_URL}/societes/${opts.slug}/notifications/flux?token=${encodeURIComponent(token)}`,
+    types: ['notification'],
+    onEvent: () => opts.onSignal(),
+    onState: opts.onEtat,
+  });
+}
 
 export function getNotifications(slug: string): Promise<FluxNotifications> {
   return apiSociete<FluxNotifications>(slug, '/notifications');

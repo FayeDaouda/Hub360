@@ -411,6 +411,29 @@
         ]
       }
     },
+    "/api/societes/{slug}/notifications/ticket": {
+      "post": {
+        "operationId": "NotificationsController_ticket",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
     "/api/societes/{slug}/notifications": {
       "get": {
         "operationId": "NotificationsController_flux",
@@ -643,6 +666,34 @@
         },
         "tags": [
           "Notifications"
+        ]
+      }
+    },
+    "/api/societes/{slug}/notifications/flux": {
+      "get": {
+        "operationId": "NotificationsFluxController_flux",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "NotificationsFlux"
         ]
       }
     },

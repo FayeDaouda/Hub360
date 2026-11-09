@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsBus } from '../realtime/notifications.bus';
 import type { PartsFactures } from '../projets/domaine/config';
 import {
   type AjoutLigne,
@@ -40,7 +41,10 @@ function afficher(def: DefinitionReglage, v: unknown): string {
 // entre au journal (qui alimentera le registre des décisions, Pilotage).
 @Injectable()
 export class ReglagesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private bus: NotificationsBus, // signal temps réel des notifications au CEO
+  ) {}
 
   async lire(societeId: string) {
     const gabarits = await this.gabaritsDe(societeId);
@@ -254,6 +258,7 @@ export class ReglagesService {
             })),
           ),
         });
+        this.bus.signal(societeId, destinataires);
       }
     }
     return this.lire(societeId);

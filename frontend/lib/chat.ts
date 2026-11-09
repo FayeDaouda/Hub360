@@ -11,6 +11,7 @@ import type {
   ResultatRechercheChat,
 } from './types';
 import { apiSociete } from './client-api';
+import { API_URL, connectSseStream } from './sse-stream';
 
 // Chat multi-canaux (lot 3). API NestJS (src/chat) :
 //   GET   /societes/:slug/canaux                       liste + non-lus par canal
@@ -20,7 +21,6 @@ import { apiSociete } from './client-api';
 //   POST  /societes/:slug/canaux/direct                { avecUtilisateurId }
 //   POST  /societes/:slug/chat/ticket                  jeton SSE (60 s, usage unique)
 //   GET   /societes/:slug/chat/flux?token=             flux SSE (réception seule)
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export function getCanaux(slug: string): Promise<CanalChat[]> {
   return apiSociete<CanalChat[]>(slug, '/canaux');
@@ -72,76 +72,16 @@ type OptionsFlux = {
   onEtat: (etat: EtatFluxChat) => void;
 };
 
-// Connexion SSE au flux chat avec RECONNEXION EXPLICITE : le ticket serveur est
-// à usage unique, donc la reprise native d'EventSource (qui rejouerait le jeton
-// consommé → 401) est inutilisable. À chaque (ré)ouverture on récupère un
-// ticket frais puis on ouvre un EventSource ; `error` → backoff → nouveau
-// ticket → nouvel EventSource. Retourne une fonction de fermeture.
+// Connexion SSE au flux chat (reconnexion explicite : lib/flux-sse.ts).
+// Retourne une fonction de fermeture.
 export function connecterFluxChat(opts: OptionsFlux): () => void {
-  let es: EventSource | null = null;
-  let ferme = false;
-  let jamaisOuvert = true;
-  let backoff = 1000;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-
-  async function ouvrir() {
-    if (ferme) return;
-    opts.onEtat(jamaisOuvert ? 'connexion' : 'reconnexion');
-
-    let token: string;
-    try {
-      ({ token } = await getTicketChat(opts.slug));
-    } catch {
-      replanifier();
-      return;
-    }
-    if (ferme) return;
-
-    const source = new EventSource(`${API_URL}/societes/${opts.slug}/chat/flux?token=${encodeURIComponent(token)}`);
-    es = source;
-
-    source.addEventListener('open', () => {
-      jamaisOuvert = false;
-      backoff = 1000;
-      opts.onEtat('ouvert');
-    });
-
-    const relais = (type: EvenementChat['type']) => (ev: MessageEvent<string>) => {
-      try {
-        opts.onEvenement({ type, ...JSON.parse(ev.data) } as EvenementChat);
-      } catch {
-        /* trame illisible — ignorée */
-      }
-    };
-    for (const type of ['message', 'non_lus', 'message_modifie', 'reactions', 'frappe', 'lecture'] as const) {
-      source.addEventListener(type, relais(type));
-    }
-    // 'ping' : battement serveur, rien à faire.
-
-    source.addEventListener('error', () => {
-      source.close();
-      if (es === source) es = null;
-      replanifier();
-    });
-  }
-
-  function replanifier() {
-    if (ferme || timer) return;
-    opts.onEtat('reconnexion');
-    timer = setTimeout(() => {
-      timer = null;
-      void ouvrir();
-    }, backoff);
-    backoff = Math.min(backoff * 2, 15_000);
-  }
-
-  void ouvrir();
-
-  return () => {
-    ferme = true;
-    if (timer) clearTimeout(timer);
-    es?.close();
-  };
+  return connectSseStream({
+    ticket: () => getTicketChat(opts.slug),
+    url: (token) => `${API_URL}/societes/${opts.slug}/chat/flux?token=${encodeURIComponent(token)}`,
+    types: ['message', 'non_lus', 'message_modifie', 'reactions', 'frappe', 'lecture'],
+    onEvent: (type, donnees) => opts.onEvenement({ type, ...(donnees as object) } as EvenementChat),
+    onState: opts.onEtat,
+  });
 }
 
 // Groupes de discussion et mentions (01/11/2026).
