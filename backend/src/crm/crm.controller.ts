@@ -56,7 +56,8 @@ export class CrmController {
     return this.crm.creer(req.user.societeId, req.user, dto);
   }
 
-  // Complétion de la fiche d'un lead (champ par champ, « Nouveau projet »).
+  // Complétion de la fiche d'un lead (champ par champ) : en « Nouveau projet »,
+  // puis figée — sauf droit « Modifier une fiche figée » (CrmService.modifierFiche).
   @Patch(':id/fiche')
   @RequiertPermission(ETAPE.crmDossiers, 'ecriture')
   modifierFiche(@Req() req: Req, @Param('id') id: string, @Body() dto: ModifierFicheDto) {

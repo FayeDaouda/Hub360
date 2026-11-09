@@ -8,7 +8,7 @@ ALTER TYPE "NotificationType" ADD VALUE 'dossier_modifie';
 
 INSERT INTO "etapes_module" ("id", "module_id", "cle", "nom", "ordre", "libelles")
 SELECT gen_random_uuid()::text, m."id", 'crm.fiche_figee', 'Modifier une fiche figée', 5,
-  '{"ecriture": "Modifie la fiche d’un dossier après sa soumission au CFO (fiche Programme, standing, gamme) ; les champs qui fixent le prix de l’offre restent figés"}'::jsonb
+  '{"ecriture": "Avec l’Écriture des dossiers : modifie la fiche d’un dossier après sa soumission au CFO (fiche Programme, standing, gamme) ; prix de l’offre et forme bâtie restent figés"}'::jsonb
 FROM "modules" m
 WHERE m."cle" = 'crm'
   AND NOT EXISTS (SELECT 1 FROM "etapes_module" WHERE "cle" = 'crm.fiche_figee');

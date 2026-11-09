@@ -212,8 +212,12 @@ export function DetailDossierModal({
   const editable = peutEcrire && !archive && projet.statut === 'nouveau_projet';
   // Fiche figée (après la soumission au CFO) : modifiable avec l'Écriture de
   // « Modifier une fiche figée » (09/11/2026), sans les champs du prix.
+  // La route exige aussi l'Écriture des dossiers : les deux droits.
   const editionFigee =
-    !archive && projet.statut !== 'nouveau_projet' && niveauSuffisant(session, ETAPE.crmFicheFigee, 'ecriture');
+    peutEcrire &&
+    !archive &&
+    projet.statut !== 'nouveau_projet' &&
+    niveauSuffisant(session, ETAPE.crmFicheFigee, 'ecriture');
   // Dossier antérieur au référentiel : à rattacher à une localité.
   const rattachable = !projet.localite && peutEcrire && !archive;
   const rang = ETAPES.findIndex((e) => e.statut === projet.statut);
@@ -658,7 +662,15 @@ export function DetailDossierModal({
 
         <div id={idSection('fiche')} className="fiche-dossier-bloc" tabIndex={-1}>
           {(editable || editionFigee) && (
-            <CaracteristiquesProjet projet={projet} onModifier={onModifierFiche} prixFige={editionFigee} />
+            <CaracteristiquesProjet
+              projet={projet}
+              // Fiche figée : la trace de la modification s'affiche aussitôt.
+              onModifier={async (champs) => {
+                await onModifierFiche(champs);
+                if (editionFigee) setVersionHistorique((v) => v + 1);
+              }}
+              prixFige={editionFigee}
+            />
           )}
 
           {(!(editable || editionFigee) || rattachable) && (

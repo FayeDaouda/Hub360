@@ -4,13 +4,14 @@
 //
 //   · Les champs qui fixent le prix de l'offre (catégorie → tarif CO,
 //     surface × planches → quantité de la ligne de conception) ne bougent
-//     pas : on passe par « Refaire une offre » ou un renvoi du CFO.
+//     pas : on passe par « Refaire une offre » ou un renvoi du CFO. La forme
+//     bâtie non plus : elle désigne l'ouvrage sur les factures émises.
 //   · Chaque modification est tracée dans l'historique ; des enregistrements
 //     rapprochés de la même personne (la fiche s'enregistre champ par champ)
 //     se regroupent sur une seule ligne.
 
 export const MESSAGE_PRIX_FIGE =
-  'fixe le prix de l’offre : passer par « Refaire une offre » ou un renvoi du CFO pour le changer.';
+  'figé après la soumission (prix de l’offre, désignation sur les factures) : passer par « Refaire une offre » ou un renvoi du CFO pour le changer.';
 
 export const PREFIXE_TRACE = 'Fiche modifiée après soumission : ';
 

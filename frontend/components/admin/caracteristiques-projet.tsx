@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Lock, Plus, X } from 'lucide-react';
 import {
   CATEGORIES,
@@ -52,7 +52,7 @@ type Props = {
 
 // Champs du prix d'une fiche figée — même message que le serveur (crm/fiche-figee.ts).
 const MESSAGE_PRIX_FIGE =
-  'fixe le prix de l’offre : passer par « Refaire une offre » ou un renvoi du CFO pour le changer.';
+  'figé après la soumission (prix de l’offre, désignation sur les factures) : passer par « Refaire une offre » ou un renvoi du CFO pour le changer.';
 
 // Nom court du standing pour « Moyen standing : sélection type ».
 const STANDING_COURT: Record<Standing, string> = { economique: 'Économique', moyen: 'Moyen', grand: 'Grand' };
@@ -72,6 +72,11 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
   const [erreur, setErreur] = useState<string | null>(null);
   // Enregistrements en file : deux réponses rapprochées partent dans l'ordre.
   const file = useRef<Promise<void>>(Promise.resolve());
+  // Dernier état reçu du serveur (relu au moment d'un refus, pas au clic).
+  const dernierProjet = useRef(projet);
+  useEffect(() => {
+    dernierProjet.current = projet;
+  }, [projet]);
 
   // `siRefus` : remet l'écran dans l'état enregistré quand le serveur refuse.
   function enregistrer(champs: ModifierFichePayload, siRefus?: () => void) {
@@ -100,9 +105,13 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
     if (prixFige && calculChange) {
       return setErreur(`Nombre de planches : ${MESSAGE_PRIX_FIGE}`);
     }
-    const precedente = fiche;
     setFiche(suivante);
-    enregistrer({ ficheProgramme: suivante }, prixFige ? () => setFiche(precedente) : undefined);
+    // Refus (fiche figée) : retour à la dernière fiche ACCEPTÉE par le serveur
+    // (les enregistrements partent en file : pas à l'état d'avant ce clic).
+    enregistrer(
+      { ficheProgramme: suivante },
+      prixFige ? () => setFiche({ ...FICHE_VIDE, ...(dernierProjet.current.ficheProgramme ?? {}) }) : undefined,
+    );
   }
   const majLigne = (i: number, maj: Partial<LigneComposition>) =>
     majFiche({ composition: fiche.composition.map((l, j) => (j === i ? { ...l, ...maj } : l)) });
@@ -142,8 +151,8 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
           <Lock size={12} aria-hidden />
           <span>
             <strong>Fiche figée, modifiable avec ton droit.</strong> Chaque modification est tracée dans l’historique et
-            signalée aux personnes concernées. Catégorie, surface du terrain et planches fixent le prix de l’offre : ils
-            ne se modifient pas ici.
+            signalée aux personnes concernées. Catégorie, surface du terrain et planches fixent le prix de l’offre, la
+            forme bâtie désigne l’ouvrage sur les factures : ils ne se modifient pas ici.
           </span>
         </p>
       )}
@@ -282,6 +291,8 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
               id="fiche-forme"
               className={classe(!fiche.forme)}
               value={fiche.forme ?? ''}
+              // Fiche figée : la forme désigne l'ouvrage sur les factures émises.
+              disabled={prixFige}
               onChange={(e) => majFiche({ forme: e.target.value as Forme })}
             >
               {!fiche.forme && choisir}

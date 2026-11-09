@@ -17,7 +17,7 @@ import {
   REPORTINGS,
 } from '../pilotage/pilotage-regles';
 import { planNotificationsCrm } from '../crm/notifications-crm';
-import { ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
+import { lignesDuCycle, ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import { ReglagesService } from '../reglages/reglages.service';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from './notifications.service';
@@ -585,7 +585,7 @@ export class RappelsService implements OnApplicationBootstrap {
         societeId: true,
         code: true,
         transitions: {
-          where: { vers: 'en_validation' },
+          where: lignesDuCycle('en_validation'),
           orderBy: { creeLe: 'desc' },
           take: 1,
           select: { creeLe: true },

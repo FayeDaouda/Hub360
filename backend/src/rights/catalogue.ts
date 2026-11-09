@@ -89,7 +89,7 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
     ordre: 5,
     libelles: {
       ecriture:
-        'Modifie la fiche d’un dossier après sa soumission au CFO (fiche Programme, standing, gamme) ; les champs qui fixent le prix de l’offre restent figés',
+        'Avec l’Écriture des dossiers : modifie la fiche d’un dossier après sa soumission au CFO (fiche Programme, standing, gamme) ; prix de l’offre et forme bâtie restent figés',
     },
   },
 

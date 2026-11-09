@@ -179,7 +179,9 @@ describe('NotificationsService.notifierDossierCrm · dossier_modifie', () => {
     } = {},
   ) {
     const createMany = jest.fn().mockResolvedValue({ count: 1 });
-    const update = jest.fn().mockResolvedValue({});
+    // Remise à jour conditionnelle (toujours non lue) : updateMany → { count }.
+    const update = jest.fn().mockResolvedValue({ count: 1 });
+    const create = jest.fn().mockResolvedValue({});
     const findMany = jest.fn().mockResolvedValue(opts.nonLues ?? []);
     const findUnique = jest
       .fn()
@@ -192,9 +194,9 @@ describe('NotificationsService.notifierDossierCrm · dossier_modifie', () => {
         ),
       },
       utilisateur: { findUnique },
-      notification: { createMany, update, findMany },
+      notification: { createMany, updateMany: update, create, findMany },
     } as unknown as PrismaService;
-    return { s: new NotificationsService(prisma), createMany, update, findMany, findUnique };
+    return { s: new NotificationsService(prisma), createMany, update, create, findMany, findUnique };
   }
 
   const TITRE =
@@ -260,10 +262,24 @@ describe('NotificationsService.notifierDossierCrm · dossier_modifie', () => {
       destinataireId: { in: ['DG1', 'COO1'] },
     });
     expect(update).toHaveBeenCalledWith({
-      where: { id: 'N1' },
+      where: { id: 'N1', luLe: null },
       data: { titre: TITRE, parId: 'U9', createdAt: MAINTENANT },
     });
     expect(lignes(createMany)).toEqual(['COO1']);
+  });
+
+  it('non lue lue entre la lecture et la mise à jour → une nouvelle notification est créée', async () => {
+    const { s, update, create } = svcModif({ nonLues: [{ id: 'N1', destinataireId: 'DG1' }] });
+    update.mockResolvedValue({ count: 0 });
+    await s.notifierDossierCrm(modif());
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        destinataireId: 'DG1',
+        type: 'dossier_modifie',
+        dossierCrmId: 'D1',
+        titre: TITRE,
+      }),
+    });
   });
 
   it('tous les destinataires ont déjà une non lue → que des mises à jour, aucune création', async () => {

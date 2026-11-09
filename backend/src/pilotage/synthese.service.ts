@@ -24,6 +24,7 @@ import {
   ROLE_CFO,
   todayIso,
 } from '@hub/domain';
+import { lignesDuCycle } from '../crm/cycle';
 
 type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 export type LigneSynthese = { libelle: string; valeur: string; ton?: 'risque' | 'attention' | 'succes' };
@@ -156,7 +157,7 @@ export class SyntheseService {
           },
         }),
         this.prisma.dossierCrmTransition.findMany({
-          where: { vers: 'onboard', creeLe: { gte: du, lte: au }, dossier: { societeId } },
+          where: { ...lignesDuCycle('onboard'), creeLe: { gte: du, lte: au }, dossier: { societeId } },
           select: {
             dossier: {
               select: {

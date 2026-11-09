@@ -17,7 +17,7 @@ import { OnboardingService } from './onboarding.service';
 import { statutDevisEffectif } from '../devis/domaine';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
-import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable } from './cycle';
+import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable, lignesDuCycle } from './cycle';
 import { EVENEMENT_PAR_ACTION } from './notifications-crm';
 import {
   champsLibresModifies,
@@ -62,7 +62,9 @@ const INCLUDE_DOSSIER = {
   offres: { orderBy: { creeLe: 'desc' }, take: 1, include: { lignes: true } },
   // Dernière transition : celle qui a mené au statut actuel — soumission au
   // CFO (délai de 48 h, tuile « En attente CFO ») ou renvoi par le CFO.
+  // (hors traces d'une fiche modifiée : même statut avant et après).
   transitions: {
+    where: lignesDuCycle(),
     orderBy: { creeLe: 'desc' },
     take: 1,
     select: { creeLe: true, de: true, vers: true, commentaire: true },
@@ -364,9 +366,21 @@ export class CrmService {
     // être saisi à la main).
     let planches = (fiche && planchesCalculees(fiche)) ?? dto.nbPlanches;
     if (figee) {
-      const avant = dossier.ficheProgramme
-        ? planchesCalculees(dossier.ficheProgramme as unknown as FicheProgramme)
-        : null;
+      const ficheAvant = ficheStockee(dossier.ficheProgramme);
+      // La forme bâtie désigne l'ouvrage sur les factures et avoirs déjà
+      // émis (relue à l'impression) : figée comme le prix — vérifiée d'abord,
+      // changer de forme rend aussi la fiche incomplète.
+      if (fiche && fiche.forme !== (ficheAvant?.forme ?? null)) {
+        throw new ConflictException(messagePrixFige(['Forme bâtie']));
+      }
+      // La soumission a exigé un programme : une fiche figée reste complète
+      // (avant le calcul des planches : sinon « Nombre de planches » trompe).
+      if (fiche && !resume(fiche)) {
+        throw new BadRequestException(
+          'Fiche Programme incomplète : une fiche figée doit rester complète (le programme de l’offre en dépend).',
+        );
+      }
+      const avant = ficheAvant ? planchesCalculees(ficheAvant) : null;
       const apres = fiche ? planchesCalculees(fiche) : avant;
       const prix = champsPrixModifies(dossier, {
         categorie: dto.categorie,
@@ -377,12 +391,6 @@ export class CrmService {
       const calculChange = avant !== null ? apres !== avant : apres !== null && apres !== dossier.nbPlanches;
       if (calculChange && !prix.includes('Nombre de planches')) prix.push('Nombre de planches');
       if (prix.length) throw new ConflictException(messagePrixFige(prix));
-      // La soumission a exigé un programme : une fiche figée reste complète.
-      if (fiche && !resume(fiche)) {
-        throw new BadRequestException(
-          'Fiche Programme incomplète : une fiche figée doit rester complète (le programme de l’offre en dépend).',
-        );
-      }
       planches = undefined;
     }
     const tarifChange =
@@ -804,4 +812,15 @@ function resumeApporteur(a: ApporteurDto): string {
   if (a.type !== 'externe') return 'affaire directe';
   const structure = a.structure?.trim();
   return structure ? `${a.nom!.trim()} (${structure})` : a.nom!.trim();
+}
+
+// Fiche Programme stockée, relue telle quelle ; une ancienne fiche mal formée
+// vaut « pas de fiche » plutôt qu'une erreur 500.
+function ficheStockee(brute: unknown): FicheProgramme | null {
+  if (!brute) return null;
+  try {
+    return normaliserFiche(brute as Parameters<typeof normaliserFiche>[0]);
+  } catch {
+    return null;
+  }
 }

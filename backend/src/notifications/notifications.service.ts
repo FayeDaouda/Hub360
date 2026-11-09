@@ -143,7 +143,7 @@ export class NotificationsService {
       // dossier — la fiche s'enregistre champ par champ, la suivante remet
       // la précédente à jour (titre, date, auteur) au lieu d'en empiler.
       let aCreer = plan;
-      let aMettreAJour: { id: string; titre: string }[] = [];
+      let aMettreAJour: { id: string; destinataireId: string; titre: string }[] = [];
       if (evenement === 'dossier_modifie') {
         const nonLues = await this.prisma.notification.findMany({
           where: {
@@ -158,7 +158,7 @@ export class NotificationsService {
         const parDestinataire = new Map(nonLues.map((n) => [n.destinataireId, n.id]));
         aMettreAJour = plan.flatMap(({ destinataireId, titre }) => {
           const id = parDestinataire.get(destinataireId);
-          return id ? [{ id, titre }] : [];
+          return id ? [{ id, destinataireId, titre }] : [];
         });
         aCreer = plan.filter((p) => !parDestinataire.has(p.destinataireId));
       }
@@ -177,10 +177,29 @@ export class NotificationsService {
           })),
         });
       }
-      for (const { id, titre } of aMettreAJour) {
-        await this.prisma.notification
-          .update({ where: { id }, data: { titre, parId: params.parId, createdAt: new Date() } })
-          .catch((e: Error) => this.log.error(`Notification ${id} non mise à jour : ${e.message}`));
+      // Remise à jour seulement si elle est TOUJOURS non lue (lue entre-temps :
+      // une nouvelle notification, pour que la modification soit signalée).
+      for (const { id, destinataireId, titre } of aMettreAJour) {
+        try {
+          const { count } = await this.prisma.notification.updateMany({
+            where: { id, luLe: null },
+            data: { titre, parId: params.parId, createdAt: new Date() },
+          });
+          if (count === 0) {
+            await this.prisma.notification.create({
+              data: {
+                destinataireId,
+                societeId,
+                type: evenement,
+                dossierCrmId: dossierId,
+                titre,
+                parId: params.parId,
+              },
+            });
+          }
+        } catch (e) {
+          this.log.error(`Notification ${id} non mise à jour : ${(e as Error).message}`);
+        }
       }
     } catch (e) {
       this.log.error(

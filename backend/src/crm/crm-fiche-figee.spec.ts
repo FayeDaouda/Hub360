@@ -173,15 +173,17 @@ describe('CrmService.modifierFiche · champs du prix figés', () => {
     expect(tx.dossierCrm.update).not.toHaveBeenCalled();
   });
 
-  it('ancien dossier SANS fiche Programme : une fiche aux mêmes planches est acceptée, d’autres planches non', async () => {
-    const sansFiche = { ...EN_VALIDATION, ficheProgramme: null };
-    const ok = svc({ dossier: sansFiche }); // stockées 3 = calcul de VILLA
-    await ok.s.modifierFiche('S1', AVEC_DROIT, 'D1', { ficheProgramme: VILLA });
-    expect(ok.tx.dossierCrm.update).toHaveBeenCalled();
-    const ko = svc({ dossier: { ...sansFiche, nbPlanches: 5 } });
-    await expect(ko.s.modifierFiche('S1', AVEC_DROIT, 'D1', { ficheProgramme: VILLA })).rejects.toThrow(
-      'Nombre de planches',
-    );
+  it('ancien dossier SANS fiche Programme : en remplir une donnerait une forme bâtie → refusé', async () => {
+    // La forme désigne l'ouvrage sur les factures émises : figée, même absente.
+    const { s, tx } = svc({ dossier: { ...EN_VALIDATION, ficheProgramme: null } });
+    await expect(s.modifierFiche('S1', AVEC_DROIT, 'D1', { ficheProgramme: VILLA })).rejects.toThrow('Forme bâtie');
+    expect(tx.dossierCrm.update).not.toHaveBeenCalled();
+  });
+
+  it('forme bâtie changée (villa → immeuble) → 409 qui nomme « Forme bâtie »', async () => {
+    const { s } = svc();
+    const immeuble = { usage: 'residentiel', forme: 'immeuble', gabarit: 1, sousSols: 1 };
+    await expect(s.modifierFiche('S1', AVEC_DROIT, 'D1', { ficheProgramme: immeuble })).rejects.toThrow('Forme bâtie');
   });
 
   it('ancien dossier aux planches saisies à la main (≠ calcul) : la fiche reste modifiable', async () => {
