@@ -232,6 +232,7 @@ enum NotificationType {
   prolongation_decidee
   // Cycle CRM (tableau validé sept. 2026) — cf. src/crm/notifications-crm.ts
   dossier_cree // nouveau lead : au directeur qui le portera (Dir. GC, 09/11/2026)
+  dossier_modifie // fiche figée modifiée : propriétaire, créateur (+ CFO en validation)
   dossier_soumis
   dossier_renvoye
   offre_envoyee // offre validée par la CFO et partie chez le client

@@ -11550,6 +11550,7 @@
                 "demande_droit_a_valider",
                 "demande_droit_decidee",
                 "dossier_cree",
+                "dossier_modifie",
                 "dossier_perdu",
                 "dossier_renvoye",
                 "dossier_soumis",

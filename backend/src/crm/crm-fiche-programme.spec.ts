@@ -11,10 +11,12 @@ import { CrmService } from './crm.service';
 // planches se déduisent de la fiche, jamais saisis quand ils se calculent.
 function svc(dossier: object = { statut: 'nouveau_projet', archiveLe: null, nbPlanches: 0, categorie: 'conception' }) {
   const update = jest.fn().mockRejectedValue(new Error('arrêt du test après l’écriture'));
-  const prisma = {
+  const prisma: Record<string, unknown> = {
     dossierCrm: { findFirst: jest.fn().mockResolvedValue(dossier), update },
     devis: { count: jest.fn().mockResolvedValue(0) },
   };
+  // L'écriture de la fiche passe par une transaction (trace d'une fiche figée).
+  prisma.$transaction = jest.fn((f: (tx: unknown) => unknown) => f(prisma));
   const s = new CrmService(
     prisma as unknown as PrismaService,
     {} as DevisService,

@@ -97,6 +97,8 @@ export const ETAPE = {
   crmProprietaire: 'crm.proprietaire',
   crmApporteur: 'crm.apporteur',
   crmTotaux: 'crm.totaux',
+  // Fiche modifiable après la soumission au CFO (09/11/2026).
+  crmFicheFigee: 'crm.fiche_figee',
   // Finances (lot 3) : les quatre clés historiques restent les étapes
   // principales (Offres, Factures, Marges et rentabilité, Charges).
   financesOffres: 'finances_devis',

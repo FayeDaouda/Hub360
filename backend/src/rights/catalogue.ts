@@ -80,6 +80,18 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
       lecture: 'Voit les montants HT par étape du pipeline, sans le détail des offres',
     },
   },
+  // Fiche modifiable après la soumission au CFO (09/11/2026) : personne au
+  // départ (hors carte blanche du CIO et de l'Administrateur HUB).
+  {
+    module: 'crm',
+    cle: ETAPE.crmFicheFigee,
+    nom: 'Modifier une fiche figée',
+    ordre: 5,
+    libelles: {
+      ecriture:
+        'Modifie la fiche d’un dossier après sa soumission au CFO (fiche Programme, standing, gamme) ; les champs qui fixent le prix de l’offre restent figés',
+    },
+  },
 
   // Finances (lot 3, 31/10/2026). Les étapes principales gardent la clé de
   // leur module (finances_devis…), lue partout dans le HUB.

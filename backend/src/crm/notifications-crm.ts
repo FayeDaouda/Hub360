@@ -27,6 +27,12 @@
 // endroit (CIBLES_EVENEMENT.dossier_cree).
 //   dossier créé               propriétaire (Dir. GC)               le prendre en charge
 //
+// Fiche figée modifiée (09/11/2026, crm/fiche-figee.ts) : le propriétaire et
+// le créateur ; la DAF aussi tant que l'offre est chez elle (en validation).
+// Une seule notification non lue par personne et par dossier : les
+// enregistrements suivants la remettent à jour (NotificationsService).
+//   dossier modifié            propriétaire + créateur (+ DAF)      information
+//
 // Pas de notification à l'émission d'une facture ni à un paiement : c'est la
 // CFO qui les fait elle-même. L'apporteur n'est joignable que s'il est
 // INTERNE (compte HUB) ; un apporteur externe n'a pas de compte.
@@ -34,12 +40,14 @@
 // Fonctions pures : la résolution des comptes (requêtes) est dans
 // NotificationsService.notifierDossierCrm.
 
+import type { StatutCrm } from '@prisma/client';
 import type { ActionCrm } from './cycle';
 import { ChampsFiche, TOTAL_CHAMPS_FICHE, champsManquants } from './fiche';
 import { plural } from '@hub/domain';
 
 export type EvenementCrm =
   | 'dossier_cree'
+  | 'dossier_modifie'
   | 'dossier_soumis'
   | 'dossier_renvoye'
   | 'offre_envoyee'
@@ -64,6 +72,7 @@ export const EVENEMENT_PAR_ACTION: Partial<Record<ActionCrm, EvenementCrm>> = {
 // propriétaire qui est aussi l'apporteur reçoit le titre « action requise »).
 export const CIBLES_EVENEMENT: Record<EvenementCrm, CibleCrm[]> = {
   dossier_cree: ['proprietaire'],
+  dossier_modifie: ['proprietaire', 'createur', 'daf'],
   dossier_soumis: ['daf'],
   dossier_renvoye: ['proprietaire'],
   offre_envoyee: ['proprietaire'],
@@ -79,8 +88,16 @@ export type ContexteNotificationCrm = {
   programme: string;
   commentaire?: string | null; // renvoi DAF, motif de perte
   facturesPreparees?: number; // offre acceptée (Onboard)
-  auteur?: string | null; // dossier créé : qui l'a saisi (nom officiel)
+  auteur?: string | null; // dossier créé / modifié : qui l'a fait (nom officiel)
+  statut?: StatutCrm; // dossier modifié : la DAF n'est prévenue qu'en validation
 };
+
+// Cibles d'un événement pour CE dossier : le tableau, moins la DAF pour une
+// fiche modifiée hors validation (l'offre n'est pas chez elle).
+export function ciblesEvenement(evenement: EvenementCrm, statut?: StatutCrm): CibleCrm[] {
+  const cibles = CIBLES_EVENEMENT[evenement];
+  return evenement === 'dossier_modifie' && statut !== 'en_validation' ? cibles.filter((c) => c !== 'daf') : cibles;
+}
 
 const LONGUEUR_MAX_COMMENTAIRE = 140;
 
@@ -90,13 +107,18 @@ function extrait(texte: string): string {
 }
 
 export function titreNotificationCrm(evenement: EvenementCrm, cible: CibleCrm, ctx: ContexteNotificationCrm): string {
-  const dossier = `${ctx.code} · ${ctx.programme}`;
+  // Programme pas encore saisi (lead tout neuf) : le code seul.
+  const dossier = ctx.programme ? `${ctx.code} · ${ctx.programme}` : ctx.code;
   switch (evenement) {
     case 'dossier_cree':
       // Le programme n'est pas encore saisi à la création : le code seul.
       return ctx.auteur
         ? `${ctx.code} — nouveau projet créé par ${ctx.auteur}, à prendre en charge`
         : `${ctx.code} — nouveau projet créé, à prendre en charge`;
+    case 'dossier_modifie':
+      return ctx.auteur
+        ? `${dossier} — fiche modifiée par ${ctx.auteur} après soumission (détail dans l’historique)`
+        : `${dossier} — fiche modifiée après soumission (détail dans l’historique)`;
     case 'dossier_soumis':
       return `${dossier} — offre à valider`;
     case 'dossier_renvoye':
@@ -138,7 +160,7 @@ export function planNotificationsCrm(
   auteurId: string | null,
 ): { destinataireId: string; titre: string }[] {
   const plan = new Map<string, string>();
-  for (const cible of CIBLES_EVENEMENT[evenement]) {
+  for (const cible of ciblesEvenement(evenement, ctx.statut)) {
     for (const id of comptes[cible]) {
       if (id === auteurId || plan.has(id)) continue;
       plan.set(id, titreNotificationCrm(evenement, cible, ctx));

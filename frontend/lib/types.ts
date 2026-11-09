@@ -369,6 +369,7 @@ export type NotificationType =
   | 'prolongation_decidee'
   // Cycle CRM (back-office) — ouvrent le dossier dans le CRM.
   | 'dossier_cree'
+  | 'dossier_modifie'
   | 'dossier_soumis'
   | 'dossier_renvoye'
   | 'offre_envoyee'

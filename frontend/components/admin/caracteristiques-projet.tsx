@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Lock, Plus, X } from 'lucide-react';
 import {
   CATEGORIES,
   GAMMES,
@@ -44,7 +44,15 @@ type Props = {
   projet: Projet;
   // Rejeter la promesse affiche l'erreur sous le formulaire.
   onModifier: (champs: ModifierFichePayload) => Promise<void>;
+  // Fiche figée modifiée avec le droit « Modifier une fiche figée »
+  // (09/11/2026) : les champs du prix de l'offre restent figés (le serveur
+  // refuse aussi), chaque modification est tracée et notifiée.
+  prixFige?: boolean;
 };
+
+// Champs du prix d'une fiche figée — même message que le serveur (crm/fiche-figee.ts).
+const MESSAGE_PRIX_FIGE =
+  'fixe le prix de l’offre : passer par « Refaire une offre » ou un renvoi du CFO pour le changer.';
 
 // Nom court du standing pour « Moyen standing : sélection type ».
 const STANDING_COURT: Record<Standing, string> = { economique: 'Économique', moyen: 'Moyen', grand: 'Grand' };
@@ -54,7 +62,7 @@ const STANDING_COURT: Record<Standing, string> = { economique: 'Économique', mo
 // chaque réponse s'enregistre aussitôt, les questions s'adaptent (villa, ou
 // composition par niveau pour les autres formes), et le serveur en déduit le résumé (colonne Programme) et, quand
 // ils se calculent, les planches. Un champ attendu est cerné d'ambre.
-export function CaracteristiquesProjet({ projet, onModifier }: Props) {
+export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }: Props) {
   const [fiche, setFiche] = useState<FicheProgramme>(() => ({ ...FICHE_VIDE, ...(projet.ficheProgramme ?? {}) }));
   const [autreSurface, setAutreSurface] = useState(
     () => projet.surfaceTerrain > 0 && !SURFACES.includes(projet.surfaceTerrain),
@@ -65,20 +73,36 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
   // Enregistrements en file : deux réponses rapprochées partent dans l'ordre.
   const file = useRef<Promise<void>>(Promise.resolve());
 
-  function enregistrer(champs: ModifierFichePayload) {
+  // `siRefus` : remet l'écran dans l'état enregistré quand le serveur refuse.
+  function enregistrer(champs: ModifierFichePayload, siRefus?: () => void) {
     setEnCours((n) => n + 1);
     setErreur(null);
     file.current = file.current
       .then(() => onModifier(champs))
-      .catch((e) => setErreur(e instanceof Error && e.message ? e.message : 'L’enregistrement a échoué.'))
+      .catch((e) => {
+        siRefus?.();
+        setErreur(e instanceof Error && e.message ? e.message : 'L’enregistrement a échoué.');
+      })
       .finally(() => setEnCours((n) => n - 1));
   }
 
   // La fiche locale fait foi pendant la saisie ; chaque changement part en entier.
   function majFiche(maj: Partial<FicheProgramme>) {
     const suivante = { ...fiche, ...maj };
+    // Fiche figée : une réponse qui changerait les planches calculées
+    // changerait le prix de l'offre — refusée avant l'envoi.
+    // On compare le calcul avant / après (un ancien dossier a pu être saisi
+    // à la main) — même règle que le serveur.
+    const avant = planchesCalculees(fiche);
+    const apres = planchesCalculees(suivante);
+    // Sans calcul avant (ancien dossier), la référence est la valeur stockée.
+    const calculChange = avant !== null ? apres !== avant : apres !== null && apres !== projet.nbPlanches;
+    if (prixFige && calculChange) {
+      return setErreur(`Nombre de planches : ${MESSAGE_PRIX_FIGE}`);
+    }
+    const precedente = fiche;
     setFiche(suivante);
-    enregistrer({ ficheProgramme: suivante });
+    enregistrer({ ficheProgramme: suivante }, prixFige ? () => setFiche(precedente) : undefined);
   }
   const majLigne = (i: number, maj: Partial<LigneComposition>) =>
     majFiche({ composition: fiche.composition.map((l, j) => (j === i ? { ...l, ...maj } : l)) });
@@ -113,6 +137,16 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
   return (
     <section className="fiche-crm-section" aria-busy={enCours > 0}>
       <h3 className="fiche-crm-titre">Caractéristiques du projet</h3>
+      {prixFige && (
+        <p className="fiche-crm-note fiche-figee-note" role="note">
+          <Lock size={12} aria-hidden />
+          <span>
+            <strong>Fiche figée, modifiable avec ton droit.</strong> Chaque modification est tracée dans l’historique et
+            signalée aux personnes concernées. Catégorie, surface du terrain et planches fixent le prix de l’offre : ils
+            ne se modifient pas ici.
+          </span>
+        </p>
+      )}
       <div className="fiche-crm-form">
         <div className="field">
           <label className="field-label" htmlFor="fiche-categorie">
@@ -122,6 +156,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
             id="fiche-categorie"
             className={classe(!projet.categorie)}
             value={projet.categorie ?? ''}
+            disabled={prixFige}
             onChange={(e) => enregistrer({ categorie: e.target.value as Categorie })}
           >
             {!projet.categorie && choisir}
@@ -157,6 +192,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
               id="fiche-surface"
               className={classe(!(projet.surfaceTerrain > 0))}
               value={autreSurface ? 'autre' : projet.surfaceTerrain > 0 ? String(projet.surfaceTerrain) : ''}
+              disabled={prixFige}
               onChange={(e) => choisirSurface(e.target.value)}
             >
               {!(projet.surfaceTerrain > 0) && !autreSurface && choisir}
@@ -174,6 +210,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                 aria-label="Autre surface (m²)"
                 placeholder="Surface en m²"
                 value={surfaceSaisie}
+                disabled={prixFige}
                 onChange={(e) => setSurfaceSaisie(e.target.value)}
                 onBlur={quitterSurface}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
@@ -466,6 +503,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
               id="fiche-planches"
               className={classe(!(projet.nbPlanches > 0))}
               value={projet.nbPlanches > 0 ? projet.nbPlanches : ''}
+              disabled={prixFige}
               onChange={(e) => enregistrer({ nbPlanches: Number(e.target.value) })}
             >
               {!(projet.nbPlanches > 0) && choisir}
