@@ -44,6 +44,31 @@ describe('ProjectTeamsService.setTeams', () => {
   });
 });
 
+describe('ProjectTeamsService.teams', () => {
+  it('équipes du projet et cellules proposées, avec chef d’équipe et nombre de membres', async () => {
+    const cell = (id: string, membres: number, dispatcher: { prenom: string; nom: string } | null) => ({
+      id,
+      code: `C-${id}`,
+      nom: `Cellule ${id}`,
+      dispatcher,
+      _count: { membres },
+    });
+    const awa = { prenom: 'Awa', nom: 'Diop' };
+    const prisma = {
+      projet: { findFirst: jest.fn().mockResolvedValue({ cellules: [{ cellule: cell('A', 3, awa) }] }) },
+      cellule: { findMany: jest.fn().mockResolvedValue([cell('A', 3, awa), cell('B', 0, null)]) },
+    };
+    const s = new ProjectTeamsService(prisma as unknown as PrismaService, {} as never);
+    await expect(s.teams('S1', 'P1')).resolves.toEqual({
+      equipes: [{ id: 'A', code: 'C-A', nom: 'Cellule A', chef: 'Awa Diop', membres: 3 }],
+      disponibles: [
+        { id: 'A', code: 'C-A', nom: 'Cellule A', chef: 'Awa Diop', membres: 3 },
+        { id: 'B', code: 'C-B', nom: 'Cellule B', chef: null, membres: 0 },
+      ],
+    });
+  });
+});
+
 describe('projectScope · Salarié', () => {
   it('voit aussi les projets affectés à son équipe', () => {
     expect(projectScope('Salarié', 'C1')).toEqual({
