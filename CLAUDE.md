@@ -41,8 +41,9 @@ Les agents cités sont ceux de l'utilisateur (`~/.claude/agents/`), pas du dép�
 3. Lancer `security-auditor` si la modification touche aux rôles, aux
    permissions, aux finances, à la RH, aux contrats ou aux données
    personnelles.
-4. Lancer `ui-reviewer` si un écran est créé ou modifié (serveur de dev
-   lancé).
+4. Pas de `ui-reviewer` (retiré le 09/11/2026 : trop lent et trop coûteux) ;
+   un écran créé ou modifié se vérifie par quelques captures prises
+   directement (bureau et téléphone, clair et sombre).
 5. Lancer `test-writer` si une logique métier change.
 6. Corriger les points Critique et Haute, lancer tous les tests, puis
    présenter un résumé avant le commit. Ne jamais pousser ni fusionner sans
