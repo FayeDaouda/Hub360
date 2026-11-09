@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import type { Subscription } from 'rxjs';
 import { Interval } from '@nestjs/schedule';
 import * as webpush from 'web-push';
 import {
@@ -10,6 +11,7 @@ import {
   type PreferencesNotifications,
 } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsBus } from '../realtime/notifications.bus';
 import { runAsSystem } from '../tenancy/tenant-context';
 
 export type MessagePush = { titre: string; corps: string; url: string; tag: string };
@@ -22,12 +24,35 @@ type Abonnement = { endpoint: string; p256dh: string; auth: string };
 // worker de l'appareil n'affiche rien si le HUB est déjà devant elle (le
 // pop-up s'en charge). Sans clés VAPID, rien n'est envoyé.
 @Injectable()
-export class PushService implements OnModuleInit {
+export class PushService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger('Push');
   private actif = false;
   private enCours = false;
+  // Temps réel (09/11/2026) : une notification écrite déclenche la tournée
+  // aussitôt (regroupée sur 200 ms) ; l'intervalle de 5 s reste le filet.
+  private aRelancer = false;
+  private planifiee: NodeJS.Timeout | null = null;
+  private abonnement: Subscription | null = null;
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private bus: NotificationsBus,
+  ) {}
+
+  onModuleDestroy() {
+    this.abonnement?.unsubscribe();
+    if (this.planifiee) clearTimeout(this.planifiee);
+  }
+
+  // Tournée dans 200 ms (plusieurs signaux rapprochés = une seule tournée).
+  private bientot() {
+    if (this.planifiee) return;
+    this.planifiee = setTimeout(() => {
+      this.planifiee = null;
+      void this.distribuer();
+    }, 200);
+    this.planifiee.unref?.();
+  }
 
   onModuleInit() {
     const [publique, privee] = [process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY];
@@ -35,6 +60,10 @@ export class PushService implements OnModuleInit {
     try {
       webpush.setVapidDetails(process.env.VAPID_SUJET || 'mailto:contact@hub360.space', publique, privee);
       this.actif = true;
+      // Nouvelles seulement : une lecture n'a rien à envoyer.
+      this.abonnement = this.bus.all().subscribe((s) => {
+        if (s.kind === 'new') this.bientot();
+      });
     } catch (e) {
       this.log.error(`Clés VAPID invalides : ${e instanceof Error ? e.message : e}`);
     }
@@ -97,7 +126,11 @@ export class PushService implements OnModuleInit {
   // Tournée : les notifications pas encore poussées (une heure au plus).
   @Interval(5_000)
   async distribuer() {
-    if (this.enCours) return;
+    // Tournée en cours : une autre suivra juste après (rien n'attend 5 s).
+    if (this.enCours) {
+      this.aRelancer = true;
+      return;
+    }
     this.enCours = true;
     try {
       await runAsSystem('notifications système : tournée', async () => {
@@ -155,6 +188,10 @@ export class PushService implements OnModuleInit {
       this.log.error(`Tournée des notifications système : ${e instanceof Error ? e.message : e}`);
     } finally {
       this.enCours = false;
+      if (this.aRelancer) {
+        this.aRelancer = false;
+        this.bientot();
+      }
     }
   }
 

@@ -276,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/notifications/ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NotificationsController_ticket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/notifications": {
         parameters: {
             query?: never;
@@ -367,6 +383,22 @@ export interface paths {
         put?: never;
         post: operations["NotificationsController_abonner"];
         delete: operations["NotificationsController_desabonner"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/notifications/flux": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NotificationsFluxController_flux"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6921,6 +6953,25 @@ export interface operations {
             };
         };
     };
+    NotificationsController_ticket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     NotificationsController_flux: {
         parameters: {
             query?: never;
@@ -7092,6 +7143,27 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    NotificationsFluxController_flux: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
         };
     };

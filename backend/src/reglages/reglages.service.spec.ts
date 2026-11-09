@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GABARIT_GC_CONCEPTION } from './gabarit-gc-conception';
 import { ReglagesService } from './reglages.service';
+import { NotificationsBus } from '../realtime/notifications.bus';
 
 const V0 = {
   id: 'V0',
@@ -24,7 +25,7 @@ function svc(o: { slug?: string; valeurs?: { cle: string; valeur: unknown }[]; v
     journalReglage: { count: jest.fn().mockResolvedValue(0), createMany: jest.fn() },
     $transaction: jest.fn().mockResolvedValue([]),
   } as unknown as PrismaService;
-  return { s: new ReglagesService(prisma), prisma };
+  return { s: new ReglagesService(prisma, new NotificationsBus()), prisma };
 }
 
 describe('ReglagesService', () => {
@@ -86,5 +87,60 @@ describe('ReglagesService', () => {
         expect.objectContaining({ cle: 'jours_feries', libelle: 'Jours fériés : aucun → 25/12/2026', motif: 'CODIR' }),
       ],
     });
+  });
+});
+
+// Temps réel (09/11/2026) : seuil de gouvernance modifié → notification au
+// CEO, puis signal à ses écrans (sa cloche se relit). Ni signal pour l'auteur
+// lui-même, ni pour un réglage hors gouvernance, ni si l'écriture échoue.
+describe('ReglagesService · signal temps réel au CEO', () => {
+  function monter(o: { ceo?: string[]; echec?: boolean } = {}) {
+    const bus = new NotificationsBus();
+    const signaux: { societeId: string; destinataireIds: string[] }[] = [];
+    bus.all().subscribe((x) => signaux.push(x));
+    const createMany = o.echec
+      ? jest.fn().mockRejectedValue(new Error('base indisponible'))
+      : jest.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      societe: { findUnique: jest.fn().mockResolvedValue({ slug: 'grey-concrete' }) },
+      gabaritVersion: { findFirst: jest.fn().mockResolvedValue(V0), create: jest.fn() },
+      reglageSociete: { findMany: jest.fn().mockResolvedValue([]), upsert: jest.fn() },
+      journalReglage: { count: jest.fn().mockResolvedValue(0), createMany: jest.fn() },
+      utilisateurSocieteRole: {
+        findMany: jest.fn().mockResolvedValue((o.ceo ?? ['CEO1']).map((utilisateurId) => ({ utilisateurId }))),
+      },
+      notification: { createMany },
+      $transaction: jest.fn().mockResolvedValue([]),
+    } as unknown as PrismaService;
+    return { s: new ReglagesService(prisma, bus), createMany, signaux };
+  }
+  const seuil = { motif: 'CODIR', valeurs: { seuil_contresignature_ceo: 60_000_000 } };
+
+  it('seuil modifié par un autre que le CEO : notification puis signal au CEO', async () => {
+    const { s, createMany, signaux } = monter({ ceo: ['CEO1', 'CEO1'] });
+    await s.majValeurs('S', 'CFO1', 'regles', seuil);
+    expect(createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ destinataireId: 'CEO1', type: 'reglage_gouvernance_modifie' })],
+    });
+    expect(signaux).toEqual([{ societeId: 'S', destinataireIds: ['CEO1'], kind: 'new' }]);
+  });
+
+  it('le CEO modifie lui-même le seuil : ni notification ni signal', async () => {
+    const { s, createMany, signaux } = monter();
+    await s.majValeurs('S', 'CEO1', 'regles', seuil);
+    expect(createMany).not.toHaveBeenCalled();
+    expect(signaux).toEqual([]);
+  });
+
+  it('réglage hors gouvernance : aucun signal', async () => {
+    const { s, signaux } = monter();
+    await s.majValeurs('S', 'CFO1', 'regles', { motif: 'CODIR', valeurs: { alerte_avenant_jours: 10 } });
+    expect(signaux).toEqual([]);
+  });
+
+  it('écriture de la notification en échec : aucun signal', async () => {
+    const { s, signaux } = monter({ echec: true });
+    await expect(s.majValeurs('S', 'CFO1', 'regles', seuil)).rejects.toThrow('base indisponible');
+    expect(signaux).toEqual([]);
   });
 });

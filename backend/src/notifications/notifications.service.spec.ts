@@ -1,5 +1,6 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
+import { NotificationsBus } from '../realtime/notifications.bus';
 
 // notifierDossierCrm : résolution des comptes (DAF = titulaires CFO actifs,
 // propriétaire sinon titulaires Dir. GC, apporteur interne seulement) et
@@ -36,7 +37,7 @@ function svc(opts: { dossier?: Dossier | null; titulaires?: Record<string, strin
     utilisateurSocieteRole: { findMany: usrFindMany },
     notification: { createMany },
   } as unknown as PrismaService;
-  return { s: new NotificationsService(prisma), createMany, usrFindMany };
+  return { s: new NotificationsService(prisma, new NotificationsBus()), createMany, usrFindMany };
 }
 
 const lignes = (m: jest.Mock) =>
@@ -196,7 +197,14 @@ describe('NotificationsService.notifierDossierCrm · dossier_modifie', () => {
       utilisateur: { findUnique },
       notification: { createMany, updateMany: update, create, findMany },
     } as unknown as PrismaService;
-    return { s: new NotificationsService(prisma), createMany, update, create, findMany, findUnique };
+    return {
+      s: new NotificationsService(prisma, new NotificationsBus()),
+      createMany,
+      update,
+      create,
+      findMany,
+      findUnique,
+    };
   }
 
   const TITRE =
@@ -307,5 +315,187 @@ describe('NotificationsService.notifierDossierCrm · dossier_modifie', () => {
     const { s, update } = svcModif({ nonLues: [{ id: 'N1', destinataireId: 'DG1' }] });
     update.mockRejectedValue(new Error('base indisponible'));
     await expect(s.notifierDossierCrm(modif())).resolves.toBeUndefined();
+  });
+});
+
+// Temps réel (09/11/2026) : chaque écriture de notifications est suivie d'un
+// signal aux destinataires (leur cloche se relit) ; rien si personne n'est
+// notifié, rien si l'écriture échoue (l'écran ne relirait que l'ancien état).
+describe('NotificationsService · signal temps réel', () => {
+  const PROJET = { id: 'P1', code: 'GC-P1', celluleIds: [] };
+
+  function monter(o: { titulaires?: Record<string, string[]>; echec?: boolean } = {}) {
+    const createMany = o.echec
+      ? jest.fn().mockRejectedValue(new Error('base indisponible'))
+      : jest.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      dossierCrm: { findFirst: jest.fn().mockResolvedValue(DOSSIER), findMany: jest.fn().mockResolvedValue([]) },
+      utilisateurSocieteRole: {
+        findMany: jest.fn(({ where }: { where: { role: { nom: string } } }) =>
+          Promise.resolve((o.titulaires?.[where.role.nom] ?? []).map((utilisateurId) => ({ utilisateurId }))),
+        ),
+      },
+      utilisateur: { findUnique: jest.fn().mockResolvedValue({ prenom: 'Moussa', nom: 'Fall' }) },
+      notification: {
+        createMany,
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        create: jest.fn().mockResolvedValue({}),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    } as unknown as PrismaService;
+    const bus = new NotificationsBus();
+    const signaux: { societeId: string; destinataireIds: string[] }[] = [];
+    bus.all().subscribe((x) => signaux.push(x));
+    return { s: new NotificationsService(prisma, bus), prisma, createMany, signaux };
+  }
+
+  describe('pousser', () => {
+    it('signale les destinataires une fois les notifications écrites', async () => {
+      const { s, createMany, signaux } = monter();
+      let ecrire!: (v: unknown) => void;
+      createMany.mockReturnValue(new Promise((r) => (ecrire = r)));
+      const envoi = s.pousser({
+        societeId: 'S1',
+        projet: PROJET,
+        type: 'tache_assignee',
+        titre: 'Tâche assignée',
+        destinataireIds: ['U1', 'U2'],
+      });
+      await Promise.resolve();
+      expect(signaux).toEqual([]); // écriture pas encore validée
+      ecrire({ count: 2 });
+      await envoi;
+      expect(signaux).toEqual([{ societeId: 'S1', destinataireIds: ['U1', 'U2'], kind: 'new' }]);
+    });
+
+    it('aucun destinataire : ni écriture ni signal', async () => {
+      const { s, createMany, signaux } = monter();
+      await s.pousser({ societeId: 'S1', projet: PROJET, type: 'tache_assignee', titre: 'x', destinataireIds: [] });
+      expect(createMany).not.toHaveBeenCalled();
+      expect(signaux).toEqual([]);
+    });
+
+    it('écriture en échec : l’erreur remonte à l’appelant, aucun signal', async () => {
+      const { s, signaux } = monter({ echec: true });
+      await expect(
+        s.pousser({ societeId: 'S1', projet: PROJET, type: 'tache_assignee', titre: 'x', destinataireIds: ['U1'] }),
+      ).rejects.toThrow('base indisponible');
+      expect(signaux).toEqual([]);
+    });
+  });
+
+  describe('envoyer', () => {
+    const base = { societeId: 'S1', type: 'annonce_importante' as const, titre: 'Annonce' };
+
+    it('signale les destinataires dédoublonnés, jamais l’auteur', async () => {
+      const { s, signaux } = monter();
+      await s.envoyer({ ...base, destinataireIds: ['U1', 'AUTEUR', 'U1', null, 'U2'], parId: 'AUTEUR' });
+      expect(signaux).toEqual([{ societeId: 'S1', destinataireIds: ['U1', 'U2'], kind: 'new' }]);
+    });
+
+    it('personne à prévenir (seul l’auteur, ou vide) : aucun signal', async () => {
+      const { s, createMany, signaux } = monter();
+      await expect(s.envoyer({ ...base, destinataireIds: ['AUTEUR', undefined], parId: 'AUTEUR' })).resolves.toBe(0);
+      await expect(s.envoyer({ ...base, destinataireIds: [] })).resolves.toBe(0);
+      expect(createMany).not.toHaveBeenCalled();
+      expect(signaux).toEqual([]);
+    });
+
+    it('écriture en échec : ne lève pas, renvoie 0, aucun signal', async () => {
+      const { s, signaux } = monter({ echec: true });
+      await expect(s.envoyer({ ...base, destinataireIds: ['U1'] })).resolves.toBe(0);
+      expect(signaux).toEqual([]);
+    });
+  });
+
+  describe('notifierFactureAValider', () => {
+    const params = { societeId: 'S1', factureId: 'F1', dossierCrmId: 'D1', titre: 'Facture à valider' };
+
+    it('signale les titulaires CFO de la société', async () => {
+      const { s, signaux } = monter({ titulaires: { CFO: ['CFO1', 'CFO2'] } });
+      await s.notifierFactureAValider(params);
+      expect(signaux).toEqual([{ societeId: 'S1', destinataireIds: ['CFO1', 'CFO2'], kind: 'new' }]);
+    });
+
+    it('aucun CFO : aucun signal', async () => {
+      const { s, createMany, signaux } = monter();
+      await s.notifierFactureAValider(params);
+      expect(createMany).not.toHaveBeenCalled();
+      expect(signaux).toEqual([]);
+    });
+
+    it('écriture en échec : ne lève pas, aucun signal', async () => {
+      const { s, signaux } = monter({ titulaires: { CFO: ['CFO1'] }, echec: true });
+      await expect(s.notifierFactureAValider(params)).resolves.toBeUndefined();
+      expect(signaux).toEqual([]);
+    });
+  });
+
+  describe('notifierDossierCrm', () => {
+    it('création : signal aux destinataires du plan', async () => {
+      const { s, signaux } = monter({ titulaires: { CFO: ['CFO1'] } });
+      await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'contrat_signe', parId: null });
+      expect(signaux).toEqual([{ societeId: 'S1', destinataireIds: ['DG1', 'CFO1'], kind: 'new' }]);
+    });
+
+    it('fiche modifiée : signal aussi à ceux dont la notification non lue est remise à jour', async () => {
+      const { s, prisma, createMany, signaux } = monter();
+      (prisma.notification.findMany as jest.Mock).mockResolvedValue([{ id: 'N1', destinataireId: 'DG1' }]);
+      await s.notifierDossierCrm({
+        societeId: 'S1',
+        dossierId: 'D1',
+        evenement: 'dossier_modifie',
+        parId: 'U9',
+      });
+      // DG1 : remise à jour (pas de création) ; il est quand même signalé.
+      expect(createMany).not.toHaveBeenCalled();
+      // Remise à jour = « nouvelle » (elle redevient récente dans la cloche).
+      expect(signaux).toEqual([{ societeId: 'S1', destinataireIds: ['DG1'], kind: 'new' }]);
+    });
+
+    it('fiche modifiée : créations et mises à jour réunies dans un seul signal', async () => {
+      const { s, prisma, signaux } = monter();
+      (prisma.dossierCrm.findFirst as jest.Mock).mockResolvedValue({
+        ...DOSSIER,
+        statut: 'offre_envoyee',
+        creeParId: 'COO1',
+        creePar: { prenom: 'Awa', nom: 'Diop' },
+      });
+      (prisma.notification.findMany as jest.Mock).mockResolvedValue([{ id: 'N1', destinataireId: 'DG1' }]);
+      await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'dossier_modifie', parId: 'U9' });
+      expect(signaux).toHaveLength(1);
+      expect([...signaux[0].destinataireIds].sort()).toEqual(['COO1', 'DG1']);
+    });
+
+    it('personne à prévenir : aucun signal', async () => {
+      const { s, signaux } = monter();
+      await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'dossier_soumis', parId: null });
+      expect(signaux).toEqual([]);
+    });
+
+    it('écriture en échec : ne lève pas, aucun signal', async () => {
+      const { s, signaux } = monter({ titulaires: { CFO: ['CFO1'] }, echec: true });
+      await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'dossier_soumis', parId: null });
+      expect(signaux).toEqual([]);
+    });
+  });
+
+  describe('marquerLues', () => {
+    it('se signale à soi-même (ses autres onglets et appareils se remettent à jour)', async () => {
+      const { s, prisma, signaux } = monter();
+      await s.marquerLues('S1', 'U1');
+      expect(prisma.notification.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ destinataireId: 'U1', societeId: 'S1' }) }),
+      );
+      // « lue » : remet les compteurs à jour, sans tournée de notifications système.
+      expect(signaux).toEqual([{ societeId: 'S1', destinataireIds: ['U1'], kind: 'read' }]);
+    });
+
+    it('écriture en échec : l’erreur remonte, aucun signal', async () => {
+      const { s, prisma, signaux } = monter();
+      (prisma.notification.updateMany as jest.Mock).mockRejectedValue(new Error('base indisponible'));
+      await expect(s.marquerLues('S1', 'U1')).rejects.toThrow('base indisponible');
+      expect(signaux).toEqual([]);
+    });
   });
 });

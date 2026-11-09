@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsBus } from '../realtime/notifications.bus';
 import { ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import {
   ContexteNotificationCrm,
@@ -42,7 +43,12 @@ export type NotificationItem = {
 @Injectable()
 export class NotificationsService {
   private readonly log = new Logger('Notifications');
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    // Temps réel (09/11/2026) : après chaque écriture, un signal aux
+    // destinataires — leur cloche se relit aussitôt (flux SSE).
+    private bus: NotificationsBus,
+  ) {}
 
   // -- Écriture : appelée par les services Projets au moment de l'événement --
   // Best-effort : un échec de fan-out ne doit pas faire échouer l'action
@@ -68,6 +74,7 @@ export class NotificationsService {
         parId: params.parId ?? null,
       })),
     });
+    this.bus.signal(params.societeId, destinataires);
   }
 
   // -- Cycle CRM : qui prévenir à chaque étape (src/crm/notifications-crm.ts)
@@ -201,6 +208,10 @@ export class NotificationsService {
           this.log.error(`Notification ${id} non mise à jour : ${(e as Error).message}`);
         }
       }
+      this.bus.signal(
+        societeId,
+        [...aCreer, ...aMettreAJour].map((p) => p.destinataireId),
+      );
     } catch (e) {
       this.log.error(
         `Notification CRM « ${params.evenement} » non envoyée (dossier ${params.dossierId}) : ${(e as Error).message}`,
@@ -225,6 +236,7 @@ export class NotificationsService {
           titre: params.titre,
         })),
       });
+      this.bus.signal(params.societeId, cfo);
     } catch (e) {
       this.log.error(`Facture à valider non notifiée (${params.factureId}) : ${e instanceof Error ? e.message : e}`);
     }
@@ -356,11 +368,18 @@ export class NotificationsService {
           canalId: params.canalId ?? null,
         })),
       });
+      this.bus.signal(params.societeId, ids);
       return count;
     } catch (e) {
       this.log.error(`Notification ${params.type} non envoyée : ${e instanceof Error ? e.message : e}`);
       return 0;
     }
+  }
+
+  // Notifications lues par un autre chemin (mention de projet traitée…) :
+  // les autres onglets et appareils de la personne se remettent à jour.
+  signalerLues(societeId: string, utilisateurId: string) {
+    this.bus.signal(societeId, [utilisateurId], 'read');
   }
 
   // Comptes (utilisateurId) des fiches d'équipe données — sans compte : rien.
@@ -373,7 +392,7 @@ export class NotificationsService {
 
   // `types` : seulement ces notifications (onglet de Mon espace ouvert).
   async marquerLues(societeId: string, utilisateurId: string, types?: NotificationType[], ids?: string[]) {
-    await this.prisma.notification.updateMany({
+    const { count } = await this.prisma.notification.updateMany({
       where: {
         destinataireId: utilisateurId,
         societeId,
@@ -383,6 +402,9 @@ export class NotificationsService {
       },
       data: { luLe: new Date() },
     });
+    // Ses autres onglets et appareils remettent leur compteur à jour (si
+    // quelque chose a changé).
+    if (count) this.signalerLues(societeId, utilisateurId);
     return this.flux(societeId, utilisateurId);
   }
 

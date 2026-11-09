@@ -5,7 +5,7 @@ import { CompteCommeLecture, PermissionSelonMethode, RequiertPermission } from '
 import { PermissionGuard } from '../commun/permission.guard';
 import { AccesCanalGuard } from './acces-canal.guard';
 import { ChatService } from './chat.service';
-import { TicketStore } from './ticket.store';
+import { TicketStore } from '../realtime/ticket.store';
 import {
   AjouterMembresDto,
   CreerGroupeDto,
@@ -174,6 +174,7 @@ export class ChatController {
   ticket(@Req() req: R) {
     return {
       token: this.tickets.emettre({
+        stream: 'chat',
         userId: req.user.userId,
         societeId: req.user.societeId,
         societeSlug: req.user.societeSlug,

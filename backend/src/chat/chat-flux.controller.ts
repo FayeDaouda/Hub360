@@ -4,8 +4,8 @@ import { from, Observable } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatBus } from './chat.bus';
-import { TicketGuard } from './ticket.guard';
-import type { TicketPayload } from './ticket.store';
+import { TicketGuard } from '../realtime/ticket.guard';
+import type { TicketPayload } from '../realtime/ticket.store';
 
 type R = { ticket: TicketPayload };
 

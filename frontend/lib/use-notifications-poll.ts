@@ -1,15 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getNotifications, marquerLuesParId, marquerNotificationsLues } from './notifications';
+import {
+  connecterFluxNotifications,
+  getNotifications,
+  marquerLuesParId,
+  marquerNotificationsLues,
+} from './notifications';
 import { categorieNotification } from '@hub/domain';
 import { jouerSonNotification } from './notification-sound';
 import { popupPermis, sonPermis } from './preferences-notifications';
 import type { FluxNotifications, NotificationItem } from './types';
 
-// Fréquence de sondage — pas de websocket dans cette appli, un intervalle
-// suffit pour une équipe de 4 personnes (cf. mémoire hub360°).
-const INTERVALLE_MS = 15_000;
+// Temps réel (09/11/2026) : un flux SSE signale chaque notification, la
+// cloche se relit aussitôt. Le sondage reste le filet : lent quand le flux
+// est ouvert, rapide sinon (connexion en cours ou coupée).
+const INTERVALLE_FLUX_OUVERT_MS = 60_000;
+const INTERVALLE_SANS_FLUX_MS = 15_000;
+// Signaux rapprochés (plusieurs notifications d'un coup) : une seule lecture.
+const REGROUPEMENT_MS = 250;
 // Devant le HUB : onglet visible, fenêtre active, et un geste (souris,
 // clavier, toucher, défilement) depuis moins de 3 minutes.
 const INACTIF_APRES_MS = 3 * 60_000;
@@ -119,11 +128,34 @@ export function useNotificationsPoll(slug: string) {
       .catch(() => {});
   }, [slug, traiterNouveaux]);
 
+  // Flux temps réel : chaque signal relit la cloche (regroupé sur 250 ms).
+  const [fluxOuvert, setFluxOuvert] = useState(false);
+  useEffect(() => {
+    let attente: ReturnType<typeof setTimeout> | null = null;
+    const fermer = connecterFluxNotifications({
+      slug,
+      onSignal: () => {
+        if (attente) return;
+        attente = setTimeout(() => {
+          attente = null;
+          charger();
+        }, REGROUPEMENT_MS);
+      },
+      // (Re)connecté : l'effet du sondage relit aussitôt la cloche (on
+      // rattrape ce qui a pu arriver pendant la coupure).
+      onEtat: (etat) => setFluxOuvert(etat === 'ouvert'),
+    });
+    return () => {
+      fermer();
+      if (attente) clearTimeout(attente);
+    };
+  }, [slug, charger]);
+
   useEffect(() => {
     charger();
-    const id = setInterval(charger, INTERVALLE_MS);
+    const id = setInterval(charger, fluxOuvert ? INTERVALLE_FLUX_OUVERT_MS : INTERVALLE_SANS_FLUX_MS);
     return () => clearInterval(id);
-  }, [charger]);
+  }, [charger, fluxOuvert]);
 
   async function toutLire() {
     try {

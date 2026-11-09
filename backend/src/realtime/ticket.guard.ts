@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import { TicketStore, TicketPayload } from './ticket.store';
+import { TicketStream, TicketStore, TicketPayload } from './ticket.store';
 import { identifyCompany } from '../tenancy/tenant-context';
 
 // Valide (et consomme — usage unique) le ticket ?token= AVANT que NestJS
@@ -7,9 +7,11 @@ import { identifyCompany } from '../tenancy/tenant-context';
 // vrai HTTP 401 (EventSource échoue définitivement, pas de boucle de reconnexion)
 // plutôt qu'un `event: error` déguisé en 200.
 // Corollaire : la reconnexion se refait avec un ticket frais (le front
-// réorchestre : POST /chat/ticket → nouvel EventSource).
-@Injectable()
-export class TicketGuard implements CanActivate {
+// réorchestre : POST …/ticket → nouvel EventSource).
+abstract class TicketGuardBase implements CanActivate {
+  // Le seul flux que cette garde ouvre.
+  protected abstract readonly stream: TicketStream;
+
   constructor(private tickets: TicketStore) {}
 
   canActivate(ctx: ExecutionContext): boolean {
@@ -18,11 +20,23 @@ export class TicketGuard implements CanActivate {
     const slug = req.params?.slug as string | undefined;
 
     const payload = token ? this.tickets.consommer(token) : null;
-    if (!payload || payload.societeSlug !== slug) {
+    if (!payload || payload.societeSlug !== slug || payload.stream !== this.stream) {
       throw new UnauthorizedException('Ticket de flux invalide ou expiré');
     }
     (req as { ticket?: TicketPayload }).ticket = payload;
     identifyCompany(payload.societeId);
     return true;
   }
+}
+
+// Flux de la messagerie : tickets émis par POST …/chat/ticket seulement.
+@Injectable()
+export class TicketGuard extends TicketGuardBase {
+  protected readonly stream = 'chat' as const;
+}
+
+// Flux des notifications : tickets émis par POST …/notifications/ticket.
+@Injectable()
+export class TicketNotificationsGuard extends TicketGuardBase {
+  protected readonly stream = 'notifications' as const;
 }

@@ -90,7 +90,7 @@ export class ProjectThreadsService {
     const now = new Date();
     if (!comment.mentionLueLe)
       await this.prisma.commentaireProjet.update({ where: { id: comment.id }, data: { mentionLueLe: now } });
-    await this.prisma.notification.updateMany({
+    const { count } = await this.prisma.notification.updateMany({
       where: {
         destinataireId: userId,
         societeId: companyId,
@@ -100,6 +100,7 @@ export class ProjectThreadsService {
       },
       data: { luLe: now },
     });
+    if (count) this.notifications.signalerLues(companyId, userId);
     return { id: comment.id };
   }
 
