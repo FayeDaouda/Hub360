@@ -9,6 +9,10 @@ describe('catégorie d’une notification', () => {
     expect(categorieNotification('fiche_a_completer', true)).toBe('decisions');
     expect(categorieNotification('facture_payee')).toBe('informations');
   });
+
+  it('un dossier CRM créé est une décision (lead à prendre en charge)', () => {
+    expect(categorieNotification('dossier_cree')).toBe('decisions');
+  });
 });
 
 describe('préférences', () => {

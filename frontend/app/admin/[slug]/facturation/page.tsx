@@ -18,7 +18,7 @@ import {
 import { niveauSuffisant } from '@/lib/auth';
 import { contresigneAffaire, useContresignature, useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import { getDevisListe, getProduitsServices } from '@/lib/devis';
-import { dansListeFactures, indicateursFinances, statutDevis, statutFacture } from '@/lib/finances';
+import { dansListeFactures, indicateursFinances, statutFacture } from '@/lib/finances';
 import {
   TAUX_TVA_DEFAUT,
   type BureauARegler,
@@ -40,6 +40,7 @@ import { ImpressionDocument } from '@/components/impression-document';
 import { CGV_PAR_SOCIETE } from '@/lib/cgv';
 import type { FactureDocumentProps } from '@/components/finances/facture-document';
 import type { DocumentFacturationProps } from '@/components/document-facturation';
+import { documentDevis } from '@/lib/document-devis';
 import { NouvelleFactureDirecte } from '@/components/finances/nouvelle-facture-directe';
 import { FacturePanneau } from '@/components/finances/facture-panneau';
 import { DevisPanneau } from '@/components/finances/devis-panneau';
@@ -207,23 +208,7 @@ export default function FinancesPage(props: Props) {
   const kpi = useMemo(() => indicateursFinances(devisFiltres, facturesFiltrees), [devisFiltres, facturesFiltrees]);
 
   function documentDepuisDevis(d: Devis): DocumentFacturationProps | null {
-    if (!societe) return null;
-    const s = statutDevis(d);
-    return {
-      typeDocument: 'Devis',
-      societe,
-      reference: d.reference,
-      statutLabel: s.libelle,
-      statutClasse: `pill--${s.ton}`,
-      dateEmission: formatLongDate(d.dateEnvoi ?? d.creeLe),
-      dateValidite: d.dateValidite ? formatLongDate(d.dateValidite) : null,
-      clientNom: d.client.nom,
-      objet: d.objet,
-      lignes: d.lignes,
-      montantHt: d.montantHt,
-      montantTva: d.montantTva,
-      montantTtc: d.montantTtc,
-    };
+    return societe ? documentDevis(d, societe) : null;
   }
 
   // Facture ou avoir au modèle imprimé (lot 6) : profil de facturation de la

@@ -425,6 +425,22 @@ textarea.field-input {
   }
 }
 
+/* Aperçu de l'offre avant envoi (09/11/2026) : le document du client, en
+   grande fenêtre ; place réservée pendant le chargement. */
+.apercu-offre-chargement {
+  height: 28rem;
+  border-radius: var(--radius-md);
+}
+@media (max-width: 640px) {
+  /* Le document en pleine largeur : ses coins arrondis sautent déjà sur mobile. */
+  .apercu-offre .modal-body {
+    padding-inline: 0;
+  }
+  .apercu-offre .modal-body > :not(.fac-document) {
+    margin-inline: 1rem;
+  }
+}
+
 /* -- Modale « Nouveau projet » (maquette du boss, oct. 2026) ------------
    Carte du code en dégradé violet HUB, nature du client en bascule Argile,
    fiche apporteur cernée d'ambre tant qu'elle reste à remplir. */

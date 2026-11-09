@@ -15,6 +15,7 @@ export const LIBELLES_CATEGORIE: Record<CategorieNotification, { libelle: string
 // Ce qui demande une action du destinataire (onglet « Décisions » de la cloche).
 const TYPES_DECISION = new Set([
   'prolongation_demandee',
+  'dossier_cree', // nouveau lead à prendre en charge (Dir. GC)
   'dossier_soumis',
   'dossier_renvoye',
   'rappel_offre',

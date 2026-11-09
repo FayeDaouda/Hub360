@@ -14,6 +14,7 @@ const aucun = { daf: [], proprietaire: [], apporteur: [], createur: [] };
 describe('CIBLES_EVENEMENT — tableau validé', () => {
   it('qui est prévenu à chaque étape', () => {
     expect(CIBLES_EVENEMENT).toEqual({
+      dossier_cree: ['proprietaire'],
       dossier_soumis: ['daf'],
       dossier_renvoye: ['proprietaire'],
       offre_envoyee: ['proprietaire'],
@@ -44,6 +45,33 @@ describe('CIBLES_EVENEMENT — tableau validé', () => {
       destinataireId: 'COO',
       titre: 'TCP_ALM.26 · Villa Almadies — dossier déclaré perdu : « Client parti chez un concurrent »',
     });
+  });
+});
+
+// Création d'un lead (09/11/2026) : le directeur qui portera le dossier est
+// prévenu tout de suite — activé pour le Dir. GC (propriétaire).
+describe('dossier créé', () => {
+  const comptes = { daf: ['CFO'], proprietaire: ['DG'], apporteur: ['APP'], createur: ['COO'] };
+
+  it('le Dir. GC (propriétaire) seul : ni DAF, ni apporteur, ni créateur', () => {
+    expect(planNotificationsCrm('dossier_cree', { ...CTX, programme: '', auteur: 'Awa Diop' }, comptes, 'COO')).toEqual(
+      [{ destinataireId: 'DG', titre: 'TCP_ALM.26 — nouveau projet créé par Awa Diop, à prendre en charge' }],
+    );
+  });
+
+  it('« à assigner » : tous les titulaires Dir. GC', () => {
+    const plan = planNotificationsCrm('dossier_cree', CTX, { ...aucun, proprietaire: ['DG1', 'DG2'] }, 'COO');
+    expect(plan.map((p) => p.destinataireId)).toEqual(['DG1', 'DG2']);
+  });
+
+  it('créé par le Dir. GC lui-même → personne à prévenir', () => {
+    expect(planNotificationsCrm('dossier_cree', CTX, comptes, 'DG')).toEqual([]);
+  });
+
+  it('auteur inconnu (compte supprimé) → titre sans nom', () => {
+    expect(titreNotificationCrm('dossier_cree', 'proprietaire', { ...CTX, auteur: null })).toBe(
+      'TCP_ALM.26 — nouveau projet créé, à prendre en charge',
+    );
   });
 });
 

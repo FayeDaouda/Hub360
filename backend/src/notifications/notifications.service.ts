@@ -98,6 +98,8 @@ export class NotificationsService {
           apporteurType: true,
           apporteurUtilisateurId: true,
           creeParId: true,
+          // Nom officiel : la création est une trace de travail (règle du profil).
+          creePar: { select: { prenom: true, nom: true } },
         },
       });
       if (!d) return;
@@ -111,6 +113,7 @@ export class NotificationsService {
         programme: d.programme,
         commentaire: params.commentaire,
         facturesPreparees: params.facturesPreparees,
+        auteur: d.creePar ? `${d.creePar.prenom} ${d.creePar.nom}`.trim() : null,
       };
       const plan = planNotificationsCrm(
         evenement,

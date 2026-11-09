@@ -20,6 +20,13 @@
 //   dossier perdu              propriétaire + créateur + apporteur   information (motif)
 //   offre expirée              propriétaire + créateur + apporteur   refaire l'offre ou perdre
 //
+// Création d'un lead (09/11/2026) : le directeur qui portera le dossier est
+// prévenu dès la création, sans attendre la relance des 72 h. Activé pour le
+// Dir. GC (le propriétaire ; « à assigner » → tous les titulaires Dir. GC).
+// Les rôles prévenus deviendront ajustables : la liste est ici, à un seul
+// endroit (CIBLES_EVENEMENT.dossier_cree).
+//   dossier créé               propriétaire (Dir. GC)               le prendre en charge
+//
 // Pas de notification à l'émission d'une facture ni à un paiement : c'est la
 // CFO qui les fait elle-même. L'apporteur n'est joignable que s'il est
 // INTERNE (compte HUB) ; un apporteur externe n'a pas de compte.
@@ -32,6 +39,7 @@ import { ChampsFiche, TOTAL_CHAMPS_FICHE, champsManquants } from './fiche';
 import { plural } from '@hub/domain';
 
 export type EvenementCrm =
+  | 'dossier_cree'
   | 'dossier_soumis'
   | 'dossier_renvoye'
   | 'offre_envoyee'
@@ -55,6 +63,7 @@ export const EVENEMENT_PAR_ACTION: Partial<Record<ActionCrm, EvenementCrm>> = {
 // Ordre = priorité du titre quand une même personne cumule deux cibles (le
 // propriétaire qui est aussi l'apporteur reçoit le titre « action requise »).
 export const CIBLES_EVENEMENT: Record<EvenementCrm, CibleCrm[]> = {
+  dossier_cree: ['proprietaire'],
   dossier_soumis: ['daf'],
   dossier_renvoye: ['proprietaire'],
   offre_envoyee: ['proprietaire'],
@@ -70,6 +79,7 @@ export type ContexteNotificationCrm = {
   programme: string;
   commentaire?: string | null; // renvoi DAF, motif de perte
   facturesPreparees?: number; // offre acceptée (Onboard)
+  auteur?: string | null; // dossier créé : qui l'a saisi (nom officiel)
 };
 
 const LONGUEUR_MAX_COMMENTAIRE = 140;
@@ -82,6 +92,11 @@ function extrait(texte: string): string {
 export function titreNotificationCrm(evenement: EvenementCrm, cible: CibleCrm, ctx: ContexteNotificationCrm): string {
   const dossier = `${ctx.code} · ${ctx.programme}`;
   switch (evenement) {
+    case 'dossier_cree':
+      // Le programme n'est pas encore saisi à la création : le code seul.
+      return ctx.auteur
+        ? `${ctx.code} — nouveau projet créé par ${ctx.auteur}, à prendre en charge`
+        : `${ctx.code} — nouveau projet créé, à prendre en charge`;
     case 'dossier_soumis':
       return `${dossier} — offre à valider`;
     case 'dossier_renvoye':
