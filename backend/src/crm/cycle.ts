@@ -1,4 +1,4 @@
-import { NiveauPermission, StatutCrm } from '@prisma/client';
+import { NiveauPermission, Prisma, StatutCrm } from '@prisma/client';
 import { ROLE_DIR_GC } from '@hub/domain';
 import { ETAPE } from '../rights/catalogue';
 
@@ -100,3 +100,13 @@ export const MOTIF_REFUS_CLIENT = 'Offre refusée par le client.';
 // Rôle dont les titulaires peuvent être propriétaires d'un dossier (« le
 // responsable GC », décision sept. 2026).
 export const ROLE_PROPRIETAIRE_DOSSIER = ROLE_DIR_GC;
+
+// Lignes d'historique où le dossier a VRAIMENT changé d'étape. Les traces
+// d'une fiche modifiée (fiche apporteur, fiche figée) gardent le même statut
+// avant et après : elles ne datent ni une soumission, ni une signature, ni un
+// renvoi (commissions, synthèse, délai du CFO…). Ligne de création : de = null.
+// « de ≠ vers » ne s'écrit pas entre deux colonnes en Prisma : un cas par statut.
+export function lignesDuCycle(...statuts: StatutCrm[]): Prisma.DossierCrmTransitionWhereInput {
+  const liste = statuts.length ? statuts : (Object.values(StatutCrm) as StatutCrm[]);
+  return { OR: liste.map((s) => ({ vers: s, OR: [{ de: null }, { de: { not: s } }] })) };
+}

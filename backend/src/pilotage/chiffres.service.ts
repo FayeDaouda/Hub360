@@ -9,6 +9,7 @@ import { IntegrationService } from '../rh/integration.service';
 import { bornesMois, moisDe } from '../rh/regles-temps';
 import { plural, ROLE_COMPANY_ADMIN } from '@hub/domain';
 import { ETAPE } from '../rights/catalogue';
+import { lignesDuCycle } from '../crm/cycle';
 
 // Tuiles du Pilotage (décision du 12/10/2026, option A) : des chiffres clés
 // au lieu des compteurs déjà présents plus bas. La rangée suit la matrice :
@@ -166,7 +167,7 @@ export class ChiffresPilotageService {
         createdAt: true,
         offres: { orderBy: { creeLe: 'desc' }, take: 1, select: { statut: true, dateValidite: true } },
         transitions: {
-          where: { vers: 'en_validation' },
+          where: lignesDuCycle('en_validation'),
           orderBy: { creeLe: 'desc' },
           take: 1,
           select: { creeLe: true },

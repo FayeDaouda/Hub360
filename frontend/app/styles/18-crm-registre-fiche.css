@@ -259,6 +259,22 @@
 :root[data-theme='dark'] .fiche-crm-alerte {
   color: var(--ocre);
 }
+/* Fiche figée modifiable (09/11/2026) : même teinte ocre que les alertes,
+   en ligne avec le cadenas. */
+.fiche-figee-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in oklch, var(--ocre) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--ocre) 12%, transparent);
+  color: var(--attention-texte);
+}
+.fiche-figee-note svg {
+  flex: none;
+  margin-top: 0.2rem;
+}
 .fiche-crm-champs {
   margin: 0;
   border: 1px solid var(--border);

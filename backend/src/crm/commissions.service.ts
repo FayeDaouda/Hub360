@@ -17,6 +17,7 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { commissionsAttendues, modeA, type EncaissementHonoraires } from './commissions';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
 import { formatAmount, formatDayMonth, ETAPE, ROLE_CEO, ROLE_CFO, ROLE_COO, todayIso, toIsoDay } from '@hub/domain';
+import { lignesDuCycle } from './cycle';
 
 type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 
@@ -98,7 +99,12 @@ export class CommissionsService {
         apporteurType: true,
         apporteurNom: true,
         apporteurUtilisateur: { select: { prenom: true, nom: true } },
-        transitions: { where: { vers: 'onboard' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
+        transitions: {
+          where: lignesDuCycle('onboard'),
+          orderBy: { creeLe: 'desc' },
+          take: 1,
+          select: { creeLe: true },
+        },
         offres: {
           where: { statut: 'accepte' },
           orderBy: { creeLe: 'desc' },

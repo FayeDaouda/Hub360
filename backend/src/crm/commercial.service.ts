@@ -6,6 +6,7 @@ import { aTraiterCommercial, performanceCommerciale, totauxPipeline, type Dossie
 import { CommissionsService } from './commissions.service';
 import { toIsoDay } from '@hub/domain';
 import { ETAPE } from '../rights/catalogue';
+import { lignesDuCycle } from './cycle';
 
 type Acteur = { societeId: string; role: string; permissions?: Record<string, string> };
 
@@ -92,7 +93,12 @@ export class CommercialService {
             lignes: { select: { quantite: true, prixUnitaire: true } },
           },
         },
-        transitions: { where: { vers: 'onboard' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
+        transitions: {
+          where: lignesDuCycle('onboard'),
+          orderBy: { creeLe: 'desc' },
+          take: 1,
+          select: { creeLe: true },
+        },
         commissions: { select: { statut: true, montant: true } },
       },
     });

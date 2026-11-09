@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Client, Prisma } from '@prisma/client';
+import { Client, Prisma, StatutCrm } from '@prisma/client';
 import { ETAPE } from '../rights/catalogue';
 import { PrismaService } from '../prisma/prisma.service';
 import { avecDelegataire } from '../commun/delegation-ceo';
@@ -17,8 +17,16 @@ import { OnboardingService } from './onboarding.service';
 import { statutDevisEffectif } from '../devis/domaine';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
-import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable } from './cycle';
+import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable, lignesDuCycle } from './cycle';
 import { EVENEMENT_PAR_ACTION } from './notifications-crm';
+import {
+  champsLibresModifies,
+  champsPrixModifies,
+  commentaireTrace,
+  fusionnerTrace,
+  messagePrixFige,
+  traceARegrouper,
+} from './fiche-figee';
 import { ApporteurDto, CreerDossierDto, ModifierFicheDto } from './dto';
 import { motifFicheIncomplete } from './fiche';
 import { codeAvecVariante, genererCodeDossier } from './nomenclature';
@@ -54,7 +62,9 @@ const INCLUDE_DOSSIER = {
   offres: { orderBy: { creeLe: 'desc' }, take: 1, include: { lignes: true } },
   // Dernière transition : celle qui a mené au statut actuel — soumission au
   // CFO (délai de 48 h, tuile « En attente CFO ») ou renvoi par le CFO.
+  // (hors traces d'une fiche modifiée : même statut avant et après).
   transitions: {
+    where: lignesDuCycle(),
     orderBy: { creeLe: 'desc' },
     take: 1,
     select: { creeLe: true, de: true, vers: true, commentaire: true },
@@ -315,14 +325,30 @@ export class CrmService {
   // champ, tant qu'elle n'est pas verrouillée (« Nouveau projet »). Les
   // planches et la catégorie fixent le tarif CO : pas de changement sous une
   // offre en préparation (le brouillon se supprime d'abord).
+  // Fiche d'un dossier : libre en « Nouveau projet » (Écriture des dossiers,
+  // vérifiée par la route) ; figée ensuite, sauf pour l'Écriture de
+  // « Modifier une fiche figée » (09/11/2026, crm/fiche-figee.ts) — sans les
+  // champs du prix, tracé dans l'historique, notifié aux personnes concernées
+  // et répercuté sur le projet d'exécution (programme).
   async modifierFiche(societeId: string, acteur: Acteur, id: string, dto: ModifierFicheDto) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
-      select: { statut: true, archiveLe: true, nbPlanches: true, categorie: true },
+      select: {
+        statut: true,
+        archiveLe: true,
+        nbPlanches: true,
+        categorie: true,
+        surfaceTerrain: true,
+        standing: true,
+        gamme: true,
+        ficheProgramme: true,
+        projet: { select: { id: true } },
+      },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
     exigerNonArchive(dossier);
-    if (!ficheModifiable(dossier.statut)) {
+    const figee = !ficheModifiable(dossier.statut);
+    if (figee && !aLaPermission(acteur.permissions, ETAPE.crmFicheFigee, 'ecriture')) {
       throw new ConflictException('Fiche verrouillée depuis la soumission de l’offre.');
     }
     // Fiche Programme : programme (résumé) déduit ; planches déduites dès
@@ -334,7 +360,39 @@ export class CrmService {
       if (e instanceof ErreurFicheProgramme) throw new BadRequestException(e.message);
       throw e;
     }
-    const planches = (fiche && planchesCalculees(fiche)) ?? dto.nbPlanches;
+    // Fiche figée : les planches ne se réécrivent jamais (prix de l'offre).
+    // Une fiche Programme qui changerait leur calcul est refusée — on compare
+    // le calcul avant / après, pas la valeur stockée (un ancien dossier a pu
+    // être saisi à la main).
+    let planches = (fiche && planchesCalculees(fiche)) ?? dto.nbPlanches;
+    if (figee) {
+      const ficheAvant = ficheStockee(dossier.ficheProgramme);
+      // La forme bâtie désigne l'ouvrage sur les factures et avoirs déjà
+      // émis (relue à l'impression) : figée comme le prix — vérifiée d'abord,
+      // changer de forme rend aussi la fiche incomplète.
+      if (fiche && fiche.forme !== (ficheAvant?.forme ?? null)) {
+        throw new ConflictException(messagePrixFige(['Forme bâtie']));
+      }
+      // La soumission a exigé un programme : une fiche figée reste complète
+      // (avant le calcul des planches : sinon « Nombre de planches » trompe).
+      if (fiche && !resume(fiche)) {
+        throw new BadRequestException(
+          'Fiche Programme incomplète : une fiche figée doit rester complète (le programme de l’offre en dépend).',
+        );
+      }
+      const avant = ficheAvant ? planchesCalculees(ficheAvant) : null;
+      const apres = fiche ? planchesCalculees(fiche) : avant;
+      const prix = champsPrixModifies(dossier, {
+        categorie: dto.categorie,
+        surfaceTerrain: dto.surfaceTerrain,
+        nbPlanches: dto.nbPlanches,
+      });
+      // Sans fiche avant (ancien dossier), la référence est la valeur stockée.
+      const calculChange = avant !== null ? apres !== avant : apres !== null && apres !== dossier.nbPlanches;
+      if (calculChange && !prix.includes('Nombre de planches')) prix.push('Nombre de planches');
+      if (prix.length) throw new ConflictException(messagePrixFige(prix));
+      planches = undefined;
+    }
     const tarifChange =
       (planches !== undefined && planches !== dossier.nbPlanches) ||
       (dto.categorie !== undefined && dto.categorie !== dossier.categorie);
@@ -348,19 +406,69 @@ export class CrmService {
         );
       }
     }
-    const maj = await this.prisma.dossierCrm.update({
-      where: { id },
-      data: {
-        categorie: dto.categorie,
-        surfaceTerrain: dto.surfaceTerrain,
-        nbPlanches: planches,
-        standing: dto.standing,
-        gamme: dto.gamme,
-        ...(fiche && { ficheProgramme: fiche as unknown as Prisma.InputJsonValue, programme: resume(fiche) }),
-      },
-      include: INCLUDE_DOSSIER,
+    // Fiche figée : ce qui change vraiment (rien → ni trace ni notification).
+    const changes = figee
+      ? champsLibresModifies(dossier, { standing: dto.standing, gamme: dto.gamme, ficheProgramme: fiche })
+      : [];
+
+    const maj = await this.prisma.$transaction(async (tx) => {
+      const ecrit = await tx.dossierCrm.update({
+        where: { id },
+        data: {
+          categorie: dto.categorie,
+          surfaceTerrain: dto.surfaceTerrain,
+          nbPlanches: planches,
+          standing: dto.standing,
+          gamme: dto.gamme,
+          ...(fiche && { ficheProgramme: fiche as unknown as Prisma.InputJsonValue, programme: resume(fiche) }),
+        },
+        include: INCLUDE_DOSSIER,
+      });
+      if (changes.length) {
+        await this.tracerFicheFigee(tx, id, dossier.statut, acteur.userId, changes);
+        // Projet d'exécution ouvert (Onboard) : il garde le même programme.
+        if (fiche && dossier.projet) {
+          await tx.projet.update({ where: { id: dossier.projet.id }, data: { programme: ecrit.programme } });
+        }
+      }
+      return ecrit;
     });
+    if (changes.length) {
+      await this.notifications.notifierDossierCrm({
+        societeId,
+        dossierId: id,
+        evenement: 'dossier_modifie',
+        parId: acteur.userId,
+      });
+    }
     return versDossierCrm(maj, this.optsFormat(acteur));
+  }
+
+  // Ligne d'historique d'une fiche figée modifiée (même statut avant et
+  // après, comme la fiche apporteur) ; des enregistrements rapprochés du
+  // même auteur complètent la dernière ligne au lieu d'en empiler.
+  private async tracerFicheFigee(
+    tx: Prisma.TransactionClient,
+    dossierId: string,
+    statut: StatutCrm,
+    auteurId: string,
+    champs: string[],
+  ): Promise<void> {
+    const derniere = await tx.dossierCrmTransition.findFirst({
+      where: { dossierId },
+      orderBy: { creeLe: 'desc' },
+      select: { id: true, parId: true, commentaire: true, creeLe: true },
+    });
+    if (derniere && traceARegrouper(derniere, auteurId, new Date())) {
+      await tx.dossierCrmTransition.update({
+        where: { id: derniere.id },
+        data: { commentaire: fusionnerTrace(derniere.commentaire ?? '', champs) },
+      });
+      return;
+    }
+    await tx.dossierCrmTransition.create({
+      data: { dossierId, de: statut, vers: statut, parId: auteurId, commentaire: commentaireTrace(champs) },
+    });
   }
 
   // Fait avancer un dossier dans le cycle commercial (cf. crm/cycle.ts) :
@@ -704,4 +812,15 @@ function resumeApporteur(a: ApporteurDto): string {
   if (a.type !== 'externe') return 'affaire directe';
   const structure = a.structure?.trim();
   return structure ? `${a.nom!.trim()} (${structure})` : a.nom!.trim();
+}
+
+// Fiche Programme stockée, relue telle quelle ; une ancienne fiche mal formée
+// vaut « pas de fiche » plutôt qu'une erreur 500.
+function ficheStockee(brute: unknown): FicheProgramme | null {
+  if (!brute) return null;
+  try {
+    return normaliserFiche(brute as Parameters<typeof normaliserFiche>[0]);
+  } catch {
+    return null;
+  }
 }

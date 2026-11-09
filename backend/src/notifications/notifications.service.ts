@@ -100,9 +100,19 @@ export class NotificationsService {
           creeParId: true,
           // Nom officiel : la création est une trace de travail (règle du profil).
           creePar: { select: { prenom: true, nom: true } },
+          statut: true,
         },
       });
       if (!d) return;
+      // Fiche modifiée : l'auteur de la modification (nom officiel), pas le créateur.
+      const modifiePar =
+        evenement === 'dossier_modifie' && params.parId
+          ? await this.prisma.utilisateur.findUnique({
+              where: { id: params.parId },
+              select: { prenom: true, nom: true },
+            })
+          : null;
+      const auteur = evenement === 'dossier_modifie' ? modifiePar : d.creePar;
 
       const [daf, dirGc] = await Promise.all([
         this.titulairesRole(societeId, ROLE_CFO),
@@ -113,7 +123,8 @@ export class NotificationsService {
         programme: d.programme,
         commentaire: params.commentaire,
         facturesPreparees: params.facturesPreparees,
-        auteur: d.creePar ? `${d.creePar.prenom} ${d.creePar.nom}`.trim() : null,
+        auteur: auteur ? `${auteur.prenom} ${auteur.nom}`.trim() || null : null,
+        statut: d.statut,
       };
       const plan = planNotificationsCrm(
         evenement,
@@ -128,17 +139,68 @@ export class NotificationsService {
       );
       if (plan.length === 0) return;
 
-      await this.prisma.notification.createMany({
-        data: plan.map(({ destinataireId, titre }) => ({
-          destinataireId,
-          societeId,
-          type: evenement,
-          dossierCrmId: dossierId,
-          projetId: params.projetId ?? null,
-          titre,
-          parId: params.parId,
-        })),
-      });
+      // Fiche modifiée : une seule notification NON LUE par personne et par
+      // dossier — la fiche s'enregistre champ par champ, la suivante remet
+      // la précédente à jour (titre, date, auteur) au lieu d'en empiler.
+      let aCreer = plan;
+      let aMettreAJour: { id: string; destinataireId: string; titre: string }[] = [];
+      if (evenement === 'dossier_modifie') {
+        const nonLues = await this.prisma.notification.findMany({
+          where: {
+            societeId,
+            type: 'dossier_modifie',
+            dossierCrmId: dossierId,
+            luLe: null,
+            destinataireId: { in: plan.map((p) => p.destinataireId) },
+          },
+          select: { id: true, destinataireId: true },
+        });
+        const parDestinataire = new Map(nonLues.map((n) => [n.destinataireId, n.id]));
+        aMettreAJour = plan.flatMap(({ destinataireId, titre }) => {
+          const id = parDestinataire.get(destinataireId);
+          return id ? [{ id, destinataireId, titre }] : [];
+        });
+        aCreer = plan.filter((p) => !parDestinataire.has(p.destinataireId));
+      }
+
+      // Créations d'abord : une mise à jour en échec ne les fait pas perdre.
+      if (aCreer.length) {
+        await this.prisma.notification.createMany({
+          data: aCreer.map(({ destinataireId, titre }) => ({
+            destinataireId,
+            societeId,
+            type: evenement,
+            dossierCrmId: dossierId,
+            projetId: params.projetId ?? null,
+            titre,
+            parId: params.parId,
+          })),
+        });
+      }
+      // Remise à jour seulement si elle est TOUJOURS non lue (lue entre-temps :
+      // une nouvelle notification, pour que la modification soit signalée).
+      for (const { id, destinataireId, titre } of aMettreAJour) {
+        try {
+          const { count } = await this.prisma.notification.updateMany({
+            where: { id, luLe: null },
+            data: { titre, parId: params.parId, createdAt: new Date() },
+          });
+          if (count === 0) {
+            await this.prisma.notification.create({
+              data: {
+                destinataireId,
+                societeId,
+                type: evenement,
+                dossierCrmId: dossierId,
+                titre,
+                parId: params.parId,
+              },
+            });
+          }
+        } catch (e) {
+          this.log.error(`Notification ${id} non mise à jour : ${(e as Error).message}`);
+        }
+      }
     } catch (e) {
       this.log.error(
         `Notification CRM « ${params.evenement} » non envoyée (dossier ${params.dossierId}) : ${(e as Error).message}`,

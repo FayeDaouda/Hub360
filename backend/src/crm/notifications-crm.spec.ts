@@ -1,5 +1,6 @@
 import {
   CIBLES_EVENEMENT,
+  ciblesEvenement,
   planNotificationsCrm,
   relanceFicheIncomplete,
   titreNotificationCrm,
@@ -15,6 +16,7 @@ describe('CIBLES_EVENEMENT — tableau validé', () => {
   it('qui est prévenu à chaque étape', () => {
     expect(CIBLES_EVENEMENT).toEqual({
       dossier_cree: ['proprietaire'],
+      dossier_modifie: ['proprietaire', 'createur', 'daf'],
       dossier_soumis: ['daf'],
       dossier_renvoye: ['proprietaire'],
       offre_envoyee: ['proprietaire'],
@@ -71,6 +73,74 @@ describe('dossier créé', () => {
   it('auteur inconnu (compte supprimé) → titre sans nom', () => {
     expect(titreNotificationCrm('dossier_cree', 'proprietaire', { ...CTX, auteur: null })).toBe(
       'TCP_ALM.26 — nouveau projet créé, à prendre en charge',
+    );
+  });
+});
+
+// Fiche figée modifiée (09/11/2026) : propriétaire et créateur ; la DAF
+// seulement tant que l'offre est chez elle (en validation).
+describe('dossier modifié', () => {
+  const comptes = { daf: ['CFO'], proprietaire: ['DG'], apporteur: ['APP'], createur: ['COO'] };
+
+  it('en validation : propriétaire, créateur et DAF', () => {
+    expect(ciblesEvenement('dossier_modifie', 'en_validation')).toEqual(['proprietaire', 'createur', 'daf']);
+  });
+
+  it.each(['offre_envoyee', 'onboard', 'perdu', 'nouveau_projet'] as const)(
+    'statut %s : la DAF n’est pas prévenue',
+    (statut) => {
+      expect(ciblesEvenement('dossier_modifie', statut)).toEqual(['proprietaire', 'createur']);
+    },
+  );
+
+  it('statut inconnu (non transmis) : la DAF n’est pas prévenue', () => {
+    expect(ciblesEvenement('dossier_modifie')).toEqual(['proprietaire', 'createur']);
+  });
+
+  it('autres événements : le tableau tel quel, quel que soit le statut', () => {
+    expect(ciblesEvenement('dossier_soumis', 'offre_envoyee')).toEqual(['daf']);
+    expect(ciblesEvenement('contrat_signe')).toEqual(['proprietaire', 'daf', 'createur']);
+  });
+
+  it('plan en validation : DG, COO et CFO, jamais l’apporteur, titre au nom de l’auteur', () => {
+    const plan = planNotificationsCrm(
+      'dossier_modifie',
+      { ...CTX, auteur: 'Awa Diop', statut: 'en_validation' },
+      comptes,
+      'U9',
+    );
+    const titre =
+      'TCP_ALM.26 · Villa Almadies — fiche modifiée par Awa Diop après soumission (détail dans l’historique)';
+    expect(plan).toEqual([
+      { destinataireId: 'DG', titre },
+      { destinataireId: 'COO', titre },
+      { destinataireId: 'CFO', titre },
+    ]);
+  });
+
+  it('plan après l’envoi de l’offre : sans la DAF', () => {
+    const plan = planNotificationsCrm('dossier_modifie', { ...CTX, statut: 'offre_envoyee' }, comptes, null);
+    expect(plan.map((p) => p.destinataireId)).toEqual(['DG', 'COO']);
+  });
+
+  it('modifié par le propriétaire lui-même : il n’est pas prévenu', () => {
+    const plan = planNotificationsCrm('dossier_modifie', { ...CTX, statut: 'en_validation' }, comptes, 'DG');
+    expect(plan.map((p) => p.destinataireId)).toEqual(['COO', 'CFO']);
+  });
+
+  it('propriétaire aussi créateur : une seule notification', () => {
+    const plan = planNotificationsCrm(
+      'dossier_modifie',
+      { ...CTX, statut: 'onboard' },
+      { ...comptes, createur: ['DG'] },
+      'U9',
+    );
+    expect(plan.map((p) => p.destinataireId)).toEqual(['DG']);
+  });
+
+  it('auteur inconnu (compte supprimé) → titre sans nom', () => {
+    expect(titreNotificationCrm('dossier_modifie', 'proprietaire', { ...CTX, auteur: null })).toBe(
+      'TCP_ALM.26 · Villa Almadies — fiche modifiée après soumission (détail dans l’historique)',
     );
   });
 });

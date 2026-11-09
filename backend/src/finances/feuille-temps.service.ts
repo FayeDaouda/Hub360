@@ -7,6 +7,7 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { refDevis } from '../devis/domaine';
 import { delaiTranche, prevueLe, tempsImpute, tempsPipe } from './feuille-temps';
 import { daysBetween, todayIso, toIsoDay } from '@hub/domain';
+import { lignesDuCycle } from '../crm/cycle';
 
 const jour = (d: Date | string | null | undefined) =>
   d ? (typeof d === 'string' ? d.slice(0, 10) : toIsoDay(d)) : null;
@@ -32,7 +33,7 @@ export class FeuilleTempsService {
         createdAt: true,
         client: { select: { id: true, nom: true } },
         projet: { select: { id: true, code: true, budgetHeures: true } },
-        transitions: { select: { vers: true, creeLe: true }, orderBy: { creeLe: 'asc' } },
+        transitions: { where: lignesDuCycle(), select: { vers: true, creeLe: true }, orderBy: { creeLe: 'asc' } },
         offres: {
           orderBy: { creeLe: 'desc' },
           include: {
