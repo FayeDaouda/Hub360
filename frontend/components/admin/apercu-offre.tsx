@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
 import { todayIso, VALIDITE_OFFRE_JOURS } from '@hub/domain';
+import { ACTIONS_CRM } from '@/lib/cycle-crm';
 import { getDevis } from '@/lib/devis';
 import { documentApercuOffre } from '@/lib/document-devis';
 import { useSocieteCourante } from '@/lib/layout-contexte';
@@ -27,13 +28,32 @@ type Props = {
 // Aperçu de l'offre AVANT son envoi (09/11/2026) : le CFO la lit telle que
 // le client la recevra, puis la valide en bas du document — l'envoi passe
 // obligatoirement par cet aperçu. Fenêtre au premier plan, rendue hors du
-// tiroir de la fiche (portail) ; Échap ne la ferme pas, pour ne pas fermer
-// la fiche avec elle (même choix que les réglages des contrats).
+// tiroir de la fiche (portail). Clavier comme la confirmation : focus dans
+// la fenêtre à l'ouverture (rendu au bouton d'origine à la fermeture),
+// tabulation piégée, Échap intercepté à la capture — il ferme l'aperçu seul,
+// jamais la fiche en dessous, et rien pendant l'envoi.
 export function ApercuOffre({ slug, offreId, dossierCode, decision, onClose }: Props) {
   const societe = useSocieteCourante();
   const [devis, setDevis] = useState<Devis | null | undefined>(undefined);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const boite = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const origine = document.activeElement as HTMLElement | null;
+    boite.current?.querySelector<HTMLElement>('button:not([disabled])')?.focus();
+    return () => origine?.focus?.();
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      if (!enCours) onClose();
+    }
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [enCours, onClose]);
 
   useEffect(() => {
     let annule = false;
@@ -68,6 +88,8 @@ export function ApercuOffre({ slug, offreId, dossierCode, decision, onClose }: P
       onClose={onClose}
       busy={enCours}
       closeOnEscape={false}
+      trapFocus
+      boxRef={boite}
       portal
       labelledBy="apercu-offre-titre"
       className="modal--large apercu-offre"
@@ -79,14 +101,16 @@ export function ApercuOffre({ slug, offreId, dossierCode, decision, onClose }: P
         onClose={onClose}
         closeDisabled={enCours}
       />
-      <div className="modal-body">
+      <div className="modal-body" aria-busy={devis === undefined}>
         <p className="field-aide">
-          L’offre telle que le client la recevra. Son numéro est attribué à l’envoi ; elle est valable{' '}
-          {VALIDITE_OFFRE_JOURS} jours à partir de l’envoi.
+          L’offre telle que le client la recevra, datée du jour de l’envoi et valable {VALIDITE_OFFRE_JOURS} jours à
+          partir de l’envoi.
         </p>
 
         {devis === undefined && <div className="apercu-offre-chargement skeleton" aria-hidden />}
-        {devis === null && <FieldError>Impossible d’afficher l’offre. Ferme puis réessaie.</FieldError>}
+        {(devis === null || (devis && !societe)) && (
+          <FieldError>Impossible d’afficher l’offre. Ferme puis réessaie.</FieldError>
+        )}
         {doc && (
           <div className="fac-document">
             <DocumentFacturation {...doc} />
@@ -95,10 +119,7 @@ export function ApercuOffre({ slug, offreId, dossierCode, decision, onClose }: P
 
         {decision && (
           <>
-            <p className="field-aide">
-              En validant, l’offre est numérotée et envoyée au client (email et lien de réponse). Elle ne sera plus
-              modifiable.
-            </p>
+            <p className="field-aide">{ACTIONS_CRM.valider.consequence}</p>
             {erreur && <FieldError>{erreur}</FieldError>}
             <div className="modal-actions">
               <button type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>

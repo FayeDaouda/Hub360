@@ -35,7 +35,7 @@ export const ACTIONS_CRM: Record<ActionCrm, DefAction> = {
     de: ['en_validation'],
     module: 'finances_devis',
     niveau: 'validation',
-    consequence: `L’offre est numérotée et envoyée au client (email + lien de réponse), valable ${VALIDITE_OFFRE_JOURS} jours. Elle ne sera plus modifiable.`,
+    consequence: `En validant, l’offre est envoyée au client (email + lien de réponse), valable ${VALIDITE_OFFRE_JOURS} jours. Elle ne sera plus modifiable.`,
     ton: 'principal',
   },
   renvoyer: {

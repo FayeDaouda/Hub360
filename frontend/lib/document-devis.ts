@@ -27,8 +27,8 @@ export function documentDevis(d: Devis, societe: Societe): DocumentFacturationPr
 
 // Aperçu AVANT envoi (validation du CFO, 09/11/2026) : l'offre telle que le
 // client la recevra si elle part aujourd'hui — date du jour et validité qui
-// court à partir de l'envoi. Le numéro n'existe pas encore (attribué à
-// l'envoi) : « — », comme sur tout brouillon.
+// court à partir de l'envoi. La référence reste celle du devis (une offre
+// CRM a la sienne, CODE-OFn, dès sa création).
 export function documentApercuOffre(d: Devis, societe: Societe, aujourdhui: string): DocumentFacturationProps {
   return {
     ...documentDevis(d, societe),

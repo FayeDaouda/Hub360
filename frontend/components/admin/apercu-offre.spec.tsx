@@ -155,11 +155,25 @@ describe('Aperçu de l’offre · consultation sans droit de décision', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('ne se ferme pas avec Échap (la fiche derrière resterait seule)', async () => {
+  // Échap intercepté à la capture : il ferme l'aperçu seul, sans atteindre
+  // la fiche en dessous (qui écoute Échap sur window).
+  it('Échap ferme l’aperçu seul, sans atteindre la fiche en dessous', async () => {
     const user = userEvent.setup();
-    const { onClose } = ouvrir(null);
-    await user.keyboard('{Escape}');
-    expect(onClose).not.toHaveBeenCalled();
+    const fiche = vi.fn();
+    window.addEventListener('keydown', fiche);
+    try {
+      const { onClose } = ouvrir(null);
+      await user.keyboard('{Escape}');
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(fiche).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener('keydown', fiche);
+    }
+  });
+
+  it('le focus entre dans l’aperçu à l’ouverture', async () => {
+    ouvrir(null);
+    await waitFor(() => expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement));
   });
 });
 
