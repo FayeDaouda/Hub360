@@ -11,7 +11,6 @@ const FICHE_COMPLETE = {
   code: 'X',
   categorie: 'conception',
   localiteId: 'L',
-  type: 'villa',
   surfaceTerrain: 300,
   nbPlanches: 2,
   clientId: 'C',

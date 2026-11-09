@@ -728,6 +728,7 @@ async function main() {
       standing: 'moyen',
       gamme: 'importe',
       fiche: immeuble({
+        forme: 'local_commercial',
         usage: 'commercial',
         gabarit: 0,
         composition: [{ de: 0, a: 0, usage: 'commerce', typologie: '', nb: 1 }],

@@ -158,9 +158,10 @@ export function changerProprietaire(slug: string, id: string, proprietaireId: st
   });
 }
 
-// Complétude d'une fiche (registre CRM, maquette du boss) : les 10 champs —
-// code, catégorie, localisation (rattachée au référentiel), type, surface du
-// terrain, n° de planches, client, standing, gamme, programme. Les libellés
+// Complétude d'une fiche (registre CRM, maquette du boss) : les 9 champs —
+// code, catégorie, localisation (rattachée au référentiel), surface du
+// terrain, n° de planches, client, standing, gamme, programme (le type de
+// projet a laissé place, le 09/11/2026, à la forme bâtie du programme). Les libellés
 // manquants alimentent le rappel « il manque … » de la fiche.
 // Catégorie affichée (maquette) : « Développement » = promotion interne ;
 // null = « À choisir » (lead créé sans catégorie).
@@ -175,7 +176,6 @@ export function completudeFiche(p: Projet): { faits: number; total: number; manq
     ['code projet', !!p.code],
     ['catégorie', !!p.categorie],
     ['localisation', !!p.localite],
-    ['type de projet', !!p.type],
     ['surface du terrain', p.surfaceTerrain > 0],
     ['n° de planches', p.nbPlanches > 0],
     ['client', !!p.client],

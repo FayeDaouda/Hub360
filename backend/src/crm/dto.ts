@@ -17,7 +17,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ACTIONS_CRM, ActionCrm } from './cycle';
-import { Categorie, Gamme, ModePaiement, NatureDossier, Standing, TypeBien, TypeClient } from '@prisma/client';
+import { Categorie, Gamme, ModePaiement, NatureDossier, Standing, TypeClient } from '@prisma/client';
 
 // Plus de sigle à la création (maquette « Nouveau projet », oct. 2026) : le
 // segment CLIENT d'une personne morale se tire de sa raison sociale.
@@ -72,12 +72,12 @@ export class CreerDossierDto {
   @IsString() @MinLength(1) localiteId!: string;
   @IsOptional() @IsNumber() latitude?: number | null;
   @IsOptional() @IsNumber() longitude?: number | null;
-  @IsOptional() @IsEnum(TypeBien) type?: TypeBien;
   @IsOptional() @IsInt() @Min(0) nbPlanches?: number;
   @IsOptional() @IsInt() @Min(0) surfaceTerrain?: number;
   @IsOptional() @IsEnum(Standing) standing?: Standing;
   @IsOptional() @IsEnum(Gamme) gamme?: Gamme;
-  @IsOptional() @IsString() @MaxLength(200) programme?: string;
+  // Pas de programme à la création (09/11/2026) : il se déduit de la Fiche
+  // Programme seulement, ce qui garantit une forme bâtie à toute fiche complète.
   @ValidateNested() @Type(() => ClientRefDto) client!: ClientRefDto;
   @ValidateNested() @Type(() => ApporteurDto) apporteur!: ApporteurDto;
   // Facultatif : sans choix, un titulaire Dir. GC unique est retenu d'office ;
@@ -111,7 +111,6 @@ export class ActionDossierDto {
 // planches aussi dès qu'elles se calculent (crm/fiche-programme.ts).
 export class ModifierFicheDto {
   @IsOptional() @IsEnum(Categorie) categorie?: Categorie;
-  @IsOptional() @IsEnum(TypeBien) type?: TypeBien;
   @IsOptional() @IsInt() @Min(1) surfaceTerrain?: number;
   @IsOptional() @IsInt() @Min(1) @Max(99) nbPlanches?: number;
   @IsOptional() @IsEnum(Standing) standing?: Standing;

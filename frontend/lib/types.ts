@@ -1,4 +1,4 @@
-import type { FicheProgramme } from './fiche-programme';
+import type { FicheProgramme, Forme } from './fiche-programme';
 import { yearOf, type Right, type RightSet } from '@hub/domain';
 export type Societe = {
   id: string;
@@ -238,7 +238,7 @@ export type Projet = {
   localisation: string; // libellé affiché
   // null = dossier antérieur au référentiel, pas encore rattaché.
   localite: Pick<Localite, 'id' | 'code' | 'nom'> | null;
-  type: TypeBien | null;
+  type: TypeBien | null; // plus saisi depuis le 09/11/2026 : dossiers antérieurs
   nbPlanches: number; // nombre de planches (0 = à renseigner)
   surfaceTerrain: number; // m² (0 = à renseigner)
   client: Client;
@@ -335,7 +335,6 @@ export type NouveauProjetPayload = {
 // de la Fiche Programme par le serveur.
 export type ModifierFichePayload = Partial<{
   categorie: Categorie;
-  type: TypeBien;
   surfaceTerrain: number;
   nbPlanches: number;
   standing: Standing;
@@ -589,7 +588,7 @@ export type ProjetExecution = {
   categorie: Categorie;
   programme: string;
   localisation: string;
-  type: TypeBien;
+  type: TypeBien | null; // plus saisi depuis le 09/11/2026
   client: Client;
   origineCrmId: string;
   // Plusieurs équipes possibles par projet (décision boss, sept. 2026 —
@@ -822,7 +821,8 @@ export type ProjetFacturation = Omit<ProjetRef, 'categorieConception'> & {
   nature: NatureDossier;
   categorie: Categorie;
   localisation: string;
-  type: TypeBien;
+  type: TypeBien | null; // dossiers antérieurs au 09/11/2026
+  forme: Forme | null; // forme bâtie du programme
   phase: Phase;
 };
 
@@ -1168,7 +1168,8 @@ export type FactureCentrale = {
   // Pour le document imprimé (lot 6) : nature et lieu du projet, tranche
   // F1 / F2 / F3, offre acceptée qui fonde la facture.
   pourDocument?: {
-    typeBien: TypeBien | null;
+    forme: Forme | null; // forme bâtie du programme (remplace le type, 09/11/2026)
+    typeBien: TypeBien | null; // type d'un dossier antérieur
     localite: string | null;
     tranche: string | null;
     offre: { reference: string | null; accepteeLe: string | null } | null;

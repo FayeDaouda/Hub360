@@ -4,7 +4,6 @@ const complete: ChampsFiche = {
   code: 'CM_YOF.26',
   categorie: 'conception',
   localiteId: 'L1',
-  type: 'villa',
   surfaceTerrain: 350,
   nbPlanches: 3,
   clientId: 'C1',
@@ -23,8 +22,15 @@ describe('fiche CRM · complétude', () => {
     const lead = { ...complete, categorie: null, nbPlanches: 0, gamme: null, programme: '  ' };
     expect(champsManquants(lead)).toEqual(['catégorie', 'n° de planches', 'gamme', 'programme']);
     expect(motifFicheIncomplete(lead, 'avant de créer l’offre')).toBe(
-      'Fiche 6/10 : il manque catégorie, n° de planches, gamme, programme — complète-la avant de créer l’offre.',
+      'Fiche 5/9 : il manque catégorie, n° de planches, gamme, programme — complète-la avant de créer l’offre.',
     );
+  });
+
+  it('neuf champs : le type de projet n’est plus demandé (09/11/2026)', () => {
+    // Un dossier sans type, tous les autres champs remplis, est complet.
+    const sansType = { ...complete, type: null } as ChampsFiche;
+    expect(champsManquants(sansType)).toEqual([]);
+    expect(motifFicheIncomplete({ ...complete, gamme: null }, 'avant de créer l’offre')).toMatch(/^Fiche 8\/9 :/);
   });
 
   it('dossier antérieur non rattaché au référentiel → localisation manquante', () => {

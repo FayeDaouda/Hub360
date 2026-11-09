@@ -21,7 +21,6 @@ import { getDevisListe, getProduitsServices } from '@/lib/devis';
 import { dansListeFactures, indicateursFinances, statutDevis, statutFacture } from '@/lib/finances';
 import {
   TAUX_TVA_DEFAUT,
-  TYPES_BIEN,
   type BureauARegler,
   type Client,
   type Devis,
@@ -30,6 +29,7 @@ import {
   type Projet,
   type ProjetRef,
 } from '@/lib/types';
+import { libelleOuvrage } from '@/lib/fiche-programme';
 import { ETAPE, formatCompactAmount, formatLongDate, ROLE_CFO } from '@hub/domain';
 import { KpiStrip } from '@/components/ui/kpi';
 import { etatEnRetard } from '@/lib/couleurs-etat';
@@ -257,7 +257,10 @@ export default function FinancesPage(props: Props) {
       aReception: !f.echeanceLe || (!!f.emiseLe && f.echeanceLe.slice(0, 10) === f.emiseLe.slice(0, 10)),
       // Ce que le client reconnaît : « Villa — Yoff », le code en rappel.
       projet: {
-        nom: doc?.typeBien ? [TYPES_BIEN[doc.typeBien], doc.localite].filter(Boolean).join(' — ') : null,
+        nom: (() => {
+          const ouvrage = libelleOuvrage(doc?.forme, doc?.typeBien);
+          return ouvrage ? [ouvrage, doc?.localite].filter(Boolean).join(' — ') : null;
+        })(),
         code: f.dossierCrm?.code ?? f.projet?.code ?? null,
       },
       tranche: source.tranche

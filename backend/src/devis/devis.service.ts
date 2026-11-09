@@ -550,7 +550,6 @@ export class DevisService {
         code: true,
         categorie: true,
         localiteId: true,
-        type: true,
         surfaceTerrain: true,
         nbPlanches: true,
         clientId: true,

@@ -7,7 +7,6 @@ import { Archive, ArrowRight, Check, Copy, Lock } from 'lucide-react';
 import {
   GAMMES,
   STANDINGS,
-  TYPES_BIEN,
   TYPES_CLIENT,
   STATUTS_CRM,
   type Localite,
@@ -209,7 +208,7 @@ export function DetailDossierModal({
   // Lead archivé : fiche consultable seulement, plus aucune action.
   const archive = projet.archive;
   // Fiche à compléter tant qu'elle n'est pas verrouillée (maquette) ; sinon
-  // la liste de ses dix champs, en lecture.
+  // la liste de ses neuf champs, en lecture.
   const editable = peutEcrire && !archive && projet.statut === 'nouveau_projet';
   // Dossier antérieur au référentiel : à rattacher à une localité.
   const rattachable = !projet.localite && peutEcrire && !archive;
@@ -230,7 +229,6 @@ export function DetailDossierModal({
         : manquant(`${projet.localisation} · non rattachée`),
       aide: 'Choisie dans le référentiel des localités',
     },
-    { libelle: 'Type de projet', valeur: projet.type ? TYPES_BIEN[projet.type] : manquant(), aide: 'Liste déroulante' },
     {
       libelle: 'Surface du terrain',
       valeur: projet.surfaceTerrain > 0 ? `${formatNumber(projet.surfaceTerrain)} m²` : manquant(),

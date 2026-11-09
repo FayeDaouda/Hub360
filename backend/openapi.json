@@ -11949,18 +11949,6 @@
             "type": "number",
             "nullable": true
           },
-          "type": {
-            "type": "string",
-            "enum": [
-              "equipement",
-              "hotelier",
-              "immeuble_bureaux",
-              "immeuble_mixte",
-              "immeuble_residentiel",
-              "local_commercial",
-              "villa"
-            ]
-          },
           "nbPlanches": {
             "type": "number",
             "minimum": 0
@@ -11984,10 +11972,6 @@
               "local",
               "sur_mesure_importe"
             ]
-          },
-          "programme": {
-            "type": "string",
-            "maxLength": 200
           },
           "client": {
             "$ref": "#/components/schemas/ClientRefDto"
@@ -12015,18 +11999,6 @@
               "amenagement",
               "conception",
               "developpement"
-            ]
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "equipement",
-              "hotelier",
-              "immeuble_bureaux",
-              "immeuble_mixte",
-              "immeuble_residentiel",
-              "local_commercial",
-              "villa"
             ]
           },
           "surfaceTerrain": {

@@ -69,4 +69,35 @@ describe('CrmService.modifierFiche · Fiche Programme', () => {
     );
     expect(update).not.toHaveBeenCalled();
   });
+
+  it('local commercial décrit niveau par niveau : résumé et planches calculées', async () => {
+    const { s, update } = svc();
+    await s
+      .modifierFiche('S1', acteur, 'D1', {
+        nbPlanches: 9, // ignoré : les planches se calculent
+        ficheProgramme: {
+          usage: 'commercial',
+          forme: 'local_commercial',
+          gabarit: 1,
+          typologieVilla: 'F5', // effacée hors villa
+          composition: [
+            { de: 0, a: 0, usage: 'commerce', nb: 2 },
+            { de: 1, a: 1, usage: 'bureaux', nb: 1 },
+          ],
+        },
+      })
+      .catch(() => undefined);
+    const data = update.mock.calls[0][0].data;
+    expect(data.nbPlanches).toBe(2);
+    expect(data.programme).toBe('Local commercial R+1 · 2 commerces · 1 bureau');
+    expect(data.ficheProgramme).toMatchObject({ forme: 'local_commercial', typologieVilla: null });
+  });
+
+  it('forme « hotelier » (ancien type de projet) → 400, rien écrit', async () => {
+    const { s, update } = svc();
+    await expect(s.modifierFiche('S1', acteur, 'D1', { ficheProgramme: { forme: 'hotelier' } })).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(update).not.toHaveBeenCalled();
+  });
 });

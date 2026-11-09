@@ -156,7 +156,6 @@ export class ChiffresPilotageService {
         code: true,
         categorie: true,
         localiteId: true,
-        type: true,
         surfaceTerrain: true,
         nbPlanches: true,
         clientId: true,

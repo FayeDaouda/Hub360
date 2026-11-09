@@ -232,8 +232,8 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
             </div>
 
             <p className="field-aide nouveau-projet-suite">
-              Les autres champs (type, terrain, planches, standing, gamme, programme) se complètent ensuite dans la
-              fiche, par listes déroulantes, sous 72 h. Au-delà, le HUB crée une relance.
+              Les autres champs (terrain, planches, standing, gamme, programme) se complètent ensuite dans la fiche, par
+              listes déroulantes, sous 72 h. Au-delà, le HUB crée une relance.
             </p>
           </div>
         </div>

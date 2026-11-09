@@ -188,7 +188,7 @@ describe('CrmService.agir', () => {
       projet: null,
     });
     await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(
-      'Fiche 8/10 : il manque n° de planches, gamme',
+      'Fiche 7/9 : il manque n° de planches, gamme',
     );
     expect(prisma.dossierCrm.updateMany).not.toHaveBeenCalled();
   });

@@ -74,11 +74,12 @@ export class OnboardingService {
         'L’Onboard exige une offre acceptée par le client (via son lien, ou réponse saisie).',
       );
     }
-    // Soumis complet (crm/fiche.ts), un dossier a sa catégorie et son type ;
-    // garde pour un dossier antérieur resté incomplet (annule la transaction).
-    const { categorie, type } = dossier;
-    if (!categorie || !type) {
-      throw new ConflictException('Fiche incomplète : catégorie et type de projet requis pour ouvrir le projet.');
+    // Soumis complet (crm/fiche.ts), un dossier a sa catégorie ; garde pour
+    // un dossier antérieur resté incomplet (annule la transaction). Le type
+    // de projet n'est plus demandé (09/11/2026) : repris s'il existe.
+    const { categorie } = dossier;
+    if (!categorie) {
+      throw new ConflictException('Fiche incomplète : catégorie requise pour ouvrir le projet.');
     }
 
     // Garde de concurrence : ne bascule que si le statut n'a pas changé.
@@ -102,7 +103,7 @@ export class OnboardingService {
         localisation: dossier.localisation,
         latitude: dossier.latitude,
         longitude: dossier.longitude,
-        type,
+        type: dossier.type,
         clientId: dossier.clientId,
         phase: PHASES_PAR_CATEGORIE[categorie][0],
       },

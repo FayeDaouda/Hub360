@@ -6,13 +6,11 @@ import {
   CATEGORIES,
   GAMMES,
   STANDINGS,
-  TYPES_BIEN,
   type Categorie,
   type Gamme,
   type ModifierFichePayload,
   type Projet,
   type Standing,
-  type TypeBien,
 } from '@/lib/types';
 import {
   ANNEXES,
@@ -53,8 +51,8 @@ const STANDING_COURT: Record<Standing, string> = { economique: 'Économique', mo
 
 // « Caractéristiques du projet » et Fiche Programme d'un lead en « Nouveau
 // projet » (doc « Création de projet côté CRM » §3.3–3.4, captures du boss) :
-// chaque réponse s'enregistre aussitôt, les questions s'adaptent (villa ou
-// immeuble), et le serveur en déduit le résumé (colonne Programme) et, quand
+// chaque réponse s'enregistre aussitôt, les questions s'adaptent (villa, ou
+// composition par niveau pour les autres formes), et le serveur en déduit le résumé (colonne Programme) et, quand
 // ils se calculent, les planches. Un champ attendu est cerné d'ambre.
 export function CaracteristiquesProjet({ projet, onModifier }: Props) {
   const [fiche, setFiche] = useState<FicheProgramme>(() => ({ ...FICHE_VIDE, ...(projet.ficheProgramme ?? {}) }));
@@ -95,7 +93,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
   );
   const planches = planchesCalculees(fiche);
   const controle = controleComposition(fiche);
-  const totauxImmeuble = totaux(fiche);
+  const totauxComposition = totaux(fiche);
   const niveauxPossibles = niveaux(fiche);
   const nbCommodites = fiche.commodites.length;
 
@@ -134,25 +132,6 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
             ))}
           </select>
           <span className="field-aide">Le type de mission confiée à Grey Concrete.</span>
-        </div>
-        <div className="field">
-          <label className="field-label" htmlFor="fiche-type">
-            Type de projet
-          </label>
-          <select
-            id="fiche-type"
-            className={classe(!projet.type)}
-            value={projet.type ?? ''}
-            onChange={(e) => enregistrer({ type: e.target.value as TypeBien })}
-          >
-            {!projet.type && choisir}
-            {Object.entries(TYPES_BIEN).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-          <span className="field-aide">La nature de l’ouvrage à concevoir.</span>
         </div>
       </div>
 
@@ -408,8 +387,8 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                   <Plus size={15} aria-hidden /> Ajouter une ligne
                 </button>
                 <p className="fp-totaux">
-                  {totauxImmeuble.length
-                    ? `Totaux : ${totauxImmeuble.map((t) => `${t.n} ${t.libelle}`).join(' · ')}`
+                  {totauxComposition.length
+                    ? `Totaux : ${totauxComposition.map((t) => `${t.n} ${t.libelle}`).join(' · ')}`
                     : 'Les totaux par typologie se calculent dès que la composition est remplie.'}
                 </p>
                 {controle.nonDecrits.length > 0 && (
