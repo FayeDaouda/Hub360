@@ -11549,6 +11549,7 @@
                 "delegation_ceo",
                 "demande_droit_a_valider",
                 "demande_droit_decidee",
+                "dossier_cree",
                 "dossier_perdu",
                 "dossier_renvoye",
                 "dossier_soumis",

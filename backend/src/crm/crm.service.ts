@@ -103,7 +103,7 @@ export class CrmService {
     }
     const apporteur = champsApporteur(dto.apporteur);
 
-    return this.prisma.$transaction(async (tx) => {
+    const cree = await this.prisma.$transaction(async (tx) => {
       const client = await this.resoudreClient(tx, societeId, dto.client);
 
       const localite = await tx.localite.findUnique({
@@ -152,6 +152,15 @@ export class CrmService {
       });
       return versDossierCrm(dossier, this.optsFormat(acteur));
     });
+    // Après la transaction (best-effort, ne lève jamais) : le directeur qui
+    // portera le dossier est prévenu de sa création.
+    await this.notifications.notifierDossierCrm({
+      societeId,
+      dossierId: cree.id,
+      evenement: 'dossier_cree',
+      parId: acteur.userId,
+    });
+    return cree;
   }
 
   // Titulaires actifs du rôle propriétaire DANS cette société — la liste

@@ -179,21 +179,45 @@ describe('CrmService — fiche apporteur', () => {
       dossierCrm: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn(relu) },
     };
     const prisma = { $transaction: jest.fn((f: (t: typeof tx) => unknown) => f(tx)) };
+    const notifications = { notifierDossierCrm: jest.fn().mockResolvedValue(undefined) };
     const s = new CrmService(
       prisma as unknown as PrismaService,
       {} as DevisService,
       {} as FacturationService,
-      {} as NotificationsService,
+      notifications as unknown as NotificationsService,
       {} as SeuilCeoService,
       {} as OnboardingService,
     );
-    return { s, tx };
+    return { s, tx, notifications };
   }
   const cio = {
     userId: 'U-CIO',
     role: 'CIO (transverse)',
     permissions: { 'crm.dossiers': 'LE', 'crm.apporteur': 'L', 'crm.proprietaire': 'L' },
   };
+
+  // 09/11/2026 : le directeur qui portera le dossier est prévenu de sa
+  // création — après la transaction, l'auteur étant exclu par le plan.
+  it('création → notification « dossier créé » envoyée après l’écriture', async () => {
+    const { s, tx, notifications } = svcCreation();
+    await s.creer('S1', cio, DTO as never);
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
+      societeId: 'S1',
+      dossierId: 'D1',
+      evenement: 'dossier_cree',
+      parId: 'U-CIO',
+    });
+    expect(tx.dossierCrm.create.mock.invocationCallOrder[0]).toBeLessThan(
+      notifications.notifierDossierCrm.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('échec dans la transaction → la création échoue, aucune notification', async () => {
+    const { s, tx, notifications } = svcCreation();
+    tx.dossierCrm.create.mockRejectedValueOnce(new Error('base indisponible'));
+    await expect(s.creer('S1', cio, DTO as never)).rejects.toThrow('base indisponible');
+    expect(notifications.notifierDossierCrm).not.toHaveBeenCalled();
+  });
 
   it('affaire directe → colonnes à null, tracée sur la ligne de création', async () => {
     const { s, tx } = svcCreation();

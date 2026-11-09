@@ -11,6 +11,8 @@ type Dossier = {
   proprietaireId: string | null;
   apporteurType: 'interne' | 'externe' | null;
   apporteurUtilisateurId: string | null;
+  creeParId?: string | null;
+  creePar?: { prenom: string; nom: string } | null;
 };
 
 const DOSSIER: Dossier = {
@@ -73,6 +75,43 @@ describe('NotificationsService.notifierDossierCrm', () => {
       commentaire: 'x',
     });
     expect(lignes(createMany)).toEqual(['DG1', 'DG2']);
+  });
+
+  it('dossier créé par le COO → le Dir. GC, titre au nom officiel du créateur', async () => {
+    const { s, createMany } = svc({
+      dossier: { ...DOSSIER, programme: '', creeParId: 'COO1', creePar: { prenom: 'Awa', nom: 'Diop' } },
+      titulaires: { CFO: ['CFO1'] },
+    });
+    await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'dossier_cree', parId: 'COO1' });
+    expect(createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({
+        destinataireId: 'DG1',
+        type: 'dossier_cree',
+        dossierCrmId: 'D1',
+        titre: 'TCP_ALM.26 — nouveau projet créé par Awa Diop, à prendre en charge',
+        parId: 'COO1',
+      }),
+    ]);
+  });
+
+  it('dossier créé « à assigner » par un Dir. GC → les autres titulaires Dir. GC seuls', async () => {
+    const { s, createMany } = svc({
+      dossier: { ...DOSSIER, proprietaireId: null, creeParId: 'DG1', creePar: { prenom: 'Moussa', nom: 'Fall' } },
+      titulaires: { 'Dir. GC': ['DG1', 'DG2'], CFO: ['CFO1'] },
+    });
+    await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'dossier_cree', parId: 'DG1' });
+    expect(lignes(createMany)).toEqual(['DG2']);
+  });
+
+  it('dossier créé, créateur introuvable (compte supprimé) → titre sans nom', async () => {
+    const { s, createMany } = svc({ dossier: { ...DOSSIER, creeParId: null, creePar: null } });
+    await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'dossier_cree', parId: 'COO1' });
+    expect(createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({
+        destinataireId: 'DG1',
+        titre: 'TCP_ALM.26 — nouveau projet créé, à prendre en charge',
+      }),
+    ]);
   });
 
   it('apporteur externe (pas de compte) → seul le propriétaire', async () => {
