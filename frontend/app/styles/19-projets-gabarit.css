@@ -82,47 +82,243 @@
   color: var(--ocre);
 }
 
-/* Colonnes : projets ouverts | dossier */
+/* Sélecteur de projet au-dessus, dossier sur toute la largeur (09/11/2026). */
 .po-colonnes {
   display: grid;
-  grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 1rem;
 }
-.po-liste {
-  display: grid;
-  gap: 0.8rem;
-  padding: 1rem;
+
+/* Sélecteur des projets ouverts (09/11/2026) : un bouton, une liste avec
+   recherche, filtres rapides et tri par urgence ; plein écran sur téléphone. */
+.pp {
+  position: relative;
+  z-index: 20;
+  min-width: 0;
 }
-.po-liste-titre {
-  margin: 0;
-  font-size: 1.1rem;
+.pp-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
 }
-.po-liste ul {
-  display: grid;
+.pp-declencheur {
+  display: inline-flex;
+  align-items: center;
   gap: 0.6rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.po-projet {
-  display: grid;
-  gap: 0.45rem;
-  width: 100%;
-  padding: 0.85rem 0.95rem;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: transparent;
+  background: color-mix(in oklch, var(--surface) 70%, transparent);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.po-projet:hover {
-  border-color: color-mix(in oklch, var(--brand) 45%, var(--border));
+.pp-declencheur:hover,
+.pp.is-ouvert .pp-declencheur {
+  border-color: var(--action);
 }
+.pp-declencheur-titre {
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pp-client {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pp-chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+.pp.is-ouvert .pp-chevron {
+  transform: rotate(180deg);
+}
+.pp-resume {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.pp-panneau {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(40rem, 100%);
+  /* --pp-max : hauteur mesurée sous le bouton (le bas de la page est tenu
+     dans la fenêtre sur grand écran, la liste n'y est jamais rognée). */
+  max-height: min(32rem, var(--pp-max, 70dvh));
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  animation: localite-entree 0.12s ease;
+}
+.pp-recherche {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.pp-recherche > svg {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.pp-recherche .field-input {
+  flex: 1;
+  padding-left: 2.25rem;
+}
+/* « Fermer » : utile en plein écran (téléphone) seulement. */
+.pp-fermer {
+  display: none;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pp-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.pp-filtre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.pp-filtre.is-actif {
+  border-color: var(--action);
+  background: color-mix(in srgb, var(--action) 14%, transparent);
+}
+.pp-filtre-nombre {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.pp-compte {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-12);
+}
+.pp-liste {
+  display: grid;
+  gap: 0.25rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+.pp-option {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.pp-option.is-actif {
+  background: color-mix(in oklch, var(--action) 12%, transparent);
+}
+.pp-option.is-choisi {
+  border-color: color-mix(in srgb, var(--action) 55%, transparent);
+}
+.pp-option-tete {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.pp-option-tete .pill {
+  margin-left: auto;
+  flex: none;
+}
+.pp-coche {
+  flex: none;
+  color: var(--action);
+}
+.pp-option-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.8rem;
+  color: var(--text-muted);
+  font-size: var(--t-12);
+}
+.pp-equipe {
+  color: var(--text);
+}
+.pp-avance {
+  flex: 1 1 6rem;
+  max-width: 10rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pp-panneau {
+    animation: none;
+  }
+  .pp-chevron {
+    transition: none;
+  }
+}
+@media (max-width: 720px) {
+  /* Ouvert : au-dessus de la barre du haut (collée, z-index 30 dans le même
+     <main>) ; la barre d'onglets du bas (hors <main>) reste devant. */
+  .pp.is-ouvert {
+    z-index: 40;
+  }
+  .pp-declencheur {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .pp-declencheur-titre {
+    display: none;
+  }
+  .pp-chevron {
+    margin-left: auto;
+  }
+  .pp-panneau {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    width: auto;
+    max-height: none;
+    padding: calc(0.75rem + env(safe-area-inset-top)) 1rem calc(5.5rem + env(safe-area-inset-bottom));
+    border: 0;
+    border-radius: 0;
+  }
+  .pp-fermer {
+    display: inline-grid;
+    place-items: center;
+  }
+}
+
 /* Sélection = élément actif : iris (--brand), comme la barre latérale. */
-.po-projet.is-actif,
 .po-etape.is-actif,
 .po-tache.is-actif,
 .po-fil-bouton.is-actif {
@@ -137,12 +333,6 @@
     0 6px 18px color-mix(in srgb, var(--action) 22%, transparent);
 }
 
-.po-projet-tete {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
 .po-barre {
   height: 5px;
   border-radius: 999px;
@@ -752,17 +942,8 @@
   }
 }
 @media (max-width: 1000px) {
-  .po-colonnes {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .po-tuiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .po-liste ul {
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(15rem, 80%);
-    overflow-x: auto;
-    padding-bottom: 0.2rem;
   }
 }
 @media (max-width: 640px) {

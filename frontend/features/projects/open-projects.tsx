@@ -51,7 +51,6 @@ export function OpenProjects({ slug }: { slug: string }) {
   useTitrePage(employee ? 'Projets' : `Projets · gabarit ${board?.gabarit ?? 'GC-CONCEPTION'}`);
 
   const horizon = board ? Math.round(board.budgetHeures / HOURS_PER_DAY) : null;
-  const compact = !!board && board.projets.length < 3;
   const access = dplg
     ? 'Dir. GC : équipes du projet, assignation, désactivation, prolongations, validation en suppléance'
     : employee
@@ -109,8 +108,9 @@ export function OpenProjects({ slug }: { slug: string }) {
           </p>
         </section>
       ) : (
-        <div className={`po-colonnes${compact ? ' po-colonnes--compacte' : ''}`}>
-          <ProjectPicker board={board} projectId={p.projectId} onSelect={p.selectProject} compact={compact} />
+        // Sélecteur au-dessus, dossier sur toute la largeur (09/11/2026).
+        <div className="po-colonnes">
+          <ProjectPicker board={board} projectId={p.projectId} onSelect={p.selectProject} showTeams={!employee} />
 
           <section className="panel glass-panel po-dossier" aria-label="Dossier projet">
             {!p.file ? (
