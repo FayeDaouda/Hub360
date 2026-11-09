@@ -1,4 +1,6 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { RealtimeModule } from './realtime.module';
 import { TicketStore, TicketPayload } from './ticket.store';
 import { TicketGuard, TicketNotificationsGuard } from './ticket.guard';
 
@@ -70,5 +72,20 @@ describe('Tickets par flux', () => {
   it('ticket « notifications » accepté par le flux des notifications', () => {
     const { svc } = store({ ...PAYLOAD, stream: 'notifications' });
     expect(new TicketNotificationsGuard(svc).canActivate(ctxOf(req()))).toBe(true);
+  });
+});
+
+// Non-régression (09/11/2026) : les gardes résolues par l'injection de Nest
+// (et non créées à la main) reçoivent bien le TicketStore — sans quoi le flux
+// répondait 500 en production.
+describe('Gardes de ticket résolues par Nest', () => {
+  it('TicketGuard et TicketNotificationsGuard reçoivent le TicketStore', async () => {
+    const module = await Test.createTestingModule({ imports: [RealtimeModule] }).compile();
+    const tickets = module.get(TicketStore);
+    const chat = tickets.emettre({ ...PAYLOAD, stream: 'chat' });
+    const notif = tickets.emettre({ ...PAYLOAD, stream: 'notifications' });
+    expect(module.get(TicketGuard).canActivate(ctxOf(req({ query: { token: chat } })))).toBe(true);
+    expect(module.get(TicketNotificationsGuard).canActivate(ctxOf(req({ query: { token: notif } })))).toBe(true);
+    await module.close();
   });
 });

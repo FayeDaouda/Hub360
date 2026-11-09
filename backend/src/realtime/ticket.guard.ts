@@ -30,13 +30,24 @@ abstract class TicketGuardBase implements CanActivate {
 }
 
 // Flux de la messagerie : tickets émis par POST …/chat/ticket seulement.
+// Constructeur explicite dans chaque garde : Nest lit les dépendances à
+// injecter sur la classe décorée ; héritées d'une base non décorée, elles
+// manqueraient (TicketStore undefined → 500 sur le flux, 09/11/2026).
 @Injectable()
 export class TicketGuard extends TicketGuardBase {
   protected readonly stream = 'chat' as const;
+
+  constructor(tickets: TicketStore) {
+    super(tickets);
+  }
 }
 
 // Flux des notifications : tickets émis par POST …/notifications/ticket.
 @Injectable()
 export class TicketNotificationsGuard extends TicketGuardBase {
   protected readonly stream = 'notifications' as const;
+
+  constructor(tickets: TicketStore) {
+    super(tickets);
+  }
 }
