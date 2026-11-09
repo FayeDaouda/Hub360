@@ -84,9 +84,11 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
           ? `${pilote.nom} (Direction GC) pilote ensuite la fiche jusqu’au contrat.`
           : 'Propriétaire à assigner ensuite sur la fiche (Direction GC).';
 
+  // Focus sur le nom à l'ouverture seulement (la page parente se réaffiche
+  // en passant un nouveau onClose : le focus ne doit pas y revenir).
   useEffect(() => {
     champNom.current?.focus();
-  }, [onClose]);
+  }, []);
 
   async function soumettre(e: React.FormEvent) {
     e.preventDefault();
@@ -111,132 +113,155 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
   }
 
   return (
-    <Modal onClose={onClose} className="nouveau-projet" labelledBy="modal-titre">
-      <ModalHeader title="Nouveau projet" titleId="modal-titre" onClose={onClose} />
+    <Modal onClose={onClose} busy={envoi} trapFocus className="nouveau-projet" labelledBy="modal-titre">
+      <ModalHeader title="Nouveau projet" titleId="modal-titre" onClose={onClose} closeDisabled={envoi} />
 
-      <form className="modal-body" onSubmit={soumettre}>
-        <div className="nouveau-projet-code">
-          <span className="nouveau-projet-surtitre">Code projet généré</span>
-          <strong className="nouveau-projet-code-valeur" aria-live="polite">
-            {code}
-          </strong>
-          <span>Le code se compose au fur et à mesure de la saisie.</span>
-        </div>
-
-        <div className="field">
-          <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-client">
-            Client
-          </label>
-          <select
-            id="nouveau-projet-client"
-            className="field-input"
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-          >
-            <option value={NOUVEAU_CLIENT}>+ Nouveau client</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nom}
-              </option>
-            ))}
-          </select>
-          <span className="field-aide">
-            Un client existant garde sa fiche, ses contacts et son adresse ; le nouveau projet s’y rattache.
-          </span>
-        </div>
-
-        {clientNouveau && (
-          <>
-            <div className="field">
-              <span className="field-label nouveau-projet-label" id="nouveau-projet-nature">
-                Nature du client
-              </span>
-              <div className="nouveau-projet-nature" role="radiogroup" aria-labelledby="nouveau-projet-nature">
-                {[false, true].map((m) => (
-                  <button
-                    key={String(m)}
-                    type="button"
-                    role="radio"
-                    aria-checked={morale === m}
-                    className={morale === m ? 'is-actif' : undefined}
-                    onClick={() => setMorale(m)}
-                  >
-                    {m ? 'Personne morale' : 'Personne physique'}
-                  </button>
-                ))}
-              </div>
+      {/* Deux colonnes (identité du projet, affaire) qui défilent ; le pied,
+          avec ce qui manque et « Créer le projet », reste visible (08/11/2026). */}
+      <form className="nouveau-projet-form" onSubmit={soumettre}>
+        <div className="modal-body nouveau-projet-corps">
+          <div className="nouveau-projet-colonne">
+            <div className="nouveau-projet-code">
+              <span className="nouveau-projet-surtitre">Code projet généré</span>
+              <strong className="nouveau-projet-code-valeur" aria-live="polite">
+                {code}
+              </strong>
+              <span>Le code se compose au fur et à mesure de la saisie.</span>
             </div>
 
             <div className="field">
-              <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-nom">
-                {morale ? 'Raison sociale' : 'Prénom(s) et nom'}
+              <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-client">
+                Client
               </label>
-              <input
-                ref={champNom}
-                id="nouveau-projet-nom"
+              <select
+                id="nouveau-projet-client"
                 className="field-input"
-                value={nom}
-                onChange={(e) => setNom(e.target.value)}
-                placeholder={morale ? 'ex. SCI Les Filaos' : 'ex. Dior Fall Sourang'}
-                maxLength={160}
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+              >
+                <option value={NOUVEAU_CLIENT}>+ Nouveau client</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nom}
+                  </option>
+                ))}
+              </select>
+              <span className="field-aide">
+                Un client existant garde sa fiche, ses contacts et son adresse ; le nouveau projet s’y rattache.
+              </span>
+            </div>
+
+            {clientNouveau && (
+              <>
+                <div className="field">
+                  <span className="field-label nouveau-projet-label" id="nouveau-projet-nature">
+                    Nature du client
+                  </span>
+                  <div className="nouveau-projet-nature" role="radiogroup" aria-labelledby="nouveau-projet-nature">
+                    {[false, true].map((m) => (
+                      <button
+                        key={String(m)}
+                        type="button"
+                        role="radio"
+                        aria-checked={morale === m}
+                        className={morale === m ? 'is-actif' : undefined}
+                        onClick={() => setMorale(m)}
+                      >
+                        {m ? 'Personne morale' : 'Personne physique'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-nom">
+                    {morale ? 'Raison sociale' : 'Prénom(s) et nom'}
+                  </label>
+                  <input
+                    ref={champNom}
+                    id="nouveau-projet-nom"
+                    className="field-input"
+                    value={nom}
+                    onChange={(e) => setNom(e.target.value)}
+                    placeholder={morale ? 'ex. SCI Les Filaos' : 'ex. Dior Fall Sourang'}
+                    maxLength={160}
+                  />
+                  <span className="field-aide">
+                    {morale
+                      ? 'Les initiales ignorent les mots de liaison et la forme juridique (SA, SARL…).'
+                      : 'Dans l’ordre de l’état civil : une lettre par prénom et par nom.'}
+                  </span>
+                </div>
+              </>
+            )}
+
+            <div className="field">
+              <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-localite">
+                Localisation
+              </label>
+              <LocaliteSelect
+                localites={localites}
+                valeur={localiteId}
+                onChange={setLocaliteId}
+                idChamp="nouveau-projet-localite"
               />
               <span className="field-aide">
-                {morale
-                  ? 'Les initiales ignorent les mots de liaison et la forme juridique (SA, SARL…).'
-                  : 'Dans l’ordre de l’état civil : une lettre par prénom et par nom.'}
+                Choisie dans le référentiel des localités. Le code{localite ? ` (ici ${localite.code})` : ''} n’est
+                jamais tapé à la main.
               </span>
             </div>
-          </>
-        )}
+          </div>
 
-        <div className="field">
-          <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-localite">
-            Localisation
-          </label>
-          <LocaliteSelect
-            localites={localites}
-            valeur={localiteId}
-            onChange={setLocaliteId}
-            idChamp="nouveau-projet-localite"
-          />
-          <span className="field-aide">
-            Choisie dans le référentiel des localités. Le code{localite ? ` (ici ${localite.code})` : ''} n’est jamais
-            tapé à la main.
-          </span>
+          <div className="nouveau-projet-colonne">
+            <div
+              className={`fiche-apporteur${apporteur.aucun ? ' is-directe' : ''}`}
+              role="group"
+              aria-labelledby="nouveau-projet-apporteur"
+            >
+              <p className="fiche-apporteur-titre" id="nouveau-projet-apporteur">
+                <strong>Fiche apporteur d’affaire</strong> (obligatoire · validée et verrouillée à la création)
+              </p>
+              <FicheApporteurChamps saisie={apporteur} onChange={setApporteur} idPrefixe="nouveau-projet-apporteur" />
+              <span className="field-aide">Après création, seul le COO pourra modifier cette fiche.</span>
+            </div>
+
+            <div className="nouveau-projet-passation">
+              <span className="nouveau-projet-surtitre">Créée par (automatique)</span>
+              <strong>{session ? libelleRole(session.role) : '—'}</strong>
+              <span>{passation}</span>
+            </div>
+
+            <p className="field-aide nouveau-projet-suite">
+              Les autres champs (type, terrain, planches, standing, gamme, programme) se complètent ensuite dans la
+              fiche, par listes déroulantes, sous 72 h. Au-delà, le HUB crée une relance.
+            </p>
+          </div>
         </div>
 
-        <div
-          className={`fiche-apporteur${apporteur.aucun ? ' is-directe' : ''}`}
-          role="group"
-          aria-labelledby="nouveau-projet-apporteur"
-        >
-          <p className="fiche-apporteur-titre" id="nouveau-projet-apporteur">
-            <strong>Fiche apporteur d’affaire</strong> (obligatoire · validée et verrouillée à la création)
-          </p>
-          <FicheApporteurChamps saisie={apporteur} onChange={setApporteur} idPrefixe="nouveau-projet-apporteur" />
-          <span className="field-aide">Après création, seul le COO pourra modifier cette fiche.</span>
-        </div>
-
-        <div className="nouveau-projet-passation">
-          <span className="nouveau-projet-surtitre">Créée par (automatique)</span>
-          <strong>{session ? libelleRole(session.role) : '—'}</strong>
-          <span>{passation}</span>
-        </div>
-
-        <p className="field-aide nouveau-projet-suite">
-          Les autres champs (type, terrain, planches, standing, gamme, programme) se complètent ensuite dans la fiche,
-          par listes déroulantes, sous 72 h. Au-delà, le HUB crée une relance.
-        </p>
-
-        {erreur && <FieldError>{erreur}</FieldError>}
-
-        <button
-          type="submit"
-          className={`btn-primary nouveau-projet-valider${blocage ? ' is-bloque' : ''}`}
-          disabled={!!blocage || envoi}
-        >
-          {envoi ? 'Création…' : (blocage ?? 'Créer le projet')}
-        </button>
+        <footer className="nouveau-projet-pied">
+          <div id="nouveau-projet-etat" className="nouveau-projet-etat" role="status">
+            {erreur ? (
+              <FieldError>{erreur}</FieldError>
+            ) : blocage ? (
+              <span>{blocage}</span>
+            ) : (
+              <span className="nouveau-projet-pret">Tout est prêt : le code sera réservé à la création.</span>
+            )}
+          </div>
+          <div className="nouveau-projet-boutons">
+            <button type="button" className="btn-ghost" onClick={onClose} disabled={envoi}>
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className={`btn-primary nouveau-projet-valider${blocage ? ' is-bloque' : ''}`}
+              disabled={!!blocage || envoi}
+              aria-describedby="nouveau-projet-etat"
+            >
+              {envoi ? 'Création…' : 'Créer le projet'}
+            </button>
+          </div>
+        </footer>
       </form>
     </Modal>
   );
