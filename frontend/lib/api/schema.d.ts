@@ -5605,7 +5605,7 @@ export interface components {
             /** Format: date-time */
             resoluLe: string | null;
             auteur: components["schemas"]["CommentAuthorDto"] | null;
-            mentionne: components["schemas"]["MentionedPersonDto"] | null;
+            mentions: components["schemas"]["MentionedPersonDto"][];
         };
         ThreadRootDto: {
             ouvert: boolean;
@@ -5617,14 +5617,14 @@ export interface components {
             /** Format: date-time */
             resoluLe: string | null;
             auteur: components["schemas"]["CommentAuthorDto"] | null;
-            mentionne: components["schemas"]["MentionedPersonDto"] | null;
+            mentions: components["schemas"]["MentionedPersonDto"][];
         };
         PostCommentDto: {
             carteId?: string;
             tacheId?: string;
             parentId?: string;
             texte: string;
-            mentionneId?: string | null;
+            mentionIds?: string[];
         };
         ResolutionDto: {
             ok: boolean;
@@ -8780,7 +8780,9 @@ export interface operations {
     };
     OpenProjectsController_mentionable: {
         parameters: {
-            query?: never;
+            query?: {
+                projet?: string;
+            };
             header?: never;
             path: {
                 slug: string;

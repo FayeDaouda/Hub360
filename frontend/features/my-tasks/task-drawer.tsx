@@ -53,10 +53,10 @@ export function TaskDrawer({
     void load();
   }, [load]);
   useEffect(() => {
-    getMentionablePeople(slug)
+    getMentionablePeople(slug, projectId)
       .then(setMentionable)
       .catch(() => setMentionable(null));
-  }, [slug]);
+  }, [slug, projectId]);
 
   useEffect(() => {
     if (!onNeighbour) return;

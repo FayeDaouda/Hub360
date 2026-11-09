@@ -21,6 +21,9 @@ import { UrlFichierJoint } from '../commun/fichier-joint';
 // Mes tâches (remise, décision du valideur) et des avenants TS. Noms des
 // champs : ceux de l'API, inchangés.
 
+// Personnes citées (@) dans un commentaire de fil, au plus.
+export const MAX_COMMENT_MENTIONS = 20;
+
 // PATCH …/projets-ouverts/:id/taches/:tacheId/assignation — null = retirer.
 export class AssignTaskDto {
   @ValidateIf((_, v) => v !== null) @IsString() collaborateurId!: string | null;
@@ -39,7 +42,13 @@ export class PostCommentDto {
   @IsOptional() @IsString() tacheId?: string;
   @IsOptional() @IsString() parentId?: string;
   @IsString() @MinLength(1) @MaxLength(2000) texte!: string;
-  @IsOptional() @ValidateIf((_, v) => v !== null) @IsString() mentionneId?: string | null;
+  // Personnes citées (@) : comptes actifs de la société (09/11/2026 : plusieurs).
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_COMMENT_MENTIONS)
+  @IsString({ each: true })
+  @MaxLength(64, { each: true })
+  mentionIds?: string[];
 }
 
 // POST …/taches/:tacheId/remise — fichiers et commentaire facultatifs.

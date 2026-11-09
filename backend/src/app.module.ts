@@ -47,8 +47,9 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     // Tâches planifiées (rappels quotidiens, cf. RappelsService).
     ScheduleModule.forRoot(),
     // Rate-limiting — stockage en mémoire (OK mono-instance ; passer sur un
-    // storage partagé type Redis si l'API est répliquée). Le ThrottlerGuard
-    // n'est posé que sur AuthController : le reste de l'API n'est pas limité.
+    // storage partagé type Redis si l'API est répliquée). Posé seulement sur
+    // AuthController (par IP) et sur la publication d'un commentaire de fil
+    // (ThrottleParCompteGuard, par compte) : le reste de l'API n'est pas limité.
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 10 }],
       errorMessage: 'Trop de tentatives. Réessayez dans une minute.',
