@@ -14,7 +14,8 @@ vi.setConfig({ testTimeout: 30_000 });
 
 // Villa R+1 + 1 sous-sol : 3 planches calculées (cf. lib/fiche-programme).
 const VILLA = {
-  usage: 'residentiel',
+  typeProjet: 'residentiel',
+  usage: 'maisons_individuelles',
   forme: 'villa',
   gabarit: 1,
   sousSols: 1,
@@ -33,7 +34,7 @@ const dossier = (champs: Partial<Projet> = {}): Projet =>
     surfaceTerrain: 450,
     client: { id: 'cli-1', nom: 'Daouda Faye Sow', type: 'particulier' },
     standing: 'moyen',
-    gamme: 'local',
+    gamme: 'economique',
     programme: 'Villa R+1 · 1 sous-sol · F5',
     ficheProgramme: VILLA,
     statut: 'en_validation',
@@ -90,5 +91,116 @@ describe('CaracteristiquesProjet · fiche figée (prixFige)', () => {
     expect(screen.getByLabelText('Catégorie')).toBeEnabled();
     expect(screen.getByLabelText(/Forme/)).toBeEnabled();
     expect(screen.queryByRole('note')).toBeNull();
+  });
+});
+
+// Type de projet et usage (09/11/2026) : le type fixe la liste des usages ;
+// changer de type efface l'usage ; « Mixte » se décrit à la main.
+describe('CaracteristiquesProjet · type de projet et usage', () => {
+  const nouveau = (fiche: object) =>
+    dossier({
+      statut: 'nouveau_projet',
+      verrouillee: false,
+      ficheProgramme: fiche as NonNullable<Projet['ficheProgramme']>,
+    });
+
+  it('l’usage propose la liste du type choisi', () => {
+    render(<CaracteristiquesProjet projet={nouveau(VILLA)} onModifier={vi.fn()} />);
+    const usage = screen.getByLabelText('A · Usage');
+    expect(usage).toHaveValue('maisons_individuelles');
+    const options = [...usage.querySelectorAll('option')].map((o) => o.textContent);
+    expect(options).toContain('Logements collectifs');
+    expect(options).not.toContain('Hôtels');
+  });
+
+  it('sans type, l’usage attend le type', () => {
+    render(<CaracteristiquesProjet projet={nouveau({ forme: 'villa' })} onModifier={vi.fn()} />);
+    expect(screen.getByLabelText('A · Usage')).toBeDisabled();
+    expect(screen.getByLabelText('A · Usage')).toHaveTextContent('Choisir d’abord le type');
+  });
+
+  it('changer de type efface l’usage et part au serveur', async () => {
+    const user = userEvent.setup();
+    const onModifier = vi.fn().mockResolvedValue(undefined);
+    render(<CaracteristiquesProjet projet={nouveau(VILLA)} onModifier={onModifier} />);
+    await user.selectOptions(screen.getByLabelText('A · Type de projet'), 'commercial');
+    await waitFor(() =>
+      expect(onModifier).toHaveBeenCalledWith({
+        ficheProgramme: expect.objectContaining({ typeProjet: 'commercial', usage: null }),
+      }),
+    );
+    expect(screen.getByLabelText('A · Usage')).toHaveValue('');
+  });
+
+  it('Mixte : usage écrit à la main, enregistré en quittant le champ', async () => {
+    const user = userEvent.setup();
+    const onModifier = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CaracteristiquesProjet
+        projet={nouveau({ ...VILLA, typeProjet: 'mixte', usage: null })}
+        onModifier={onModifier}
+      />,
+    );
+    const champ = screen.getByLabelText('A · Usage');
+    await user.type(champ, 'Logements et commerces');
+    expect(onModifier).not.toHaveBeenCalled();
+    await user.tab();
+    await waitFor(() =>
+      expect(onModifier).toHaveBeenCalledWith({
+        ficheProgramme: expect.objectContaining({ typeProjet: 'mixte', usage: 'Logements et commerces' }),
+      }),
+    );
+  });
+});
+
+// Fiche figée : type de projet et usage ne fixent ni le prix ni la désignation
+// sur les factures — ils restent modifiables avec le droit.
+describe('CaracteristiquesProjet · type de projet et usage d’une fiche figée', () => {
+  // Immeuble R+1 décrit en une ligne (RDC → R+1) : 1 planche calculée.
+  const IMMEUBLE = {
+    typeProjet: 'commercial',
+    usage: 'commerces',
+    forme: 'immeuble',
+    gabarit: 1,
+    sousSols: 0,
+    composition: [{ de: 0, a: 1, usage: 'commerce', typologie: '', nb: 2 }],
+  } as unknown as NonNullable<Projet['ficheProgramme']>;
+
+  it('type et usage restent actifs, un autre usage part au serveur', async () => {
+    const user = userEvent.setup();
+    const onModifier = vi.fn().mockResolvedValue(undefined);
+    render(<CaracteristiquesProjet projet={dossier()} onModifier={onModifier} prixFige />);
+    expect(screen.getByLabelText('A · Type de projet')).toBeEnabled();
+    await user.selectOptions(screen.getByLabelText('A · Usage'), 'residences');
+    await waitFor(() =>
+      expect(onModifier).toHaveBeenCalledWith({
+        ficheProgramme: expect.objectContaining({ typeProjet: 'residentiel', usage: 'residences' }),
+      }),
+    );
+  });
+
+  // Fiche figée : changer de type ne touche pas aux planches (calculées sur
+  // le seul bâtiment) ; le nouveau type attend son usage avant de partir,
+  // puis type et usage partent ensemble (la fiche reste complète).
+  it('immeuble figé : changer de type n’annonce pas « Nombre de planches », part avec l’usage', async () => {
+    const user = userEvent.setup();
+    const onModifier = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CaracteristiquesProjet
+        projet={dossier({ ficheProgramme: IMMEUBLE, nbPlanches: 1, programme: 'Immeuble R+1 · 4 commerces' })}
+        onModifier={onModifier}
+        prixFige
+      />,
+    );
+    await user.selectOptions(screen.getByLabelText('A · Type de projet'), 'industriel');
+    expect(screen.queryByText(/Nombre de planches : figé/)).toBeNull();
+    expect(screen.getByLabelText('A · Type de projet')).toHaveValue('industriel');
+    expect(onModifier).not.toHaveBeenCalled();
+    await user.selectOptions(screen.getByLabelText('A · Usage'), 'entrepots');
+    await waitFor(() =>
+      expect(onModifier).toHaveBeenCalledWith({
+        ficheProgramme: expect.objectContaining({ typeProjet: 'industriel', usage: 'entrepots' }),
+      }),
+    );
   });
 });

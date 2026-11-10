@@ -152,7 +152,7 @@ export class SyntheseService {
             offres: {
               orderBy: { creeLe: 'desc' },
               take: 1,
-              select: { lignes: { select: { quantite: true, prixUnitaire: true } } },
+              select: { remisePct: true, lignes: { select: { quantite: true, prixUnitaire: true } } },
             },
           },
         }),
@@ -165,7 +165,7 @@ export class SyntheseService {
                 offres: {
                   where: { statut: 'accepte' },
                   take: 1,
-                  select: { lignes: { select: { quantite: true, prixUnitaire: true } } },
+                  select: { remisePct: true, lignes: { select: { quantite: true, prixUnitaire: true } } },
                 },
               },
             },
@@ -305,8 +305,10 @@ export class SyntheseService {
     });
 
     // 6. Commercial : pipeline en cours, signatures du mois.
-    const htOffre = (o?: { lignes: { quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[] }) =>
-      o ? montantHtLignes(o.lignes) : 0;
+    const htOffre = (o?: {
+      remisePct: number | null;
+      lignes: { quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[];
+    }) => (o ? montantHtLignes(o.lignes, o.remisePct) : 0);
     const signeHt = signatures.reduce((s, x) => s + htOffre(x.dossier.offres[0]), 0);
     sections.push({
       titre: 'Commercial',

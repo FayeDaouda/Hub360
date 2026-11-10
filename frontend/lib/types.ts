@@ -137,19 +137,23 @@ export const CATEGORIES: Record<Categorie, string> = {
 // listes du doc « Création de projet côté CRM » §3.4 (oct. 2026).
 export type Standing = 'economique' | 'moyen' | 'grand';
 
+// Standing et gamme (10/11/2026) : même échelle, libellés courts ; le sens
+// est dans l'aide sous chaque champ (STANDING_AIDE, GAMME_AIDE).
 export const STANDINGS: Record<Standing, string> = {
-  economique: 'Économique · aucune commodité',
-  moyen: 'Moyen · quelques commodités',
-  grand: 'Grand · tout inclus',
+  economique: 'Économique',
+  moyen: 'Moyen',
+  grand: 'Grand',
 };
+export const STANDING_AIDE = 'Le potentiel de l’ouvrage en termes de commodités.';
 
-export type Gamme = 'local' | 'importe' | 'sur_mesure_importe';
+export type Gamme = 'economique' | 'moyen' | 'grand';
 
 export const GAMMES: Record<Gamme, string> = {
-  local: 'Local',
-  importe: 'Importé',
-  sur_mesure_importe: 'Sur-mesure importé',
+  economique: 'Économique',
+  moyen: 'Moyen',
+  grand: 'Grand',
 };
+export const GAMME_AIDE = 'Le potentiel de l’ouvrage en termes de finitions.';
 
 // Nature du dossier : Grey Concrete travaille en mandat pour un client
 // externe, OU développe ses propres opérations (promotion). Champ obligatoire
@@ -956,7 +960,8 @@ export type LigneDevis = {
   quantite: number;
   prixUnitaire: number; // FCFA
   tauxTva: number; // %
-  montantHt: number; // FCFA — dérivé
+  montantHt: number; // FCFA — dérivé, HT brut de la ligne (affiché)
+  montantHtRemise: number; // HT après la remise de l'offre : base de sa TVA et de son TTC
   montantTva: number; // FCFA — dérivé
   montantTtc: number; // FCFA — dérivé
   ordre: number;
@@ -982,6 +987,11 @@ export type Devis = {
   // Avenant (TS) envoyé, toujours pas accepté au-delà du délai des Réglages.
   alerteAvenant: { jours: number; seuil: number } | null;
   lignes: LigneDevis[];
+  // Remise sur toute l'offre (09/11/2026) : 5 à 25 %, null = aucune. Les
+  // lignes gardent leur HT brut ; montantHt / TVA / TTC sont remisés.
+  remisePct: number | null;
+  montantBrutHt: number;
+  montantRemise: number;
   montantHt: number;
   montantTva: number;
   montantTtc: number;
@@ -1097,6 +1107,9 @@ export type DevisPublic = {
   lignes: (Omit<LigneDevis, 'produitServiceId' | 'ordre' | 'surfaceM2' | 'planches'> & {
     detail: string | null; // « 250 m² × 2 planches » (ligne CO)
   })[];
+  remisePct: number | null; // remise de l'offre (09/11/2026)
+  montantBrutHt: number;
+  montantRemise: number;
   montantHt: number;
   montantTva: number;
   montantTtc: number;

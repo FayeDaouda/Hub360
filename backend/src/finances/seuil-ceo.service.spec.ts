@@ -111,3 +111,48 @@ describe('SeuilCeoService · contresignature exclusive', () => {
     ).resolves.toBeUndefined();
   });
 });
+
+// Remise de l'offre (09/11/2026) : le TTC comparé au seuil est le TTC REMISÉ —
+// une remise peut faire repasser une affaire sous le seuil (validation CFO).
+describe('SeuilCeoService · remise de l’offre', () => {
+  // 50 000 000 HT brut → TTC brut 59 000 000 (au-delà du seuil de 50 M) ;
+  // remise 20 % → 40 000 000 HT → 47 200 000 TTC (en deçà).
+  const offreRemisee = { remisePct: 20, lignes: [ligne(50_000_000)] };
+
+  it('montant de l’affaire d’une facture : TTC de l’offre remisée (tranche et dossier)', async () => {
+    const s = svc({
+      devis: [
+        { id: 'OFFRE', dossierCrmId: null, statut: 'accepte', remisePct: 10, lignes: [ligne(50_000_000)] },
+        { id: 'OFFRE2', dossierCrmId: 'DOS2', statut: 'accepte', remisePct: 25, lignes: [ligne(10_000_000)] },
+      ],
+      projets: [{ id: 'P2', dossierCrmId: 'DOS2' }],
+    });
+    const m = await s.montantsAffaire([
+      facture('F1', { devisEcheancierId: 'OFFRE' }),
+      facture('F2', { projetId: 'P2' }),
+    ] as never);
+    // 45 000 000 × 1,18 ; 7 500 000 × 1,18.
+    expect(m.get('F1')).toBe(53_100_000);
+    expect(m.get('F2')).toBe(8_850_000);
+  });
+
+  it('offre de dossier remisée sous le seuil : la validation n’est plus exclusive au CEO, le CFO passe', async () => {
+    await expect(svc({ devisSeul: offreRemisee }).verifierOffreDossier(CFO, 'S', 'DOS')).resolves.toBeUndefined();
+    // Sans remise, la même offre revient au CEO.
+    await expect(
+      svc({ devisSeul: { remisePct: null, lignes: [ligne(50_000_000)] } }).verifierOffreDossier(CFO, 'S', 'DOS'),
+    ).rejects.toThrow('revient au CEO');
+  });
+
+  it('offreAuDelaDuSeuil : renvoie le TTC remisé, ou null si la remise ramène sous le seuil', async () => {
+    const auDela = svc({ devisSeul: { remisePct: 5, lignes: [ligne(50_000_000)] } });
+    await expect(auDela.offreAuDelaDuSeuil('S', 'DOS')).resolves.toBe(56_050_000);
+    await expect(svc({ devisSeul: offreRemisee }).offreAuDelaDuSeuil('S', 'DOS')).resolves.toBeNull();
+  });
+
+  it('devis remisé sous le seuil : le CEO est renvoyé vers le CFO (montant remisé cité)', async () => {
+    await expect(svc({ devisSeul: offreRemisee }).verifierDevis(CEO, 'S', 'D')).rejects.toThrow(
+      /47[\s  ]200[\s  ]000.*la validation revient au CFO/,
+    );
+  });
+});

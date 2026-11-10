@@ -36,7 +36,8 @@ describe('CrmService.modifierFiche · Fiche Programme', () => {
       .modifierFiche('S1', acteur, 'D1', {
         nbPlanches: 9, // ignoré : les planches se calculent
         ficheProgramme: {
-          usage: 'residentiel',
+          typeProjet: 'residentiel',
+          usage: 'maisons_individuelles',
           forme: 'villa',
           gabarit: 1,
           sousSols: 1,
@@ -56,7 +57,7 @@ describe('CrmService.modifierFiche · Fiche Programme', () => {
     await s
       .modifierFiche('S1', acteur, 'D1', {
         nbPlanches: 4,
-        ficheProgramme: { usage: 'mixte', forme: 'immeuble', gabarit: 3 },
+        ficheProgramme: { typeProjet: 'mixte', usage: 'Logements et commerces', forme: 'immeuble', gabarit: 3 },
       })
       .catch(() => undefined);
     const data = update.mock.calls[0][0].data;
@@ -78,7 +79,8 @@ describe('CrmService.modifierFiche · Fiche Programme', () => {
       .modifierFiche('S1', acteur, 'D1', {
         nbPlanches: 9, // ignoré : les planches se calculent
         ficheProgramme: {
-          usage: 'commercial',
+          typeProjet: 'commercial',
+          usage: 'commerces',
           forme: 'local_commercial',
           gabarit: 1,
           typologieVilla: 'F5', // effacée hors villa
@@ -101,5 +103,74 @@ describe('CrmService.modifierFiche · Fiche Programme', () => {
       BadRequestException,
     );
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+// Type de projet et usage (09/11/2026) : contrôlés par normaliserFiche ; le
+// résumé (colonne Programme) exige type + usage, en plus de la forme.
+describe('CrmService.modifierFiche · type de projet et usage', () => {
+  const VILLA_F5 = { forme: 'villa', gabarit: 1, sousSols: 1, typologieVilla: 'F5' };
+
+  it('usage d’un autre type (Résidentiel → « hotels ») → 400 lisible, rien écrit', async () => {
+    const { s, update } = svc();
+    const appel = s.modifierFiche('S1', acteur, 'D1', {
+      ficheProgramme: { ...VILLA_F5, typeProjet: 'residentiel', usage: 'hotels' },
+    });
+    await expect(appel).rejects.toThrow(BadRequestException);
+    await expect(appel).rejects.toThrow('Usage : valeur inconnue pour ce type de projet.');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('type de projet inconnu → 400 qui nomme « Type de projet », rien écrit', async () => {
+    const { s, update } = svc();
+    await expect(
+      s.modifierFiche('S1', acteur, 'D1', { ficheProgramme: { ...VILLA_F5, typeProjet: 'hotelier' } }),
+    ).rejects.toThrow('Type de projet : valeur inconnue.');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('Mixte : usage libre de plus de 120 caractères → 400, rien écrit', async () => {
+    const { s, update } = svc();
+    await expect(
+      s.modifierFiche('S1', acteur, 'D1', {
+        ficheProgramme: { ...VILLA_F5, typeProjet: 'mixte', usage: 'x'.repeat(121) },
+      }),
+    ).rejects.toThrow('Usage : 120 caractères au plus.');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('fiche complète avec type et usage de la liste → programme résumé, type et usage enregistrés', async () => {
+    const { s, update } = svc();
+    await s
+      .modifierFiche('S1', acteur, 'D1', {
+        ficheProgramme: { ...VILLA_F5, typeProjet: 'commercial', usage: 'bureaux' },
+      })
+      .catch(() => undefined);
+    const data = update.mock.calls[0][0].data;
+    expect(data.programme).toBe('Villa R+1 · 1 sous-sol · F5');
+    expect(data.ficheProgramme).toMatchObject({ typeProjet: 'commercial', usage: 'bureaux' });
+  });
+
+  it('Mixte complet : usage libre nettoyé et programme résumé', async () => {
+    const { s, update } = svc();
+    await s
+      .modifierFiche('S1', acteur, 'D1', {
+        ficheProgramme: { ...VILLA_F5, typeProjet: 'mixte', usage: '  Logements et bureaux  ' },
+      })
+      .catch(() => undefined);
+    const data = update.mock.calls[0][0].data;
+    expect(data.programme).toBe('Villa R+1 · 1 sous-sol · F5');
+    expect(data.ficheProgramme).toMatchObject({ typeProjet: 'mixte', usage: 'Logements et bureaux' });
+  });
+
+  it('villa décrite mais usage non choisi → programme vide (à remplir), planches toujours calculées', async () => {
+    const { s, update } = svc();
+    await s
+      .modifierFiche('S1', acteur, 'D1', { ficheProgramme: { ...VILLA_F5, typeProjet: 'residentiel' } })
+      .catch(() => undefined);
+    const data = update.mock.calls[0][0].data;
+    expect(data.programme).toBe('');
+    expect(data.nbPlanches).toBe(3);
+    expect(data.ficheProgramme).toMatchObject({ typeProjet: 'residentiel', usage: null });
   });
 });

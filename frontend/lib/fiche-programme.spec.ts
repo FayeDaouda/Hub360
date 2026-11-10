@@ -5,6 +5,9 @@ import {
   libelleOuvrage,
   planchesCalculees,
   programmeComplet,
+  TYPES_PROJET,
+  USAGE_LIBRE_MAX,
+  USAGES_PAR_TYPE,
   type FicheProgramme,
 } from './fiche-programme';
 
@@ -14,7 +17,8 @@ import {
 const fiche = (o: Partial<FicheProgramme> = {}): FicheProgramme => ({ ...FICHE_VIDE, ...o });
 const localCommercial = (o: Partial<FicheProgramme> = {}) =>
   fiche({
-    usage: 'commercial',
+    typeProjet: 'commercial',
+    usage: 'commerces',
     forme: 'local_commercial',
     gabarit: 1,
     composition: [
@@ -25,7 +29,8 @@ const localCommercial = (o: Partial<FicheProgramme> = {}) =>
   });
 const equipement = (o: Partial<FicheProgramme> = {}) =>
   fiche({
-    usage: 'bureau',
+    typeProjet: 'commercial',
+    usage: 'bureaux',
     forme: 'equipement',
     gabarit: 0,
     composition: [{ de: 0, a: 0, usage: 'bureaux', typologie: '', nb: 3 }],
@@ -81,12 +86,17 @@ describe('Fiche Programme · programme complet et planches des nouvelles formes'
 
   it('planches non calculables (saisie manuelle) tant que la composition est incomplète', () => {
     expect(planchesCalculees(localCommercial({ composition: [] }))).toBeNull();
-    expect(planchesCalculees(equipement({ usage: null }))).toBeNull();
     expect(planchesCalculees(FICHE_VIDE)).toBeNull();
+    // Type et usage ne comptent pas : seul le bâtiment fixe les planches (le prix).
+    expect(planchesCalculees(equipement({ usage: null, typeProjet: null }))).toBe(1);
   });
 
   it('villa inchangée : RDC + étages + sous-sols', () => {
-    expect(planchesCalculees(fiche({ usage: 'residentiel', forme: 'villa', gabarit: 2, sousSols: 1 }))).toBe(4);
+    expect(
+      planchesCalculees(
+        fiche({ typeProjet: 'residentiel', usage: 'maisons_individuelles', forme: 'villa', gabarit: 2, sousSols: 1 }),
+      ),
+    ).toBe(4);
   });
 });
 
@@ -109,5 +119,53 @@ describe('Nature de l’ouvrage affichée (libelleOuvrage)', () => {
   it('null quand ni forme ni type ne sont renseignés', () => {
     expect(libelleOuvrage(null, null)).toBeNull();
     expect(libelleOuvrage(undefined, undefined)).toBeNull();
+  });
+});
+
+// Parité avec le serveur (backend/src/crm/fiche-programme.ts, USAGES_PAR_TYPE) :
+// les clés envoyées doivent être celles que normaliserFiche accepte, sinon
+// l'enregistrement est refusé (400). Liste recopiée du serveur : la changer
+// des deux côtés à la fois.
+const USAGES_SERVEUR: Record<string, string[]> = {
+  residentiel: ['maisons_individuelles', 'logements_collectifs', 'immeubles_habitation', 'residences'],
+  commercial: ['bureaux', 'commerces', 'centres_commerciaux', 'hotels', 'restaurants'],
+  industriel: ['usines', 'entrepots', 'ateliers', 'centres_logistiques'],
+  institutionnel: ['ecoles', 'universites', 'hopitaux', 'administrations', 'tribunaux'],
+  culturel: ['musees', 'theatres', 'bibliotheques', 'stades', 'salles_sport'],
+  religieux: ['eglises', 'mosquees', 'temples', 'synagogues'],
+  transport: ['gares', 'aeroports', 'ports', 'parkings'],
+  agricole: ['hangars', 'etables', 'serres', 'silos'],
+};
+
+describe('Fiche Programme · type de projet et usage, parité avec le serveur', () => {
+  it('propose les 9 types du serveur, Mixte compris', () => {
+    expect(Object.keys(TYPES_PROJET).sort()).toEqual([...Object.keys(USAGES_SERVEUR), 'mixte'].sort());
+  });
+
+  it('les clés d’usage de chaque type sont exactement celles du serveur, dans le même ordre', () => {
+    expect(Object.keys(USAGES_PAR_TYPE).sort()).toEqual(Object.keys(USAGES_SERVEUR).sort());
+    for (const [type, cles] of Object.entries(USAGES_SERVEUR)) {
+      expect(Object.keys(USAGES_PAR_TYPE[type as keyof typeof USAGES_PAR_TYPE])).toEqual(cles);
+    }
+  });
+
+  it('chaque type et chaque usage a un libellé affichable', () => {
+    for (const libelle of Object.values(TYPES_PROJET)) expect(libelle.trim()).not.toBe('');
+    for (const usages of Object.values(USAGES_PAR_TYPE)) {
+      for (const libelle of Object.values(usages)) expect(libelle.trim()).not.toBe('');
+    }
+  });
+
+  it('Mixte n’a pas de liste (usage écrit à la main, même plafond de 120 caractères que le serveur)', () => {
+    expect(USAGES_PAR_TYPE).not.toHaveProperty('mixte');
+    expect(USAGE_LIBRE_MAX).toBe(120);
+  });
+
+  it('type et usage exigés pour un programme complet', () => {
+    const villa = fiche({ forme: 'villa', typologieVilla: 'F5' });
+    expect(programmeComplet({ ...villa, typeProjet: 'religieux', usage: 'mosquees' })).toBe(true);
+    expect(programmeComplet({ ...villa, typeProjet: 'mixte', usage: 'Logements et bureaux' })).toBe(true);
+    expect(programmeComplet({ ...villa, typeProjet: 'religieux', usage: null })).toBe(false);
+    expect(programmeComplet({ ...villa, typeProjet: null, usage: null })).toBe(false);
   });
 });

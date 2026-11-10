@@ -109,7 +109,7 @@ export class CommissionsService {
           where: { statut: 'accepte' },
           orderBy: { creeLe: 'desc' },
           take: 1,
-          select: { lignes: { select: { quantite: true, prixUnitaire: true } } },
+          select: { remisePct: true, lignes: { select: { quantite: true, prixUnitaire: true } } },
         },
       },
     });
@@ -167,7 +167,7 @@ export class CommissionsService {
             factureTtc: ventilationTva(ht, p.facture.tauxTva.toNumber()).montantTtc,
           };
         });
-      const signeHt = d.offres[0] ? montantHtLignes(d.offres[0].lignes) : null;
+      const signeHt = d.offres[0] ? montantHtLignes(d.offres[0].lignes, d.offres[0].remisePct) : null;
       for (const c of commissionsAttendues(
         { id: d.id, taux, signeLe, signeHt },
         modeA(modes, signeLe),

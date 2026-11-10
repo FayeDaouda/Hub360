@@ -15,6 +15,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { REMISES_OFFRE, type RemiseOffre } from './domaine';
+
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export class LigneDevisDto {
@@ -69,6 +71,8 @@ export class PatchDevisDto {
   @IsOptional() @IsString() @MaxLength(500) adresseClient?: string;
   // NINEA d'une entreprise cliente, imprimé sur ses factures (lot 6).
   @IsOptional() @IsString() @MaxLength(40) nineaClient?: string;
+  // Remise sur toute l'offre de lead (09/11/2026) : 5 à 25 % ; null = aucune.
+  @IsOptional() @IsIn([...REMISES_OFFRE]) remisePct?: RemiseOffre | null;
 }
 
 // POST …/devis/:id/reponse — validation MANUELLE par l'admin (le client a

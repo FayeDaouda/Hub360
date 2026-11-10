@@ -56,6 +56,9 @@ export type DocumentFacturationProps = {
   clientNom: string;
   objet?: string;
   lignes: LigneDocument[];
+  // Remise de l'offre (09/11/2026) : sous-total brut, remise, puis le HT
+  // remisé ; absente = récapitulatif habituel.
+  remise?: { pct: number; montant: number; brutHt: number } | null;
   montantHt: number;
   montantTva: number;
   montantTtc: number;
@@ -74,6 +77,7 @@ export function DocumentFacturation({
   clientNom,
   objet,
   lignes,
+  remise = null,
   montantHt,
   montantTva,
   montantTtc,
@@ -154,10 +158,27 @@ export function DocumentFacturation({
         </table>
 
         <div className="devis-public-recap">
-          <div className="devis-public-recap-ligne">
-            <span>Sous-total HT</span>
-            <span>{formatAmount(montantHt)}</span>
-          </div>
+          {remise ? (
+            <>
+              <div className="devis-public-recap-ligne">
+                <span>Sous-total HT</span>
+                <span>{formatAmount(remise.brutHt)}</span>
+              </div>
+              <div className="devis-public-recap-ligne">
+                <span>Remise {remise.pct} %</span>
+                <span>− {formatAmount(remise.montant)}</span>
+              </div>
+              <div className="devis-public-recap-ligne">
+                <span>Total HT</span>
+                <span>{formatAmount(montantHt)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="devis-public-recap-ligne">
+              <span>Sous-total HT</span>
+              <span>{formatAmount(montantHt)}</span>
+            </div>
+          )}
           <div className="devis-public-recap-ligne">
             <span>TVA</span>
             <span>{formatAmount(montantTva)}</span>

@@ -8,12 +8,15 @@ import {
   planchesCalculees,
   programmeComplet,
   resume,
+  TYPES_PROJET,
+  USAGES_PAR_TYPE,
   type FicheProgramme,
 } from './fiche-programme';
 
 const villa = (o: Partial<FicheProgramme> = {}): FicheProgramme => ({
   ...FICHE_VIDE,
-  usage: 'residentiel',
+  typeProjet: 'residentiel',
+  usage: 'maisons_individuelles',
   forme: 'villa',
   gabarit: 1,
   typologieVilla: 'F5',
@@ -21,7 +24,8 @@ const villa = (o: Partial<FicheProgramme> = {}): FicheProgramme => ({
 });
 const immeuble = (o: Partial<FicheProgramme> = {}): FicheProgramme => ({
   ...FICHE_VIDE,
-  usage: 'mixte',
+  typeProjet: 'mixte',
+  usage: 'Logements et commerces',
   forme: 'immeuble',
   gabarit: 4,
   sousSols: 1,
@@ -118,7 +122,8 @@ describe('Fiche Programme · composition, planches, résumé', () => {
 // décrites niveau par niveau comme l'immeuble ; seule la villa a sa branche.
 const localCommercial = (o: Partial<FicheProgramme> = {}): FicheProgramme => ({
   ...FICHE_VIDE,
-  usage: 'commercial',
+  typeProjet: 'commercial',
+  usage: 'commerces',
   forme: 'local_commercial',
   gabarit: 1,
   composition: [{ de: 0, a: 1, usage: 'commerce', typologie: '', nb: 1 }],
@@ -126,14 +131,15 @@ const localCommercial = (o: Partial<FicheProgramme> = {}): FicheProgramme => ({
 });
 const equipement = (o: Partial<FicheProgramme> = {}): FicheProgramme => ({
   ...FICHE_VIDE,
-  usage: 'bureau',
+  typeProjet: 'commercial',
+  usage: 'bureaux',
   forme: 'equipement',
   gabarit: 0,
   composition: [{ de: 0, a: 0, usage: 'bureaux', typologie: '', nb: 3 }],
   ...o,
 });
 
-describe('Fiche Programme · nouvelles formes (local commercial, équipement) et usage bureau', () => {
+describe('Fiche Programme · nouvelles formes (local commercial, équipement)', () => {
   it('seule la villa n’est pas décrite niveau par niveau', () => {
     expect(avecComposition('villa')).toBe(false);
     expect(avecComposition(null)).toBe(false);
@@ -143,8 +149,9 @@ describe('Fiche Programme · nouvelles formes (local commercial, équipement) et
   });
 
   it('accepte l’usage bureau et les formes local commercial et équipement', () => {
-    expect(normaliserFiche({ usage: 'bureau', forme: 'local_commercial' })).toMatchObject({
-      usage: 'bureau',
+    expect(normaliserFiche({ typeProjet: 'commercial', usage: 'bureaux', forme: 'local_commercial' })).toMatchObject({
+      typeProjet: 'commercial',
+      usage: 'bureaux',
       forme: 'local_commercial',
     });
     expect(normaliserFiche({ forme: 'equipement' }).forme).toBe('equipement');
@@ -153,10 +160,6 @@ describe('Fiche Programme · nouvelles formes (local commercial, équipement) et
   it('refuse une forme inconnue (« hotelier », ancien type de projet)', () => {
     expect(() => normaliserFiche({ forme: 'hotelier' })).toThrow(ErreurFicheProgramme);
     expect(() => normaliserFiche({ forme: 'hotelier' })).toThrow('Forme bâtie');
-  });
-
-  it('refuse un usage inconnu', () => {
-    expect(() => normaliserFiche({ usage: 'industriel' })).toThrow('Usage');
   });
 
   it('garde la composition d’un local commercial et d’un équipement, ramenée dans les niveaux existants', () => {
@@ -215,8 +218,9 @@ describe('Fiche Programme · nouvelles formes (local commercial, équipement) et
         }),
       ),
     ).toBe(false);
-    // Usage ou forme manquant : incomplet.
+    // Type, usage ou forme manquant : incomplet.
     expect(programmeComplet(equipement({ usage: null }))).toBe(false);
+    expect(programmeComplet(equipement({ typeProjet: null }))).toBe(false);
     // Une typologie de villa ne suffit pas hors villa.
     expect(programmeComplet(localCommercial({ composition: [], typologieVilla: 'F5' }))).toBe(false);
   });
@@ -235,7 +239,8 @@ describe('Fiche Programme · nouvelles formes (local commercial, équipement) et
     ).toBe(2);
     expect(planchesCalculees(equipement())).toBe(1);
     expect(planchesCalculees(localCommercial({ composition: [] }))).toBeNull();
-    expect(planchesCalculees(equipement({ usage: null }))).toBeNull();
+    // Type et usage ne comptent pas : seul le bâtiment fixe les planches (le prix).
+    expect(planchesCalculees(equipement({ usage: null, typeProjet: null }))).toBe(1);
   });
 
   it('résumé : libellé de la forme, hauteur, puis les totaux de la composition', () => {
@@ -278,5 +283,66 @@ describe('Fiche Programme · forme lue dans un JSON enregistré (formeDe)', () =
     expect(formeDe({ forme: 'immeuble', gabarit: 3 })).toBe('immeuble');
     expect(formeDe({ forme: 'local_commercial' })).toBe('local_commercial');
     expect(formeDe({ forme: 'equipement' })).toBe('equipement');
+  });
+});
+
+// Type de projet et usage (09/11/2026) : le type fixe la liste des usages ;
+// « Mixte » se décrit à la main ; un seul usage.
+describe('Fiche Programme · type de projet et usage', () => {
+  it('accepte un usage de la liste du type', () => {
+    expect(normaliserFiche({ typeProjet: 'industriel', usage: 'entrepots' })).toMatchObject({
+      typeProjet: 'industriel',
+      usage: 'entrepots',
+    });
+    expect(normaliserFiche({ typeProjet: 'religieux', usage: 'mosquees' }).usage).toBe('mosquees');
+  });
+
+  it('refuse un usage d’un autre type, un type inconnu ou l’ancien usage « bureau »', () => {
+    expect(() => normaliserFiche({ typeProjet: 'residentiel', usage: 'hotels' })).toThrow('Usage');
+    expect(() => normaliserFiche({ typeProjet: 'hotelier' })).toThrow('Type de projet');
+    expect(() => normaliserFiche({ typeProjet: 'commercial', usage: 'bureau' })).toThrow(ErreurFicheProgramme);
+  });
+
+  it('Mixte : usage écrit à la main, nettoyé et borné', () => {
+    expect(normaliserFiche({ typeProjet: 'mixte', usage: '  Logements et bureaux ' }).usage).toBe(
+      'Logements et bureaux',
+    );
+    expect(normaliserFiche({ typeProjet: 'mixte', usage: '   ' }).usage).toBeNull();
+    expect(() => normaliserFiche({ typeProjet: 'mixte', usage: 'x'.repeat(121) })).toThrow('120 caractères');
+    expect(() => normaliserFiche({ typeProjet: 'mixte', usage: 12 })).toThrow('Usage');
+  });
+
+  it('sans type de projet, pas d’usage (rien à contrôler)', () => {
+    expect(normaliserFiche({ usage: 'entrepots' })).toMatchObject({ typeProjet: null, usage: null });
+  });
+
+  it('chaque type sauf Mixte a sa liste d’usages, sans doublon', () => {
+    for (const t of TYPES_PROJET.filter((x) => x !== 'mixte')) {
+      const liste = USAGES_PAR_TYPE[t as Exclude<typeof t, 'mixte'>];
+      expect(liste.length).toBeGreaterThan(0);
+      expect(new Set(liste).size).toBe(liste.length);
+    }
+  });
+});
+
+// Mezzanine et climatisation (09/11/2026).
+describe('Fiche Programme · mezzanine et climatisation', () => {
+  it('mezzanine : gardée, citée au résumé, sans planche de plus', () => {
+    const f = normaliserFiche({
+      typeProjet: 'residentiel',
+      usage: 'maisons_individuelles',
+      forme: 'villa',
+      gabarit: 1,
+      typologieVilla: 'F5',
+      mezzanine: true,
+    });
+    expect(f.mezzanine).toBe(true);
+    expect(resume(f)).toContain('mezzanine');
+    expect(planchesCalculees(f)).toBe(planchesCalculees({ ...f, mezzanine: false }));
+  });
+
+  it('climatisation : une seule commodité, les anciennes clés ne passent plus', () => {
+    const f = normaliserFiche({ commodites: ['climatisation', 'pre_climatisation', 'climatisation_centralisee'] });
+    expect(f.commodites).toEqual(['climatisation']);
   });
 });

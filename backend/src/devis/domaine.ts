@@ -1,5 +1,5 @@
 import { StatutDevis } from '@prisma/client';
-import { ventilationTva } from '../projets/domaine/gardes';
+import { htLigne, ventilationTva } from '../projets/domaine/gardes';
 import { daysBetween, toIsoDay } from '@hub/domain';
 
 // Référence d'un devis (maquette Finances, oct. 2026) : une offre de dossier
@@ -65,22 +65,34 @@ export function relanceAFaire(
   return d.relancesEnvoyees < paliersAtteints;
 }
 
+// Remise sur toute l'offre (09/11/2026) : seuls paliers proposés ; null = aucune.
+export const REMISES_OFFRE = [5, 10, 15, 20, 25] as const;
+export type RemiseOffre = (typeof REMISES_OFFRE)[number];
+
+type Nombre = { toNumber(): number };
+
+// HT d'une ligne, remise de l'offre appliquée : projets/domaine/gardes.ts.
+export { htLigne };
+
 // Montants d'un devis à partir de ses lignes — même arrondi que
 // DevisService.calculerLignes (HT arrondi par ligne, TVA ventilée par ligne).
+// `remisePct` obligatoire : aucun total ne l'oublie (null = aucune).
 export function montantTtcLignes(
-  lignes: { quantite: { toNumber(): number }; prixUnitaire: { toNumber(): number }; tauxTva: { toNumber(): number } }[],
+  lignes: { quantite: Nombre; prixUnitaire: Nombre; tauxTva: Nombre }[],
+  remisePct: number | null,
 ): number {
   return lignes.reduce((s, l) => {
-    const ht = Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber());
+    const ht = htLigne(l.quantite.toNumber(), l.prixUnitaire.toNumber(), remisePct);
     return s + ventilationTva(ht, l.tauxTva.toNumber()).montantTtc;
   }, 0);
 }
 
 // Montant HT d'un devis à partir de ses lignes (HT arrondi par ligne).
 export function montantHtLignes(
-  lignes: { quantite: { toNumber(): number }; prixUnitaire: { toNumber(): number } }[],
+  lignes: { quantite: Nombre; prixUnitaire: Nombre }[],
+  remisePct: number | null,
 ): number {
-  return lignes.reduce((s, l) => s + Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()), 0);
+  return lignes.reduce((s, l) => s + htLigne(l.quantite.toNumber(), l.prixUnitaire.toNumber(), remisePct), 0);
 }
 
 // -- Avenant non accepté (Réglages · Règles et délais) -----------------------
@@ -107,16 +119,20 @@ export function alerteAvenant(
 
 // Message d'introduction d'une offre de lead (maquette Finances, oct. 2026),
 // pré-rempli depuis la fiche et les lignes tant que personne ne l'a réécrit.
-// « CO1 — Conception — … » s'écrit « CO1 · Conception — … » dans la liste.
+// « SU1 — Suivi de chantier — … » s'écrit « SU1 · Suivi de chantier — … »
+// dans la liste. La conception ne dit pas sa catégorie (09/11/2026) : une
+// ligne CO s'écrit « Conception », sans code ni complexité.
 export function messageIntroductionParDefaut(o: {
   societe: string;
   lieu: string | null;
   programme: string;
-  prestations: string[];
+  prestations: { designation: string; famille: string | null }[];
 }): string {
   const lieu = o.lieu ? ` sis à ${o.lieu}` : '';
   const programme = o.programme.trim() || 'programme à préciser';
-  const liste = o.prestations.map((d) => `· ${d.replace(/^(\S+) — /, '$1 · ')}`).join('\n');
+  const liste = o.prestations
+    .map((p) => `· ${p.famille === 'CO' ? 'Conception' : p.designation.replace(/^(\S+) — /, '$1 · ')}`)
+    .join('\n');
   return (
     `Dans le cadre de notre accompagnement pour le projet${lieu}, décrit comme suit (${programme}), ` +
     `${o.societe} intervient exclusivement sur les prestations suivantes :${liste ? `\n\n${liste}` : ''}`

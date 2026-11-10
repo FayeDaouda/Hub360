@@ -49,6 +49,11 @@
   border-color: transparent;
   background: transparent;
 }
+/* Cases empilées (mezzanine au-dessus de la toiture-terrasse). */
+.fp-pile {
+  display: flex;
+  flex-direction: column;
+}
 .fp-compo {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 0.8fr) auto;

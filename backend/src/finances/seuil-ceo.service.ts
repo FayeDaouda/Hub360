@@ -74,14 +74,14 @@ export class SeuilCeoService {
       devisIds.length || dossierIds.length
         ? await this.prisma.devis.findMany({
             where: { OR: [{ id: { in: devisIds } }, { dossierCrmId: { in: dossierIds }, statut: 'accepte' }] },
-            select: { id: true, dossierCrmId: true, statut: true, lignes: LIGNES_TTC },
+            select: { id: true, dossierCrmId: true, statut: true, remisePct: true, lignes: LIGNES_TTC },
           })
         : [];
-    const ttcDevis = new Map(offres.map((o) => [o.id, montantTtcLignes(o.lignes)]));
+    const ttcDevis = new Map(offres.map((o) => [o.id, montantTtcLignes(o.lignes, o.remisePct)]));
     const ttcDossier = new Map(
       offres
         .filter((o) => o.statut === 'accepte' && o.dossierCrmId)
-        .map((o) => [o.dossierCrmId!, montantTtcLignes(o.lignes)]),
+        .map((o) => [o.dossierCrmId!, montantTtcLignes(o.lignes, o.remisePct)]),
     );
 
     return new Map(
@@ -106,10 +106,10 @@ export class SeuilCeoService {
     if (!estContresignataire(acteur) && !exclusif) return;
     const devis = await this.prisma.devis.findFirst({
       where: { id: devisId, societeId },
-      select: { lignes: LIGNES_TTC },
+      select: { remisePct: true, lignes: LIGNES_TTC },
     });
     if (!devis) throw new NotFoundException('Devis introuvable');
-    await this.controler(acteur, societeId, montantTtcLignes(devis.lignes), exclusif);
+    await this.controler(acteur, societeId, montantTtcLignes(devis.lignes, devis.remisePct), exclusif);
   }
 
   // Offre d'un dossier soumise au CFO (brouillon le plus récent, celle que
@@ -117,10 +117,10 @@ export class SeuilCeoService {
   async verifierOffreDossier(acteur: ActeurSeuil, societeId: string, dossierId: string) {
     const offre = await this.prisma.devis.findFirst({
       where: { societeId, dossierCrmId: dossierId, statut: 'brouillon' },
-      select: { lignes: LIGNES_TTC },
+      select: { remisePct: true, lignes: LIGNES_TTC },
       orderBy: { creeLe: 'desc' },
     });
-    if (offre) await this.controler(acteur, societeId, montantTtcLignes(offre.lignes), true);
+    if (offre) await this.controler(acteur, societeId, montantTtcLignes(offre.lignes, offre.remisePct), true);
   }
 
   // Montant TTC de l'offre soumise d'un dossier si elle dépasse le seuil de
@@ -128,11 +128,11 @@ export class SeuilCeoService {
   async offreAuDelaDuSeuil(societeId: string, dossierId: string): Promise<number | null> {
     const offre = await this.prisma.devis.findFirst({
       where: { societeId, dossierCrmId: dossierId, statut: 'brouillon' },
-      select: { lignes: LIGNES_TTC },
+      select: { remisePct: true, lignes: LIGNES_TTC },
       orderBy: { creeLe: 'desc' },
     });
     if (!offre) return null;
-    const montant = montantTtcLignes(offre.lignes);
+    const montant = montantTtcLignes(offre.lignes, offre.remisePct);
     return signataireRequis(montant, await this.seuil(societeId)) === 'ceo' ? montant : null;
   }
 
