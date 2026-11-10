@@ -135,7 +135,7 @@ function versResumeOffre(o: Devis & { lignes: LigneDevis[] }) {
     // Rappel non bloquant (équipe + DAF) : typiquement un forfait « prix à
     // fixer » du catalogue (DPC/SPC) resté vide. Constat, pas une règle.
     lignesAZero: o.lignes.filter((l) => Number(l.prixUnitaire) === 0).length,
-    montantTtc: montantTtcLignes(o.lignes),
+    montantTtc: montantTtcLignes(o.lignes, o.remisePct),
     dateEnvoi: o.dateEnvoi,
     dateValidite: o.dateValidite,
     dateReponse: o.dateReponse,

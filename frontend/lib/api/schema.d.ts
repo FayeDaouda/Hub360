@@ -4800,7 +4800,7 @@ export interface components {
             /** @enum {string} */
             standing?: "economique" | "grand" | "moyen";
             /** @enum {string} */
-            gamme?: "importe" | "local" | "sur_mesure_importe";
+            gamme?: "economique" | "grand" | "moyen";
             client: components["schemas"]["ClientRefDto"];
             apporteur: components["schemas"]["ApporteurDto"];
             proprietaireId?: string;
@@ -4813,7 +4813,7 @@ export interface components {
             /** @enum {string} */
             standing?: "economique" | "grand" | "moyen";
             /** @enum {string} */
-            gamme?: "importe" | "local" | "sur_mesure_importe";
+            gamme?: "economique" | "grand" | "moyen";
             ficheProgramme?: {
                 [key: string]: unknown;
             };
@@ -4871,6 +4871,8 @@ export interface components {
             };
             adresseClient?: string;
             nineaClient?: string;
+            /** @enum {number|null} */
+            remisePct?: 5 | 10 | 15 | 20 | 25 | null;
         };
         ReponseDevisDto: {
             /** @enum {string} */

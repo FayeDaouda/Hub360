@@ -709,10 +709,12 @@ enum Standing {
   grand // tout inclus
 }
 
+// Standing et gamme (10/11/2026) : même échelle économique / moyen / grand.
+// Standing = potentiel de l'ouvrage en commodités ; gamme = en finitions.
 enum Gamme {
-  local
-  importe
-  sur_mesure_importe
+  economique
+  moyen
+  grand
 }
 
 enum TypeClient {
@@ -1956,6 +1958,10 @@ model Devis {
   // échéance (clé de facturation-offre.ts) — saisis sur le brouillon, figés ensuite.
   delaisEcheancier    Json?       @map("delais_echeancier")
   derniereRelanceLe   DateTime?   @map("derniere_relance_le")
+  // Remise sur toute l'offre (09/11/2026) : 5, 10, 15, 20 ou 25 % du HT de
+  // chaque ligne, avant TVA ; null = aucune. Saisie sur le brouillon, figée
+  // ensuite ; l'échéancier et les factures de l'Onboard suivent le remisé.
+  remisePct           Int?        @map("remise_pct")
 
   societe            Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
   projet             Projet?       @relation(fields: [projetId], references: [id], onDelete: SetNull)

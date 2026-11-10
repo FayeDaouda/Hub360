@@ -45,14 +45,16 @@ const DOSSIER = {
 };
 
 type Offre = { id: string; statut: string; dateValidite: string | null };
+type ProduitLigne = { code: string; famille: string; prixModifiable: boolean };
 
 function monter(
   statut: string,
   opts: {
     basculees?: number;
     projet?: object | null;
-    // Lignes du brouillon d'offre [quantité, prix] ; null = aucun brouillon.
-    lignesBrouillon?: [number, number][] | null;
+    // Lignes du brouillon d'offre [quantité, prix, produit du catalogue ?] ;
+    // null = aucun brouillon.
+    lignesBrouillon?: [number, number, ProduitLigne?][] | null;
     offres?: Offre[]; // offres envoyées / acceptées du dossier
   } = {},
 ) {
@@ -72,9 +74,10 @@ function monter(
             : opts.lignesBrouillon === null
               ? null
               : {
-                  lignes: (opts.lignesBrouillon ?? [[1, 100_000]]).map(([q, p]) => ({
+                  lignes: (opts.lignesBrouillon ?? [[1, 100_000]]).map(([q, p, produit]) => ({
                     quantite: { toNumber: () => q },
                     prixUnitaire: { toNumber: () => p },
+                    produitService: produit ?? null,
                   })),
                 },
         ),
@@ -327,6 +330,48 @@ describe('CrmService.agir — offre', () => {
       'une ligne n’est pas chiffrée',
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  // CO0 / SU0 (09/11/2026) : prix saisi sur l'offre, jamais à 0 chez le CFO.
+  const CO0: ProduitLigne = { code: 'CO0', famille: 'CO', prixModifiable: true };
+  const SU0: ProduitLigne = { code: 'SU0', famille: 'SU', prixModifiable: true };
+  const SU1: ProduitLigne = { code: 'SU1', famille: 'SU', prixModifiable: false };
+
+  it('soumettre une offre dont le prix de CO0 n’est pas saisi → 409 nommant CO0, rien ne bascule', async () => {
+    const { svc, prisma } = monter('nouveau_projet', {
+      lignesBrouillon: [
+        [300, 0, CO0],
+        [3, 300_000, SU1],
+      ],
+    });
+    await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow('saisis le prix de CO0');
+    await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(ConflictException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('soumettre une offre dont le prix de SU0 n’est pas saisi → 409 nommant SU0', async () => {
+    const { svc, prisma } = monter('nouveau_projet', {
+      lignesBrouillon: [
+        [300, 4_200, CO0],
+        [3, 0, SU0],
+      ],
+    });
+    await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow('saisis le prix de SU0');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('soumettre une offre CO0 / SU0 aux prix saisis → passe en validation CFO', async () => {
+    const { svc, prisma } = monter('nouveau_projet', {
+      lignesBrouillon: [
+        [300, 4_200, CO0],
+        [3, 250_000, SU0],
+      ],
+    });
+    await svc.agir('S1', COO as never, 'D1', 'soumettre', undefined);
+    expect(prisma.dossierCrm.updateMany).toHaveBeenCalledWith({
+      where: { id: 'D1', statut: 'nouveau_projet' },
+      data: { statut: 'en_validation' },
+    });
   });
 
   it('Onboard sans offre acceptée → 409, aucun projet', async () => {

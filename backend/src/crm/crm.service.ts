@@ -376,8 +376,10 @@ export class CrmService {
       // La soumission a exigé un programme : une fiche figée reste complète
       // (avant le calcul des planches : sinon « Nombre de planches » trompe).
       if (fiche && !resume(fiche)) {
+        // Type et usage (09/11/2026) : nommés, une fiche migrée attend son usage.
+        const manque = [!fiche.typeProjet && 'le type de projet', !fiche.usage && 'l’usage'].filter(Boolean);
         throw new BadRequestException(
-          'Fiche Programme incomplète : une fiche figée doit rester complète (le programme de l’offre en dépend).',
+          `Fiche Programme incomplète${manque.length ? ` : choisis ${manque.join(' et ')}` : ''} — une fiche figée doit rester complète (le programme de l’offre en dépend).`,
         );
       }
       const avant = ficheAvant ? planchesCalculees(ficheAvant) : null;
@@ -640,9 +642,29 @@ export class CrmService {
       // Finances) ; le CFO ne reçoit qu'une offre entièrement chiffrée.
       const offre = await this.prisma.devis.findFirst({
         where: { dossierCrmId: dossierId, statut: 'brouillon' },
-        select: { lignes: { select: { quantite: true, prixUnitaire: true } } },
+        select: {
+          lignes: {
+            select: {
+              quantite: true,
+              prixUnitaire: true,
+              produitService: { select: { code: true, famille: true, prixModifiable: true } },
+            },
+          },
+        },
       });
       const lignes = offre?.lignes ?? [];
+      // CO0 / SU0 (09/11/2026) : leur prix se saisit sur l'offre — jamais à 0 chez le CFO.
+      const sansTarif = lignes.find(
+        (l) =>
+          l.produitService?.prixModifiable &&
+          ['CO', 'SU'].includes(l.produitService.famille ?? '') &&
+          l.prixUnitaire.toNumber() <= 0,
+      );
+      if (sansTarif) {
+        throw new ConflictException(
+          `Offre : saisis le prix de ${sansTarif.produitService!.code ?? 'la prestation'} avant de la soumettre au CFO.`,
+        );
+      }
       if (!lignes.some((l) => l.quantite.toNumber() > 0 && l.prixUnitaire.toNumber() > 0)) {
         throw new ConflictException('Ajoute au moins une prestation chiffrée à l’offre avant de la soumettre au CFO.');
       }

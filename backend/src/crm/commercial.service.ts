@@ -90,6 +90,7 @@ export class CommercialService {
             statut: true,
             dateEnvoi: true,
             dateValidite: true,
+            remisePct: true,
             lignes: { select: { quantite: true, prixUnitaire: true } },
           },
         },
@@ -149,7 +150,7 @@ export class CommercialService {
             }
           : null,
         signeLe: d.transitions[0] ? toIsoDay(d.transitions[0].creeLe) : null,
-        montantHt: montants && offreMontant ? montantHtLignes(offreMontant.lignes) : null,
+        montantHt: montants && offreMontant ? montantHtLignes(offreMontant.lignes, offreMontant.remisePct) : null,
         commissions: {
           versees: montants
             ? d.commissions.filter((c) => c.statut === 'payee').reduce((s, c) => s + c.montant.toNumber(), 0)

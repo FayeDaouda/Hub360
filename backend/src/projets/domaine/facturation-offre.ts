@@ -1,6 +1,12 @@
 import { JalonFacture } from '@prisma/client';
 import { JALONS_FACTURE, type PartsFactures } from './config';
 import { plural } from '@hub/domain';
+import { htLigne } from './gardes';
+
+// CO0 (09/11/2026) : conception au tarif saisi, sans catégorie à afficher —
+// ni sur les factures ni sur l'échéancier (le client ne lit que « Conception »).
+const CO_PRIX_SAISI = 'CO0';
+const categorie = (code: string | null) => (code && code !== CO_PRIX_SAISI ? `, catégorie ${code}` : '');
 
 // Plan de facturation d'une offre acceptée (étape H2, CGV Grey Concrete 2026,
 // décisions du 27/09/2026) — pur, sans I/O : ligne d'offre → factures à
@@ -30,7 +36,8 @@ export type LigneOffre = {
 };
 
 // Lignes d'un devis (Prisma) → lignes d'offre du plan. HT = quantité × prix,
-// arrondi au franc (même calcul que le devis).
+// remise de l'offre appliquée, arrondi au franc (même calcul que le devis) :
+// l'échéancier et les factures de l'Onboard portent sur le HT remisé.
 type Nombre = { toNumber(): number };
 export function lignesOffreDepuisDevis(
   lignes: {
@@ -40,12 +47,13 @@ export function lignesOffreDepuisDevis(
     tauxTva: Nombre;
     produitService: { code: string | null; famille: string | null } | null;
   }[],
+  remisePct: number | null,
 ): LigneOffre[] {
   return lignes.map((l) => ({
     code: l.produitService?.code ?? null,
     famille: l.produitService?.famille ?? null,
     designation: l.designation,
-    montantHt: Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()),
+    montantHt: htLigne(l.quantite.toNumber(), l.prixUnitaire.toNumber(), remisePct),
     tauxTva: l.tauxTva.toNumber(),
     quantite: l.quantite.toNumber(),
   }));
@@ -104,11 +112,11 @@ export function planFacturationOffre(lignes: LigneOffre[], parts: PartsFactures)
       prevues.push({
         jalon: j.cle,
         // Lisible par le client : le code catalogue seul (« CO2 ») ne lui dit rien.
-        libelle: `Honoraires de conception, catégorie ${co.code} · ${j.tranche} (${parts[j.code]} %)`,
+        libelle: `Honoraires de conception${categorie(co.code)} · ${j.tranche} (${parts[j.code]} %)`,
         montantHt: montants[i],
         tauxTva: co.tauxTva,
         cle: `CO:${j.code}`, // une seule ligne CO par devis : clé stable si la catégorie change
-        famille: `Conception · ${co.code}`,
+        famille: co.code && co.code !== CO_PRIX_SAISI ? `Conception · ${co.code}` : 'Conception',
         echeance: j.code,
         part: parts[j.code],
         declencheur: DECLENCHEURS_CONCEPTION[j.cle],

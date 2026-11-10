@@ -12021,9 +12021,9 @@
           "gamme": {
             "type": "string",
             "enum": [
-              "importe",
-              "local",
-              "sur_mesure_importe"
+              "economique",
+              "grand",
+              "moyen"
             ]
           },
           "client": {
@@ -12074,9 +12074,9 @@
           "gamme": {
             "type": "string",
             "enum": [
-              "importe",
-              "local",
-              "sur_mesure_importe"
+              "economique",
+              "grand",
+              "moyen"
             ]
           },
           "ficheProgramme": {
@@ -12296,6 +12296,17 @@
           "nineaClient": {
             "type": "string",
             "maxLength": 40
+          },
+          "remisePct": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              5,
+              10,
+              15,
+              20,
+              25
+            ]
           }
         }
       },

@@ -15,6 +15,7 @@ import { TsElementsService } from '../projects/ts-elements.service';
 import { tsRight } from '../projects/review-rules';
 import type { AddTsElementDto } from '../projects/open-projects.dto';
 import { DevisService } from './devis.service';
+import { htLigne } from './domaine';
 import type { LigneDevisDto } from './dto';
 import { ETAPE, formatAmount, hasRight, ROLE_CFO, ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
 
@@ -47,7 +48,8 @@ export class AvenantsTsService {
     dto: AddTsElementDto,
   ) {
     const { ligne } = await this.chiffrer(societeId, projetId, dto);
-    const montantHt = Math.round(ligne.quantite * ligne.prixUnitaire);
+    // Devis de projet : jamais de remise.
+    const montantHt = htLigne(ligne.quantite, ligne.prixUnitaire, null);
     const seuil = await this.reglages.regle<number>(societeId, 'seuil_ts_cto_ht');
     const ctx = await decisionContext(this.prisma, societeId, todayIso());
     const droit = tsRight(

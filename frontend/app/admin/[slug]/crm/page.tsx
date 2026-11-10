@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, use } from 'react';
+import { useEffect, useMemo, useRef, useState, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Clock3, FileWarning, FolderOpen, Home, Plus, Search, Send } from 'lucide-react';
 import {
@@ -115,6 +115,30 @@ export default function CrmPage(props: Props) {
     getLocalites(params.slug).then(setLocalites);
     getProprietairesPossibles(params.slug).then(setProprietaires);
   }, [params.slug]);
+
+  // Droits changés en cours de route (matrice, « Vos droits ont changé ») :
+  // les dossiers sont relus, le serveur n'envoyant que ce que le rôle voit
+  // (offre, apporteur…) ; la fiche ouverte suit sans rechargement de la page.
+  const empreinteDroits = JSON.stringify(session?.permissions ?? null);
+  const droitsLus = useRef(empreinteDroits);
+  useEffect(() => {
+    if (droitsLus.current === empreinteDroits) return;
+    let annule = false; // réponse d'un changement de droits déjà dépassé : ignorée
+    getProjets(params.slug)
+      .then((liste) => {
+        if (annule) return;
+        // Repère avancé seulement une fois la liste appliquée (effet rejoué ou
+        // annulé : la relecture repart au passage suivant).
+        droitsLus.current = empreinteDroits;
+        setProjets(liste);
+      })
+      .catch(() => {
+        if (!annule) setMessage('Vos droits ont changé : rechargez la page pour mettre la liste à jour.');
+      });
+    return () => {
+      annule = true;
+    };
+  }, [empreinteDroits, params.slug]);
 
   // Lien direct vers un dossier (?dossier=… — notifications du cycle CRM) :
   // ouvre sa fiche puis retire le paramètre, pour qu'un rechargement ne la

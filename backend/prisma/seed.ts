@@ -12,7 +12,13 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { codeAvecVariante, genererCodeDossier } from '../src/crm/nomenclature';
-import { FICHE_VIDE, planchesCalculees, resume, type FicheProgramme } from '../src/crm/fiche-programme';
+import {
+  FICHE_VIDE,
+  normaliserFiche,
+  planchesCalculees,
+  resume,
+  type FicheProgramme,
+} from '../src/crm/fiche-programme';
 import { COMPTES_DEMO, creerComptesDemo } from './comptes-demo';
 import { creerFinancesDemo } from './finances-demo';
 import { organiserEquipesDemo } from './equipes-demo';
@@ -345,7 +351,8 @@ async function main() {
     commission: 4,
   };
   const villa = (o: Partial<FicheProgramme>): Partial<FicheProgramme> => ({
-    usage: 'residentiel',
+    typeProjet: 'residentiel',
+    usage: 'maisons_individuelles',
     forme: 'villa',
     ...o,
   });
@@ -367,7 +374,7 @@ async function main() {
       type: 'villa',
       surface: 400,
       standing: 'moyen',
-      gamme: 'local',
+      gamme: 'economique',
       fiche: villa({
         gabarit: 1,
         typologieVilla: 'F5',
@@ -380,7 +387,7 @@ async function main() {
           'interphone',
           'groupe_electrogene',
           'bache_surpresseur',
-          'pre_climatisation',
+          'climatisation',
           'fibre',
         ],
       }),
@@ -401,7 +408,7 @@ async function main() {
       type: 'villa',
       surface: 300,
       standing: 'grand',
-      gamme: 'importe',
+      gamme: 'moyen',
       fiche: villa({
         gabarit: 2,
         toitureTerrasse: true,
@@ -415,7 +422,7 @@ async function main() {
           'detection_incendie',
           'groupe_electrogene',
           'panneaux_solaires',
-          'climatisation_centralisee',
+          'climatisation',
           'fibre',
           'domotique',
           'piscine',
@@ -439,9 +446,10 @@ async function main() {
       type: 'immeuble_residentiel',
       surface: 600,
       standing: 'moyen',
-      gamme: 'local',
+      gamme: 'economique',
       fiche: immeuble({
-        usage: 'residentiel',
+        typeProjet: 'residentiel',
+        usage: 'immeubles_habitation',
         gabarit: 4,
         sousSols: 1,
         composition: [
@@ -477,7 +485,7 @@ async function main() {
       type: 'villa',
       surface: 1000,
       standing: 'grand',
-      gamme: 'sur_mesure_importe',
+      gamme: 'grand',
       fiche: villa({
         gabarit: 1,
         sousSols: 1,
@@ -495,7 +503,7 @@ async function main() {
           'groupe_electrogene',
           'panneaux_solaires',
           'forage',
-          'climatisation_centralisee',
+          'climatisation',
           'domotique',
           'piscine',
           'salle_sport',
@@ -520,7 +528,7 @@ async function main() {
       type: 'villa',
       surface: 250,
       standing: 'economique',
-      gamme: 'local',
+      gamme: 'economique',
       fiche: villa({ gabarit: 0, typologieVilla: 'F4' }),
     },
     {
@@ -539,9 +547,10 @@ async function main() {
       type: 'immeuble_mixte',
       surface: 1500,
       standing: 'grand',
-      gamme: 'importe',
+      gamme: 'moyen',
       fiche: immeuble({
-        usage: 'mixte',
+        typeProjet: 'mixte',
+        usage: 'Logements, commerces et bureaux',
         gabarit: 6,
         sousSols: 2,
         toitureTerrasse: true,
@@ -588,9 +597,10 @@ async function main() {
       type: 'immeuble_bureaux',
       surface: 800,
       standing: 'moyen',
-      gamme: 'importe',
+      gamme: 'moyen',
       fiche: immeuble({
-        usage: 'commercial',
+        typeProjet: 'commercial',
+        usage: 'bureaux',
         gabarit: 3,
         composition: [
           { de: 0, a: 0, usage: 'commerce', typologie: '', nb: 1 },
@@ -602,7 +612,7 @@ async function main() {
           'acces_badge',
           'videosurveillance',
           'detection_incendie',
-          'climatisation_centralisee',
+          'climatisation',
           'fibre',
           'hall_accueil',
         ],
@@ -644,7 +654,8 @@ async function main() {
       standing: 'moyen',
       gamme: null,
       fiche: immeuble({
-        usage: 'residentiel',
+        typeProjet: 'residentiel',
+        usage: 'immeubles_habitation',
         gabarit: 8,
         sousSols: 1,
         composition: [{ de: 0, a: 0, usage: 'commerce', typologie: '', nb: 4 }],
@@ -664,7 +675,7 @@ async function main() {
       type: 'villa',
       surface: 500,
       standing: 'moyen',
-      gamme: 'local',
+      gamme: 'economique',
       fiche: villa({
         gabarit: 1,
         typologieVilla: 'F5',
@@ -675,7 +686,7 @@ async function main() {
           'interphone',
           'bache_surpresseur',
           'chauffe_eau_solaire',
-          'pre_climatisation',
+          'climatisation',
         ],
       }),
     },
@@ -693,9 +704,10 @@ async function main() {
       type: 'immeuble_residentiel',
       surface: 1000,
       standing: 'grand',
-      gamme: 'importe',
+      gamme: 'moyen',
       fiche: immeuble({
-        usage: 'residentiel',
+        typeProjet: 'residentiel',
+        usage: 'immeubles_habitation',
         gabarit: 5,
         composition: [
           { de: 0, a: 0, usage: 'logements', typologie: 'F3', nb: 2 },
@@ -726,10 +738,11 @@ async function main() {
       type: 'local_commercial',
       surface: 300,
       standing: 'moyen',
-      gamme: 'importe',
+      gamme: 'moyen',
       fiche: immeuble({
         forme: 'local_commercial',
-        usage: 'commercial',
+        typeProjet: 'commercial',
+        usage: 'commerces',
         gabarit: 0,
         composition: [{ de: 0, a: 0, usage: 'commerce', typologie: '', nb: 1 }],
       }),
@@ -773,7 +786,9 @@ async function main() {
   for (const cfg of cfgs) {
     // Fiche Programme : programme (résumé) et planches déduits comme le fait
     // CrmService.modifierFiche.
-    const fiche: FicheProgramme | null = cfg.fiche ? { ...FICHE_VIDE, ...cfg.fiche } : null;
+    // Normalisée comme une saisie : une valeur inconnue (ancien usage…) fait
+    // échouer le seed au lieu de s'écrire en base.
+    const fiche: FicheProgramme | null = cfg.fiche ? normaliserFiche({ ...FICHE_VIDE, ...cfg.fiche }) : null;
     const creeLe = new Date(Date.now() - (cfg.creeIlYaJours ?? 30) * 86_400_000);
     const ap = cfg.apporteur;
     const dossier = await prisma.dossierCrm.create({

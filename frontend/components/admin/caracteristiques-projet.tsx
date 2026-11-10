@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Lock, Plus, X } from 'lucide-react';
 import {
   CATEGORIES,
+  GAMME_AIDE,
   GAMMES,
+  STANDING_AIDE,
   STANDINGS,
   type Categorie,
   type Gamme,
@@ -27,14 +29,16 @@ import {
   SURFACES,
   totaux,
   TYPOLOGIES_VILLA,
-  USAGES,
+  TYPES_PROJET,
+  USAGE_LIBRE_MAX,
+  USAGES_PAR_TYPE,
   USAGES_NIVEAU,
   type Annexe,
   type FicheProgramme,
   type Forme,
   type LigneComposition,
   type TypologieVilla,
-  type Usage,
+  type TypeProjet,
   type UsageNiveau,
 } from '@/lib/fiche-programme';
 import { formatNumber, plural } from '@hub/domain';
@@ -53,9 +57,6 @@ type Props = {
 // Champs du prix d'une fiche figée — même message que le serveur (crm/fiche-figee.ts).
 const MESSAGE_PRIX_FIGE =
   'figé après la soumission (prix de l’offre, désignation sur les factures) : passer par « Refaire une offre » ou un renvoi du CFO pour le changer.';
-
-// Nom court du standing pour « Moyen standing : sélection type ».
-const STANDING_COURT: Record<Standing, string> = { economique: 'Économique', moyen: 'Moyen', grand: 'Grand' };
 
 // « Caractéristiques du projet » et Fiche Programme d'un lead en « Nouveau
 // projet » (doc « Création de projet côté CRM » §3.3–3.4, captures du boss) :
@@ -106,6 +107,9 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
       return setErreur(`Nombre de planches : ${MESSAGE_PRIX_FIGE}`);
     }
     setFiche(suivante);
+    // Fiche figée : elle doit rester complète (le serveur refuserait). Un
+    // nouveau type attend son usage avant de partir — le champ est en rouge.
+    if (prixFige && suivante.typeProjet && !suivante.usage?.trim()) return;
     // Refus (fiche figée) : retour à la dernière fiche ACCEPTÉE par le serveur
     // (les enregistrements partent en file : pas à l'état d'avant ce clic).
     enregistrer(
@@ -244,7 +248,7 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
                 </option>
               ))}
             </select>
-            <span className="field-aide">Ce que le bâtiment offre en équipements.</span>
+            <span className="field-aide">{STANDING_AIDE}</span>
           </div>
           <div className="field">
             <label className="field-label" htmlFor="fiche-gamme">
@@ -263,25 +267,57 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
                 </option>
               ))}
             </select>
-            <span className="field-aide">Avec quoi on le finit : durabilité et coût.</span>
+            <span className="field-aide">{GAMME_AIDE}</span>
           </div>
           <div className="field">
-            <label className="field-label" htmlFor="fiche-usage">
-              A · Usage
+            <label className="field-label" htmlFor="fiche-type-projet">
+              A · Type de projet
             </label>
             <select
-              id="fiche-usage"
-              className={classe(!fiche.usage)}
-              value={fiche.usage ?? ''}
-              onChange={(e) => majFiche({ usage: e.target.value as Usage })}
+              id="fiche-type-projet"
+              className={classe(!fiche.typeProjet)}
+              value={fiche.typeProjet ?? ''}
+              // Autre type : l'usage choisi n'est plus dans sa liste, il s'efface.
+              onChange={(e) => majFiche({ typeProjet: e.target.value as TypeProjet, usage: null })}
             >
-              {!fiche.usage && choisir}
-              {Object.entries(USAGES).map(([v, l]) => (
+              {!fiche.typeProjet && choisir}
+              {Object.entries(TYPES_PROJET).map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
                 </option>
               ))}
             </select>
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="fiche-usage">
+              A · Usage
+            </label>
+            {fiche.typeProjet === 'mixte' ? (
+              <UsageLibre
+                key={fiche.usage ?? ''}
+                valeur={fiche.usage ?? ''}
+                manquant={!fiche.usage}
+                onValider={(usage) => usage !== (fiche.usage ?? '') && majFiche({ usage: usage || null })}
+              />
+            ) : (
+              <select
+                id="fiche-usage"
+                className={classe(!!fiche.typeProjet && !fiche.usage)}
+                value={fiche.usage ?? ''}
+                disabled={!fiche.typeProjet}
+                onChange={(e) => majFiche({ usage: e.target.value })}
+              >
+                <option value="" disabled>
+                  {fiche.typeProjet ? '— Choisir —' : '— Choisir d’abord le type —'}
+                </option>
+                {fiche.typeProjet &&
+                  Object.entries(USAGES_PAR_TYPE[fiche.typeProjet]).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+              </select>
+            )}
           </div>
           <div className="field">
             <label className="field-label" htmlFor="fiche-forme">
@@ -342,14 +378,26 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
                   ))}
                 </select>
               </div>
-              <label className="fp-case fp-case--seule">
-                <input
-                  type="checkbox"
-                  checked={fiche.toitureTerrasse}
-                  onChange={(e) => majFiche({ toitureTerrasse: e.target.checked })}
-                />
-                <span>Toiture-terrasse accessible</span>
-              </label>
+              {/* Mezzanine au-dessus de la toiture-terrasse (09/11/2026) : aucune
+                  des deux ne compte comme planche. */}
+              <div className="fp-pile">
+                <label className="fp-case fp-case--seule">
+                  <input
+                    type="checkbox"
+                    checked={fiche.mezzanine}
+                    onChange={(e) => majFiche({ mezzanine: e.target.checked })}
+                  />
+                  <span>Mezzanine</span>
+                </label>
+                <label className="fp-case fp-case--seule">
+                  <input
+                    type="checkbox"
+                    checked={fiche.toitureTerrasse}
+                    onChange={(e) => majFiche({ toitureTerrasse: e.target.checked })}
+                  />
+                  <span>Toiture-terrasse accessible</span>
+                </label>
+              </div>
             </div>
             <p className="fiche-crm-aide">R+4 = rez-de-chaussée + 4 étages, soit 5 niveaux.</p>
 
@@ -464,7 +512,7 @@ export function CaracteristiquesProjet({ projet, onModifier, prixFige = false }:
                     disabled
                     title="Liste type de chaque standing à fournir par la direction : rien n’est pré-coché d’ici là."
                   >
-                    {STANDING_COURT[projet.standing]} standing : sélection type
+                    {STANDINGS[projet.standing]} standing : sélection type
                   </button>
                 )}
                 <button
@@ -622,5 +670,33 @@ function LigneCompo({
         <X size={15} />
       </button>
     </>
+  );
+}
+
+// Usage d'un projet mixte, écrit à la main : enregistré en quittant le champ
+// (ou Entrée), pas à chaque frappe.
+function UsageLibre({
+  valeur,
+  manquant,
+  onValider,
+}: {
+  valeur: string;
+  manquant: boolean;
+  onValider: (usage: string) => void;
+}) {
+  const [texte, setTexte] = useState(valeur);
+  return (
+    <input
+      id="fiche-usage"
+      className={`field-input${manquant ? ' is-manquant' : ''}`}
+      value={texte}
+      maxLength={USAGE_LIBRE_MAX}
+      placeholder="Ex. logements, commerces et bureaux"
+      onChange={(e) => setTexte(e.target.value)}
+      onBlur={() => onValider(texte.trim())}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      }}
+    />
   );
 }

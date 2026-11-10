@@ -62,7 +62,12 @@ export type DocumentOffre = {
   messageIntroduction?: string | null;
   delaisEcheancier?: Record<string, number>;
   adresseClient?: string;
+  remisePct?: number | null; // remise de l'offre (09/11/2026)
 };
+
+// Remise sur toute l'offre (09/11/2026) : seuls paliers proposés (même liste
+// que le serveur, devis/domaine.ts) ; null = aucune.
+export const REMISES_OFFRE = [5, 10, 15, 20, 25] as const;
 
 export function majDevis(slug: string, id: string, patch: Partial<NouveauDevis> & DocumentOffre): Promise<Devis> {
   return apiSociete<Devis>(slug, `/devis/${id}`, { method: 'PATCH', body: patch });

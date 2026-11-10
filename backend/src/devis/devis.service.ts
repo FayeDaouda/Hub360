@@ -16,6 +16,7 @@ import { ReglagesService } from '../reglages/reglages.service';
 import {
   VALIDITE_OFFRE_JOURS,
   alerteAvenant,
+  htLigne,
   messageIntroductionParDefaut,
   refDevis,
   relanceAFaire,
@@ -29,8 +30,11 @@ type ContexteLignes = {
   // Offre d'un lead : brouillon tolérant — une ligne pas encore chiffrée
   // s'enregistre à 0, la soumission au CFO l'exige complète.
   offreDossier: boolean;
-  categorieCo: string | null; // CO1 / CO2 / CO3 déjà connue (dossier / projet)
+  categorieCo: string | null; // CO0 … CO3 déjà connue (dossier / projet)
   devisProjet: boolean; // devis complémentaire d'un projet — seul lieu des TS
+  // CO0 (prix saisi, 09/11/2026) : tarif au m² de la ligne CO0 de l'offre
+  // acceptée du projet (TS-MAJ) ; CO1-CO3 gardent le tarif du catalogue.
+  tarifCoSaisi?: number | null;
 };
 
 const AVEC_DETAIL = {
@@ -86,7 +90,8 @@ type LigneCalculee = {
   quantite: number;
   prixUnitaire: number;
   tauxTva: number;
-  montantHt: number;
+  montantHt: number; // HT brut de la ligne (affiché)
+  montantHtRemise: number; // HT après la remise de l'offre : base de sa TVA et de son TTC
   montantTva: number;
   montantTtc: number;
   ordre: number;
@@ -172,7 +177,8 @@ export class DevisService {
     return this.appliquerCatalogue(societeId, lignes, await this.contexteLignes(societeId, { projetId }));
   }
 
-  async patch(societeId: string, id: string, dto: PatchDevisDto) {
+  // `acteurId` : qui modifie (trace de la remise dans l'historique du dossier).
+  async patch(societeId: string, id: string, dto: PatchDevisDto, acteurId: string | null = null) {
     const devis = await this.brouillon(societeId, id);
     if (devis.dossierCrm) {
       this.exigerOffreModifiable(devis.dossierCrm);
@@ -184,8 +190,12 @@ export class DevisService {
           'Offre de dossier CRM : le client, le projet et la validité ne se modifient pas.',
         );
       }
-    } else if (dto.delaisEcheancier !== undefined || dto.messageIntroduction !== undefined) {
-      throw new UnprocessableEntityException('Message et échéancier : propres aux offres d’un lead.');
+    } else if (
+      dto.delaisEcheancier !== undefined ||
+      dto.messageIntroduction !== undefined ||
+      dto.remisePct !== undefined
+    ) {
+      throw new UnprocessableEntityException('Message, échéancier et remise : propres aux offres d’un lead.');
     }
     if (dto.clientId || dto.projetId !== undefined || dto.lignes) {
       await this.validerReferences(
@@ -216,6 +226,20 @@ export class DevisService {
           },
         });
       }
+      // Remise posée, changée ou retirée (09/11/2026) : tracée dans
+      // l'historique du dossier, que le CFO relit avant de valider.
+      if (devis.dossierCrm && dto.remisePct !== undefined && dto.remisePct !== devis.remisePct) {
+        const pct = (r: number | null) => (r ? `${r} %` : 'aucune');
+        await tx.dossierCrmTransition.create({
+          data: {
+            dossierId: devis.dossierCrm.id,
+            de: devis.dossierCrm.statut,
+            vers: devis.dossierCrm.statut,
+            parId: acteurId,
+            commentaire: `Remise de l’offre : ${pct(dto.remisePct)} (avant : ${pct(devis.remisePct)})`,
+          },
+        });
+      }
       const ecrit = await tx.devis.update({
         where: { id: devis.id },
         data: {
@@ -227,6 +251,8 @@ export class DevisService {
           messageIntroduction:
             dto.messageIntroduction === undefined ? undefined : dto.messageIntroduction?.trim() || null,
           lignes: lignes ? { deleteMany: {}, create: lignes } : undefined,
+          // Remise de l'offre (brouillon seulement, figée à la soumission).
+          remisePct: dto.remisePct,
         },
         include: AVEC_DETAIL,
       });
@@ -386,7 +412,7 @@ export class DevisService {
 
     const { montantHt, montantTva } = devis.lignes.reduce(
       (acc, l) => {
-        const ligneHt = Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber());
+        const ligneHt = htLigne(l.quantite.toNumber(), l.prixUnitaire.toNumber(), devis.remisePct);
         const { montantTva } = ventilationTva(ligneHt, l.tauxTva.toNumber());
         return { montantHt: acc.montantHt + ligneHt, montantTva: acc.montantTva + montantTva };
       },
@@ -626,12 +652,24 @@ export class DevisService {
     if (devis.projetId) {
       const p = await this.prisma.projet.findFirst({
         where: { id: devis.projetId, societeId },
-        select: { dossierCrm: { select: { categorieConception: true } } },
+        select: { dossierCrm: { select: { id: true, categorieConception: true } } },
       });
+      const ligneCo = p?.dossierCrm
+        ? await this.prisma.ligneDevis.findFirst({
+            where: {
+              devis: { societeId, dossierCrmId: p.dossierCrm.id, statut: { in: ['accepte', 'transforme'] } },
+              // CO0 seulement (prix saisi) : CO1-CO3 gardent le tarif du catalogue.
+              produitService: { famille: 'CO', prixModifiable: true },
+            },
+            orderBy: { devis: { creeLe: 'desc' } },
+            select: { prixUnitaire: true },
+          })
+        : null;
       return {
         offreDossier: false,
         categorieCo: p?.dossierCrm?.categorieConception ?? null,
         devisProjet: true,
+        tarifCoSaisi: ligneCo ? ligneCo.prixUnitaire.toNumber() : null,
       };
     }
     return { offreDossier: false, categorieCo: null, devisProjet: false };
@@ -702,7 +740,9 @@ export class DevisService {
         );
       }
       if (p.modeCalcul === 'tarif_co_surface_planches') {
-        if (!tarifCo?.prixUnitaire) {
+        // Tarif saisi sur l'offre acceptée s'il y en a un (CO0), sinon celui du catalogue.
+        const tarif = ctx.tarifCoSaisi || tarifCo?.prixUnitaire?.toNumber() || null;
+        if (!tarif) {
           throw new UnprocessableEntityException(
             'Reprise majeure : la catégorie de conception (CO) du projet est inconnue — son tarif ne peut pas s’appliquer.',
           );
@@ -712,7 +752,7 @@ export class DevisService {
             'Reprise majeure : surface (m²) et nombre de planches concernées requis.',
           );
         }
-        base.prixUnitaire = tarifCo.prixUnitaire.toNumber();
+        base.prixUnitaire = tarif;
         base.tauxTva = p.tauxTva.toNumber();
         base.surfaceM2 = l.surfaceM2;
         base.planches = l.planches;
@@ -724,8 +764,10 @@ export class DevisService {
           throw new UnprocessableEntityException(`Produit ${p.code ?? p.designation} sans tarif au catalogue.`);
         }
         base.prixUnitaire = p.prixUnitaire.toNumber();
-        base.tauxTva = p.tauxTva.toNumber();
       }
+      // TVA du catalogue, toujours (même à prix saisi, CO0 / SU0…) : un taux
+      // choisi par l'appelant baisserait le TTC, donc le seuil de contresignature.
+      base.tauxTva = p.tauxTva.toNumber();
       if (p.coAssocie && p.coAssocie !== categorieCo) {
         throw new UnprocessableEntityException(
           categorieCo
@@ -826,18 +868,28 @@ export class DevisService {
 
   // Math partagée entre la vue admin et la vue publique — seule la
   // sélection des champs de sortie diffère (formater / formaterPublic).
-  private calculerLignes(lignes: DevisAvecDetail['lignes']): {
+  // Remise de l'offre (09/11/2026) : chaque ligne affiche son HT brut ; sa TVA
+  // et son TTC portent sur le HT remisé (htLigne), comme tous les totaux.
+  private calculerLignes(
+    lignes: DevisAvecDetail['lignes'],
+    remisePct: number | null,
+  ): {
     lignes: LigneCalculee[];
+    montantBrutHt: number;
+    montantRemise: number;
     montantHt: number;
     montantTva: number;
     montantTtc: number;
   } {
+    let brutHt = 0;
     const calculees = lignes.map((l) => {
       const quantite = l.quantite.toNumber();
       const prixUnitaire = l.prixUnitaire.toNumber();
       const tauxTva = l.tauxTva.toNumber();
-      const montantHt = Math.round(quantite * prixUnitaire);
-      const { montantTva, montantTtc } = ventilationTva(montantHt, tauxTva);
+      const montantHt = htLigne(quantite, prixUnitaire, null);
+      const netHt = htLigne(quantite, prixUnitaire, remisePct);
+      brutHt += montantHt;
+      const { montantTva, montantTtc } = ventilationTva(netHt, tauxTva);
       return {
         id: l.id,
         produitServiceId: l.produitServiceId,
@@ -848,20 +900,31 @@ export class DevisService {
         prixUnitaire,
         tauxTva,
         montantHt,
+        montantHtRemise: netHt,
         montantTva,
         montantTtc,
         ordre: l.ordre,
       };
     });
-    const montantHt = calculees.reduce((s, l) => s + l.montantHt, 0);
+    const montantHt = calculees.reduce((s, l) => s + l.montantHtRemise, 0);
     const montantTva = calculees.reduce((s, l) => s + l.montantTva, 0);
-    return { lignes: calculees, montantHt, montantTva, montantTtc: montantHt + montantTva };
+    return {
+      lignes: calculees,
+      montantBrutHt: brutHt,
+      montantRemise: brutHt - montantHt,
+      montantHt,
+      montantTva,
+      montantTtc: montantHt + montantTva,
+    };
   }
 
   // `seuilAvenant` : délai réglé (jours) ; null = alerte non calculée (brouillon
   // qui vient d'être créé ou modifié — rien n'est encore envoyé).
   private formater(d: DevisAvecDetail, seuilAvenant: number | null = null) {
-    const { lignes, montantHt, montantTva, montantTtc } = this.calculerLignes(d.lignes);
+    const { lignes, montantBrutHt, montantRemise, montantHt, montantTva, montantTtc } = this.calculerLignes(
+      d.lignes,
+      d.remisePct,
+    );
     return {
       id: d.id,
       numero: d.numero,
@@ -889,6 +952,11 @@ export class DevisService {
               seuilAvenant,
             ),
       lignes,
+      // Remise de l'offre (09/11/2026) : HT brut des lignes, remise, puis le
+      // HT remisé sur lequel portent TVA, TTC, échéancier et factures.
+      remisePct: d.remisePct,
+      montantBrutHt,
+      montantRemise,
       montantHt,
       montantTva,
       montantTtc,
@@ -907,7 +975,7 @@ export class DevisService {
       societe: d.societe.nom,
       lieu: d.dossierCrm.localite?.nom ?? (d.dossierCrm.localisation.trim() || null),
       programme: d.dossierCrm.programme,
-      prestations: d.lignes.map((l) => l.designation),
+      prestations: d.lignes.map((l) => ({ designation: l.designation, famille: l.produitService?.famille ?? null })),
     });
   }
 
@@ -924,7 +992,7 @@ export class DevisService {
   private async echeancier(societeId: string, d: DevisAvecDetail) {
     const parts = (d.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
     return echeancierOffre(
-      lignesOffreDepuisDevis(d.lignes),
+      lignesOffreDepuisDevis(d.lignes, d.remisePct),
       parts,
       (d.delaisEcheancier as Record<string, number> | null) ?? {},
     );
@@ -934,7 +1002,10 @@ export class DevisService {
   // décider : jamais d'id interne (devis/client), jamais les coordonnées du
   // client (déjà les siennes), jamais la référence produit du catalogue.
   private formaterPublic(d: DevisAvecDetailPublic) {
-    const { lignes, montantHt, montantTva, montantTtc } = this.calculerLignes(d.lignes);
+    const { lignes, montantBrutHt, montantRemise, montantHt, montantTva, montantTtc } = this.calculerLignes(
+      d.lignes,
+      d.remisePct,
+    );
     const statutEffectif = statutDevisEffectif(d, todayIso());
     return {
       reference: refDevis(d),
@@ -964,6 +1035,7 @@ export class DevisService {
           prixUnitaire,
           tauxTva,
           montantHt,
+          montantHtRemise,
           montantTva,
           montantTtc,
         }) => ({
@@ -975,10 +1047,14 @@ export class DevisService {
           prixUnitaire,
           tauxTva,
           montantHt,
+          montantHtRemise,
           montantTva,
           montantTtc,
         }),
       ),
+      remisePct: d.remisePct,
+      montantBrutHt,
+      montantRemise,
       montantHt,
       montantTva,
       montantTtc,

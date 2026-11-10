@@ -598,22 +598,31 @@ describe('refFacture · numérotation unique de la société', () => {
 describe('FacturationService.creerMensualite', () => {
   const ceMois = new Date();
   const moisDernier = new Date(ceMois.getFullYear(), ceMois.getMonth() - 1, 15);
-  const ligneSu = (mensualites: { statut: string; estAvoir: boolean; creeLe: Date }[]) => ({
+  const ligneSu = (
+    mensualites: { statut: string; estAvoir: boolean; creeLe: Date }[],
+    o: { prix?: number; remisePct?: number | null } = {},
+  ) => ({
     id: 'L-SU',
     designation: 'SU2 — Suivi de chantier — projet intermédiaire',
     quantite: dec(6),
-    prixUnitaire: dec(500000),
+    prixUnitaire: dec(o.prix ?? 500000),
     tauxTva: dec(18),
     produitService: { code: 'SU2' },
+    // Remise de l'offre acceptée (09/11/2026) : aucune par défaut.
+    devis: { remisePct: o.remisePct ?? null },
     mensualites,
   });
   const facturee = (creeLe: Date, statut = 'emise') => ({ statut, estAvoir: false, creeLe });
 
-  function monter(phase: string, mensualites: ReturnType<typeof facturee>[]) {
+  function monter(
+    phase: string,
+    mensualites: ReturnType<typeof facturee>[],
+    o: { prix?: number; remisePct?: number | null } = {},
+  ) {
     const m = mockPrisma();
     m.projet.findFirst.mockResolvedValue({ ...PROJET_MANDAT, phase });
     m.projet.findUniqueOrThrow.mockResolvedValue({ phase });
-    m.ligneDevis.findMany.mockResolvedValue([ligneSu(mensualites)]);
+    m.ligneDevis.findMany.mockResolvedValue([ligneSu(mensualites, o)]);
     return { ...m, svc: service(m.prisma) };
   }
 
@@ -626,6 +635,30 @@ describe('FacturationService.creerMensualite', () => {
       ligneDevisId: 'L-SU',
     });
     expect(facture.create.mock.calls[0][0].data.libelle).toMatch(/^SU2 — .* mensualité 2\/6 /);
+  });
+
+  it('offre acceptée remisée : la mensualité porte la remise', async () => {
+    const { svc, facture } = monter('chantier', [facturee(moisDernier)], { remisePct: 10 });
+    await svc.creerMensualite('S1', 'P1', 'L-SU');
+    expect(facture.create.mock.calls[0][0].data.montantHt).toBe(450000);
+  });
+
+  it('offre remisée à prix impair : la somme des mensualités égale exactement le HT remisé de la ligne', async () => {
+    // 6 × 333 333 × 95 % = 1 899 998,1 → 1 899 998 (htLigne de la ligne entière).
+    const montants: number[] = [];
+    for (let n = 0; n < 6; n++) {
+      const deja = Array.from({ length: n }, (_, i) => facturee(new Date(2025, i, 10)));
+      const { svc, facture } = monter('chantier', deja, { prix: 333_333, remisePct: 5 });
+      await svc.creerMensualite('S1', 'P1', 'L-SU');
+      montants.push(facture.create.mock.calls[0][0].data.montantHt);
+    }
+    expect(montants.reduce((s, x) => s + x, 0)).toBe(1_899_998);
+    expect(Math.max(...montants) - Math.min(...montants)).toBeLessThanOrEqual(1);
+  });
+
+  it('rappel des mensualités : le prix mensuel affiché est remisé', async () => {
+    const res = await monter('chantier', [], { remisePct: 20 }).svc.get('S1', 'P1');
+    expect(res.mensualites[0].prixMensuelHt).toBe(400000);
   });
 
   it('déjà facturée ce mois-ci → 409', async () => {
@@ -804,6 +837,56 @@ describe('FacturationService · parts F1 / F2 / F3 (Réglages)', () => {
     const { data } = tx.facture.createMany.mock.calls[0][0];
     expect(data.map((f: { montantHt: number }) => f.montantHt)).toEqual([400_000, 400_000, 200_000]);
     expect(reglages.partsFactures).not.toHaveBeenCalled();
+  });
+
+  // Remise de l'offre (09/11/2026) : les factures de l'Onboard portent sur le HT remisé.
+  const ligneOffre = (code: string, famille: string, quantite: number, prix: number) => ({
+    designation: code,
+    quantite: { toNumber: () => quantite },
+    prixUnitaire: { toNumber: () => prix },
+    tauxTva: { toNumber: () => 18 },
+    produitService: { code, famille },
+  });
+  function onboard(lignes: ReturnType<typeof ligneOffre>[], remisePct: number | null) {
+    return {
+      ligneDevis: { findMany: jest.fn().mockResolvedValue(lignes) },
+      devis: { findUnique: jest.fn().mockResolvedValue({ partsFactures: { F1: 40, F2: 40, F3: 20 }, remisePct }) },
+      facture: { createMany: jest.fn() },
+    };
+  }
+
+  it('Onboard d’une offre remisée : tranches de conception sur le HT remisé', async () => {
+    const tx = onboard([ligneOffre('CO2', 'CO', 1, 1_000_000)], 10);
+    await service.preparerDepuisOffre(tx as never, 'S1', { id: 'P1', nature: 'mandat_client' as never }, 'DV1');
+    const { data } = tx.facture.createMany.mock.calls[0][0];
+    expect(data.map((f: { montantHt: number }) => f.montantHt)).toEqual([360_000, 360_000, 180_000]);
+    expect(data.every((f: { devisEcheancierId: string }) => f.devisEcheancierId === 'DV1')).toBe(true);
+  });
+
+  it('Onboard d’une offre remisée : permis et autres prestations remisés, total des factures = HT remisé hors mensuel', async () => {
+    const tx = onboard(
+      [
+        ligneOffre('CO1', 'CO', 300, 5_000),
+        ligneOffre('DPC', 'PC', 1, 333_333),
+        ligneOffre('IM1', 'IM', 2, 150_000),
+        // Suivi mensuel : facturé au mois, jamais à l'Onboard.
+        ligneOffre('SU1', 'SU', 3, 300_000),
+      ],
+      5,
+    );
+    await service.preparerDepuisOffre(tx as never, 'S1', { id: 'P1', nature: 'mandat_client' as never }, 'DV1');
+    const { data } = tx.facture.createMany.mock.calls[0][0];
+    const montants = data.map((f: { montantHt: number }) => f.montantHt);
+    // CO 1 425 000 + DPC 316 666 (333 333 × 95 % arrondi) + IM 285 000.
+    expect(montants.reduce((s: number, m: number) => s + m, 0)).toBe(1_425_000 + 316_666 + 285_000);
+    expect(data.some((f: { libelle: string }) => f.libelle.includes('SU1'))).toBe(false);
+  });
+
+  it('Onboard d’une offre sans remise (null) : HT brut', async () => {
+    const tx = onboard([ligneOffre('CO2', 'CO', 1, 1_000_000)], null);
+    await service.preparerDepuisOffre(tx as never, 'S1', { id: 'P1', nature: 'mandat_client' as never }, 'DV1');
+    const { data } = tx.facture.createMany.mock.calls[0][0];
+    expect(data.map((f: { montantHt: number }) => f.montantHt)).toEqual([400_000, 400_000, 200_000]);
   });
 });
 

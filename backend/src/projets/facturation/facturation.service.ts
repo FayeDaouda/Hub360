@@ -17,7 +17,7 @@ import {
   TAUX_TVA_DEFAUT,
   typeFactureDepuisNature,
 } from '../domaine/config';
-import { joursRetardFacture, statutFactureEffectif, ventilationTva } from '../domaine/gardes';
+import { htLigne, joursRetardFacture, statutFactureEffectif, ventilationTva } from '../domaine/gardes';
 import { FAMILLES_MENSUELLES, lignesOffreDepuisDevis, planFacturationOffre } from '../domaine/facturation-offre';
 import { refDevis } from '../../devis/domaine';
 import { montantRefacture, statutReglementBureau } from '../domaine/refacturation-etudes';
@@ -798,9 +798,13 @@ export class FacturationService {
       orderBy: { ordre: 'asc' },
     });
     // Parts figées sur l'offre (soumission à la DAF) ; à défaut, réglage en service.
-    const offre = await tx.devis.findUnique({ where: { id: devisId }, select: { partsFactures: true } });
+    const offre = await tx.devis.findUnique({
+      where: { id: devisId },
+      select: { partsFactures: true, remisePct: true },
+    });
     const parts = (offre?.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
-    const plan = planFacturationOffre(lignesOffreDepuisDevis(lignes), parts);
+    // Factures sur le HT remisé (remise de l'offre, 09/11/2026).
+    const plan = planFacturationOffre(lignesOffreDepuisDevis(lignes, offre?.remisePct ?? null), parts);
     await tx.facture.createMany({
       data: plan.map((f) => ({
         societeId,
@@ -838,7 +842,12 @@ export class FacturationService {
         projetId,
         type: typeFactureDepuisNature(projet.nature),
         libelle: `${m.nom} — mensualité ${m.moisFactures + 1}/${m.moisPrevus} (${mois})`,
-        montantHt: Math.round(ligne.prixUnitaire.toNumber()),
+        // Prix mensuel remisé comme l'offre acceptée : cumul du mois n moins
+        // cumul du mois n−1, pour que la somme des mensualités retombe
+        // exactement sur le HT remisé de la ligne (arrondis absorbés).
+        montantHt:
+          htLigne(m.moisFactures + 1, ligne.prixUnitaire.toNumber(), ligne.devis.remisePct) -
+          htLigne(m.moisFactures, ligne.prixUnitaire.toNumber(), ligne.devis.remisePct),
         tauxTva: ligne.tauxTva.toNumber(),
         ligneDevisId,
       },
@@ -1036,6 +1045,8 @@ export class FacturationService {
       },
       include: {
         produitService: { select: { code: true } },
+        // Remise de l'offre (09/11/2026) : chaque mensualité la porte aussi.
+        devis: { select: { remisePct: true } },
         mensualites: { select: { statut: true, estAvoir: true, creeLe: true } },
       },
       orderBy: { ordre: 'asc' },
@@ -1285,7 +1296,7 @@ export class FacturationService {
       return {
         ligneDevisId: l.id,
         libelle: m.nom,
-        prixMensuelHt: Math.round(l.prixUnitaire.toNumber()),
+        prixMensuelHt: htLigne(1, l.prixUnitaire.toNumber(), l.devis.remisePct),
         tauxTva: l.tauxTva.toNumber(),
         moisPrevus: m.moisPrevus,
         moisFactures: m.moisFactures,

@@ -257,7 +257,8 @@ export function produitsPrincipaux(
       ajouter(libelle(ligne), f.montantHt, f.montantHt * partEncaissee);
     } else if (offre && offre.montantHt > 0) {
       for (const l of offre.lignes) {
-        const ht = (f.montantHt * l.montantHt) / offre.montantHt;
+        // Part de la ligne dans l'offre, remise comprise (HT remisé / HT remisé).
+        const ht = (f.montantHt * l.montantHtRemise) / offre.montantHt;
         ajouter(libelle(l), ht, ht * partEncaissee);
       }
     } else {

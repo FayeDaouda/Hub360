@@ -48,7 +48,7 @@ export class DevisController {
   @Patch(':id')
   @RequiertPermission('finances_devis', 'ecriture')
   patch(@Req() req: R, @Param('id') id: string, @Body() dto: PatchDevisDto) {
-    return this.devis.patch(req.user.societeId, id, dto);
+    return this.devis.patch(req.user.societeId, id, dto, req.user.userId);
   }
 
   @Delete(':id')

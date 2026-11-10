@@ -3,6 +3,8 @@ import { ModeCalculProduit, PrismaClient } from '@prisma/client';
 // Import du catalogue réel Grey Concrete (prisma/data/catalogue-grey-concrete.json,
 // fourni par la société le 26/09/2026 — copie conforme, ne pas retoucher à la
 // main : un changement de tarif se fait dans ce fichier puis on réimporte).
+// Seuls ajouts du HUB : CO0 et SU0 (09/11/2026), prix saisi sur l'offre ; les
+// bases en service les reçoivent par la migration 20261109210000.
 //
 // Idempotent : upsert par (société, code). Un produit déjà importé est
 // resynchronisé sur la source (prix compris) ; les produits ajoutés à la main

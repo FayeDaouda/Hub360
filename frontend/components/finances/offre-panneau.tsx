@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { agirSurDossier, completudeFiche } from '@/lib/crm';
-import { creerDevis, getDevis, majDevis } from '@/lib/devis';
+import { creerDevis, getDevis, majDevis, REMISES_OFFRE } from '@/lib/devis';
+import { remiseDocument } from '@/lib/document-devis';
 import { COMMODITES } from '@/lib/fiche-programme';
 import { identiteSociete } from '@/lib/finances';
 import { CATEGORIES, GAMMES, STANDINGS, type Devis, type ProduitService, type Projet, type Societe } from '@/lib/types';
@@ -43,6 +44,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
   const [adresse, setAdresse] = useState<string | null>(null); // null = inchangée
   const [ninea, setNinea] = useState<string | null>(null); // null = inchangé
   const [delais, setDelais] = useState<Record<string, string>>({});
+  const [remise, setRemise] = useState<number | null>(null); // remise de l'offre (09/11/2026)
   const [etat, setEtat] = useState<'pret' | 'modifie' | 'enregistrement'>('pret');
   const [erreur, setErreur] = useState<string | null>(null);
   const [soumission, setSoumission] = useState(false);
@@ -57,6 +59,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
     setAdresse(null);
     setNinea(null);
     setDelais(Object.fromEntries(Object.entries(d.delaisEcheancier).map(([k, v]) => [k, String(v)])));
+    setRemise(d.remisePct);
     setEtat('pret');
   }, []);
 
@@ -135,6 +138,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
       const d = await majDevis(slug, devis.id, {
         lignes: lignesBrouillon(lignes, catalogue),
         messageIntroduction: message,
+        remisePct: remise,
         delaisEcheancier: Object.fromEntries(
           Object.entries(delais).flatMap(([k, v]) => (v.trim() === '' ? [] : [[k, Math.round(Number(v))]])),
         ),
@@ -150,7 +154,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
       setErreur(e instanceof Error && e.message ? e.message : 'Enregistrement impossible.');
       setEtat('modifie');
     }
-  }, [slug, devis, lignes, catalogue, message, delais, adresse, ninea]);
+  }, [slug, devis, lignes, catalogue, message, delais, remise, adresse, ninea]);
 
   useEffect(() => {
     if (etat !== 'modifie') return;
@@ -185,13 +189,20 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
   const fiche = lead ? completudeFiche(lead) : null;
   const chiffree = !!devis?.lignes.some((l) => l.montantHt > 0);
   const incomplete = !!devis?.lignes.some((l) => l.quantite <= 0);
+  // CO0 / SU0 (09/11/2026) : prix saisi sur l'offre, jamais à 0 chez le CFO
+  // (même règle que le serveur).
+  const sansTarif = devis?.lignes
+    .map((l) => ({ l, p: catalogue.find((c) => c.id === l.produitServiceId) }))
+    .find(({ l, p }) => p?.prixModifiable && ['CO', 'SU'].includes(p.famille ?? '') && l.prixUnitaire <= 0);
   const blocage = !chiffree
     ? 'Ajouter au moins une prestation chiffrée'
     : incomplete
       ? 'Compléter les prestations non chiffrées'
-      : fiche && fiche.faits < fiche.total
-        ? 'Compléter la fiche CRM pour soumettre au CFO'
-        : null;
+      : sansTarif
+        ? `Saisir le prix de ${sansTarif.p?.code ?? 'la prestation'}`
+        : fiche && fiche.faits < fiche.total
+          ? 'Compléter la fiche CRM pour soumettre au CFO'
+          : null;
   const categorieCo =
     lignes
       .map((l) => catalogue.find((p) => p.id === l.produitServiceId))
@@ -401,9 +412,29 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
             categorieCo={null}
             fiche={{ surface: lead?.surfaceTerrain ?? 0, planches: lead?.nbPlanches ?? 0 }}
           />
+          {/* Remise sur toute l'offre (09/11/2026) : HT de chaque ligne, avant TVA. */}
+          <div className="field offre-remise">
+            <label className="field-label" htmlFor="offre-remise">
+              Remise
+            </label>
+            <select
+              id="offre-remise"
+              className="field-input"
+              value={remise ?? ''}
+              onChange={(e) => modifier(setRemise)(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Aucune</option>
+              {REMISES_OFFRE.map((r) => (
+                <option key={r} value={r}>
+                  {r} %
+                </option>
+              ))}
+            </select>
+          </div>
           <OffreAnnexes
             societe={societe}
             totaux={{ ht: devis.montantHt, tva: devis.montantTva, ttc: devis.montantTtc }}
+            remise={remiseDocument(devis)}
             echeancier={devis.echeancier ?? []}
             delais={delais}
             onDelai={(cle, v) => modifier(setDelais)({ ...delais, [cle]: v })}

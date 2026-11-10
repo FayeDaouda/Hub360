@@ -3,6 +3,16 @@ import type { DocumentFacturationProps } from '@/components/document-facturation
 import { statutDevis } from './finances';
 import type { Devis, Societe } from './types';
 
+// Remise à afficher sur un document (null = aucune ligne de remise).
+export function remiseDocument(d: {
+  remisePct: number | null;
+  montantBrutHt: number;
+  montantRemise: number;
+}): RemiseDocument | null {
+  return d.remisePct ? { pct: d.remisePct, montant: d.montantRemise, brutHt: d.montantBrutHt } : null;
+}
+export type RemiseDocument = { pct: number; montant: number; brutHt: number };
+
 // Document d'un devis tel que l'imprime le HUB — une seule construction pour
 // le panneau Finances et l'aperçu du CFO dans la fiche CRM, rendu par le même
 // DocumentFacturation que la page de réponse du client (app/devis/[token]).
@@ -19,6 +29,7 @@ export function documentDevis(d: Devis, societe: Societe): DocumentFacturationPr
     clientNom: d.client.nom,
     objet: d.objet,
     lignes: d.lignes,
+    remise: remiseDocument(d),
     montantHt: d.montantHt,
     montantTva: d.montantTva,
     montantTtc: d.montantTtc,
