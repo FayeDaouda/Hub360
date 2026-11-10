@@ -9,10 +9,23 @@ const TEAM = {
   code: true,
   nom: true,
   dispatcher: { select: { prenom: true, nom: true } },
+  _count: { select: { membres: true } },
 } as const;
 
-type Team = { id: string; code: string; nom: string; dispatcher: { prenom: string; nom: string } | null };
-const toTeam = (c: Team) => ({ id: c.id, code: c.code, nom: c.nom, chef: fullName(c.dispatcher) });
+type Team = {
+  id: string;
+  code: string;
+  nom: string;
+  dispatcher: { prenom: string; nom: string } | null;
+  _count: { membres: number };
+};
+const toTeam = (c: Team) => ({
+  id: c.id,
+  code: c.code,
+  nom: c.nom,
+  chef: fullName(c.dispatcher),
+  membres: c._count.membres,
+});
 
 // Équipes d'un projet (décision du 29/10/2026) : le Dir. GC affecte le projet
 // à une ou plusieurs cellules dès l'Onboard, ouvert ou non. Le chef de chaque

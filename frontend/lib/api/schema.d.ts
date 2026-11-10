@@ -5661,6 +5661,7 @@ export interface components {
             code: string;
             nom: string;
             chef: string | null;
+            membres: number;
         };
         ProjectTeamsDto: {
             equipes: components["schemas"]["ProjectTeamDto"][];

@@ -15673,13 +15673,17 @@
           "chef": {
             "type": "string",
             "nullable": true
+          },
+          "membres": {
+            "type": "number"
           }
         },
         "required": [
           "id",
           "code",
           "nom",
-          "chef"
+          "chef",
+          "membres"
         ]
       },
       "ProjectTeamsDto": {

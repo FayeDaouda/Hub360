@@ -8,6 +8,8 @@ export class ProjectTeamDto {
   nom!: string;
   // Chef d'équipe (dispatcher de la cellule) ; null = à désigner dans Équipes.
   chef!: string | null;
+  // Collaborateurs rattachés à la cellule, pour choisir l'équipe.
+  membres!: number;
 }
 
 export class ProjectTeamsDto {
