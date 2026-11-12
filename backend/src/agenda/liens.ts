@@ -15,3 +15,7 @@ const urlApi = () =>
 
 export const lienAgendaHub = (slug: string) => `${urlFront()}/admin/${slug}/agenda`;
 export const urlFlux = (clair: string) => `${urlApi()}/agenda-abonnement/${clair}.ics`;
+
+// Un entretien vu hors du HUB (Google, Outlook, e-mails) : jamais le nom du
+// candidat (décision du 12/11/2026), qui reste dans le HUB.
+export const TITRE_ENTRETIEN = 'Entretien de recrutement';

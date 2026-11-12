@@ -16,6 +16,7 @@ const el = (e: Partial<ElementAgenda> & Pick<ElementAgenda, 'id' | 'type'>): Ele
   annulable: false,
   modifiable: false,
   entretien: false,
+  jeSuisOrganisateur: true,
   description: null,
   inviteIds: [],
   ...e,

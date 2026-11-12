@@ -46,6 +46,8 @@ export class ElementAgendaDto {
   // recrutement, qui se replanifie depuis sa candidature.
   modifiable: boolean;
   entretien: boolean;
+  // La personne dont c'est l'agenda l'organise (sinon : elle y est invitée).
+  jeSuisOrganisateur: boolean;
   description: string | null; // la note du rendez-vous, telle que saisie
   inviteIds: string[]; // comptes invités (le formulaire de modification)
   // Demande d'absence à trancher : son identifiant ; `validationFinale` = celle

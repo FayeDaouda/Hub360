@@ -17,6 +17,7 @@ const rdv = (id: string, debut: string, fin: string, jourDebut = J, jourFin = J)
   annulable: false,
   modifiable: false,
   entretien: false,
+  jeSuisOrganisateur: true,
   description: null,
   inviteIds: [],
 });

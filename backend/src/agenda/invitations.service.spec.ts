@@ -22,6 +22,7 @@ const COMPTES = [
 const monter = (rdv: unknown = RDV) => {
   const prisma = {
     rendezVous: { findUnique: jest.fn().mockResolvedValue(rdv) },
+    candidature: { count: jest.fn().mockResolvedValue(0) },
     utilisateur: { findMany: jest.fn().mockResolvedValue(COMPTES) },
   };
   const email = { envoyerInvitationAgenda: jest.fn().mockResolvedValue({ envoye: true }) };
@@ -68,5 +69,19 @@ describe('InvitationsAgendaService', () => {
     expect(prisma.utilisateur.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: { in: ['U1', 'U2'] } } }),
     );
+  });
+
+  it('un entretien part sans le nom du candidat (titre, e-mail, calendrier)', async () => {
+    const { s, email, prisma } = monter({
+      ...RDV,
+      titre: 'Entretien · Awa Diop · Comptable',
+      description: 'Recrutement',
+    });
+    prisma.candidature.count.mockResolvedValue(1);
+    await s.envoyer('R1', 'REQUEST');
+    const i = email.envoyerInvitationAgenda.mock.calls[0][0];
+    expect(i.titre).toBe('Entretien de recrutement');
+    expect(i.ics).toContain('SUMMARY:Entretien de recrutement');
+    expect(i.ics).not.toContain('Awa Diop · Comptable');
   });
 });

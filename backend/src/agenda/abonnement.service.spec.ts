@@ -63,6 +63,7 @@ const el = (e: Partial<ElementAgendaDto> & Pick<ElementAgendaDto, 'id' | 'type' 
   annulable: false,
   modifiable: false,
   entretien: false,
+  jeSuisOrganisateur: true,
   description: null,
   inviteIds: [],
   ...e,
@@ -188,5 +189,43 @@ describe('evenementsDuFlux', () => {
     expect(rdv.description).toContain('Avec Moussa Sow');
     expect(rdv.description).toContain(LIEN);
     expect(echeance).toMatchObject({ titre: 'Échéance · GC-001 · Plans RDC', debut: '2026-11-14', libre: true });
+  });
+
+  // Décisions du 12/11/2026.
+  it('e-mails actifs : une réunion où l’on est seulement invité ne sort pas (elle arrive par e-mail)', () => {
+    const r = (id: string, jeSuisOrganisateur: boolean) =>
+      el({
+        id,
+        type: 'rendez_vous',
+        jour: '2026-11-13',
+        titre: id,
+        debut: '2026-11-13T09:00:00.000Z',
+        fin: '2026-11-13T10:00:00.000Z',
+        jeSuisOrganisateur,
+      });
+    const elements = [r('MIENNE', true), r('INVITE', false)];
+    expect(evenementsDuFlux(elements, LIEN, { sansInvitations: true }).map((e) => e.titre)).toEqual(['MIENNE']);
+    expect(evenementsDuFlux(elements, LIEN).map((e) => e.titre)).toEqual(['MIENNE', 'INVITE']);
+  });
+
+  it('un entretien sort sans le nom du candidat ni la note', () => {
+    const [e] = evenementsDuFlux(
+      [
+        el({
+          id: 'R2',
+          type: 'rendez_vous',
+          jour: '2026-11-13',
+          titre: 'Entretien · Awa Diop · Comptable',
+          detail: 'Recrutement',
+          debut: '2026-11-13T09:00:00.000Z',
+          fin: '2026-11-13T10:00:00.000Z',
+          entretien: true,
+        }),
+      ],
+      LIEN,
+    );
+    expect(e.titre).toBe('Entretien de recrutement');
+    expect(e.description).not.toContain('Recrutement');
+    expect(JSON.stringify(e)).not.toContain('Awa');
   });
 });

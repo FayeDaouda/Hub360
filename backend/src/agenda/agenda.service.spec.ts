@@ -397,4 +397,38 @@ describe('AgendaService', () => {
     });
     expect(vue.elements.find((e) => e.id === 'R2')).toMatchObject({ modifiable: false, entretien: true });
   });
+
+  it('un entretien ne s’annule pas depuis l’Agenda (409), et n’est pas présenté annulable', async () => {
+    const { s, prisma } = svc();
+    prisma.rendezVous.findFirst.mockResolvedValue({
+      id: 'R2',
+      titre: 'Entretien',
+      organisateurId: 'U1',
+      debut: new Date(rdv.debut),
+      invites: [],
+    });
+    prisma.candidature.count.mockResolvedValue(1);
+    await expect(s.annuler(moi({ agenda: 'LES' }), 'R2')).rejects.toThrow(ConflictException);
+    expect(prisma.rendezVous.update).not.toHaveBeenCalled();
+    prisma.rendezVous.findMany.mockResolvedValue([
+      {
+        id: 'R2',
+        titre: 'Entretien',
+        debut: new Date(rdv.debut),
+        fin: new Date(rdv.fin),
+        lieu: null,
+        description: null,
+        organisateurId: 'U1',
+        invites: [],
+      },
+    ]);
+    prisma.candidature.findMany.mockResolvedValue([{ rendezVousId: 'R2' }]);
+    const vue = await s.semaine(moi({ agenda: 'LES' }), '2026-11-02');
+    expect(vue.elements[0]).toMatchObject({
+      annulable: false,
+      modifiable: false,
+      entretien: true,
+      jeSuisOrganisateur: true,
+    });
+  });
 });

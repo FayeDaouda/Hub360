@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { calendrierIcal } from './ical';
-import { lienAgendaHub, nomDe, uidEvenement } from './liens';
+import { lienAgendaHub, nomDe, TITRE_ENTRETIEN, uidEvenement } from './liens';
 
 // Invitations par e-mail aux réunions de l'Agenda (12/11/2026) : chaque invité
 // actif reçoit le calendrier de la réunion (REQUEST), puis son annulation
@@ -55,6 +55,9 @@ export class InvitationsAgendaService {
     const invites = comptes.filter((c) => c.id !== r.organisateurId && c.actif);
     if (!organisateur || !invites.length) return 0;
 
+    // Un entretien sort sans le nom du candidat (décision du 12/11/2026).
+    const entretien = (await this.prisma.candidature.count({ where: { rendezVousId: r.id } })) > 0;
+    const titre = entretien ? TITRE_ENTRETIEN : r.titre;
     const lien = lienAgendaHub(r.societe.slug);
     const ics = calendrierIcal({
       nom: `HUB · ${r.societe.nom}`,
@@ -62,11 +65,11 @@ export class InvitationsAgendaService {
       evenements: [
         {
           uid: uidEvenement('rdv', r.id),
-          titre: r.titre,
+          titre,
           debut: r.debut,
           fin: r.fin,
           lieu: r.lieu,
-          description: [r.description, `Dans le HUB : ${lien}`].filter(Boolean).join('\n'),
+          description: [entretien ? null : r.description, `Dans le HUB : ${lien}`].filter(Boolean).join('\n'),
           url: lien,
           sequence: r.sequence,
           organisateur: { nom: nomDe(organisateur), email: organisateur.email },
@@ -81,7 +84,7 @@ export class InvitationsAgendaService {
           prenom: i.prenom,
           societeNom: r.societe.nom,
           methode,
-          titre: r.titre,
+          titre,
           debut: r.debut,
           fin: r.fin,
           lieu: r.lieu,

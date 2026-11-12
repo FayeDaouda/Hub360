@@ -34,6 +34,7 @@ const RDV: ElementAgenda = {
   annulable: true,
   modifiable: true,
   entretien: false,
+  jeSuisOrganisateur: true,
   description: 'Apporter les plans',
   inviteIds: ['U2'],
 };
@@ -173,7 +174,7 @@ describe('Page Agenda', () => {
       await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
       const fiche = await screen.findByRole('dialog');
       expect(within(fiche).queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument();
-      expect(within(fiche).getByText(/se replanifie depuis le recrutement/)).toBeInTheDocument();
+      expect(within(fiche).getByText(/se replanifie ou s’annule depuis le recrutement/)).toBeInTheDocument();
     });
   });
 });

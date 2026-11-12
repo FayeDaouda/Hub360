@@ -21,6 +21,7 @@ const RDV: ElementAgenda = {
   annulable: true,
   modifiable: true,
   entretien: false,
+  jeSuisOrganisateur: true,
   description: 'Apporter les plans',
   inviteIds: ['U2'],
 };
@@ -50,7 +51,7 @@ describe('FicheElement', () => {
   it('invité ou entretien : rien à modifier ; un entretien dit où le replanifier', () => {
     monter({ ...RDV, annulable: false, modifiable: false, entretien: true });
     expect(screen.queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument();
-    expect(screen.getByText(/se replanifie depuis le recrutement/)).toBeInTheDocument();
+    expect(screen.getByText(/se replanifie ou s’annule depuis le recrutement/)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Fermer' }).length).toBeGreaterThan(0);
   });
 

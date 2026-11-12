@@ -7,8 +7,9 @@ import { SwitchesService } from '../switches/switches.service';
 import type { Acteur } from './agenda.service';
 import { AgendaService } from './agenda.service';
 import type { ElementAgendaDto } from './agenda.dto';
+import { emailsReels } from '../email/email.service';
 import { calendrierIcal, type EvenementIcal } from './ical';
-import { lienAgendaHub, uidEvenement, urlFlux } from './liens';
+import { lienAgendaHub, TITRE_ENTRETIEN, uidEvenement, urlFlux } from './liens';
 
 // Fenêtre relue par l'agenda de la personne : trois mois passés et neuf mois
 // à venir (365 jours en tout ; la lecture de l'agenda s'arrête à 366).
@@ -133,7 +134,7 @@ export class AbonnementAgendaService {
     return calendrierIcal({
       nom: `HUB · ${societe.nom}`,
       methode: 'PUBLISH',
-      evenements: evenementsDuFlux(periode.elements, lienAgendaHub(societe.slug)),
+      evenements: evenementsDuFlux(periode.elements, lienAgendaHub(societe.slug), { sansInvitations: emailsReels() }),
       maintenant,
     });
   }
@@ -141,20 +142,29 @@ export class AbonnementAgendaService {
 
 // Éléments de l'agenda → événements du calendrier. Un congé arrive jour par
 // jour : regroupé en un seul événement, du premier au dernier jour.
-export function evenementsDuFlux(elements: ElementAgendaDto[], lienHub: string): EvenementIcal[] {
+// `sansInvitations` (décision du 12/11/2026) : les réunions où la personne
+// est seulement invitée lui arrivent par e-mail, dans son agenda principal ;
+// les publier aussi ici les montrerait deux fois. Seulement quand les e-mails
+// partent vraiment. Un entretien sort sans le nom du candidat.
+export function evenementsDuFlux(
+  elements: ElementAgendaDto[],
+  lienHub: string,
+  options: { sansInvitations?: boolean } = {},
+): EvenementIcal[] {
   const conges = new Map<string, { du: string; au: string }>();
   const evenements: EvenementIcal[] = [];
   for (const e of elements) {
     if (e.type === 'rendez_vous' && e.debut && e.fin) {
+      if (options.sansInvitations && !e.jeSuisOrganisateur) continue;
       const avec = e.invites.length ? `Avec ${e.invites.join(', ')}` : null;
       const par = e.organisateur ? `Organisé par ${e.organisateur}` : null;
       evenements.push({
         uid: uidEvenement('rdv', e.id),
-        titre: e.titre,
+        titre: e.entretien ? TITRE_ENTRETIEN : e.titre,
         debut: new Date(e.debut),
         fin: new Date(e.fin),
         lieu: e.lieu,
-        description: [e.detail, avec, par, `Dans le HUB : ${lienHub}`].filter(Boolean).join('\n'),
+        description: [e.entretien ? null : e.detail, avec, par, `Dans le HUB : ${lienHub}`].filter(Boolean).join('\n'),
         url: lienHub,
       });
     } else if (e.type === 'echeance') {

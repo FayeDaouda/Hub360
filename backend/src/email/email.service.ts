@@ -124,6 +124,11 @@ export type InvitationAgendaEmail = {
   ics: string;
 };
 
+// Les e-mails partent-ils vraiment (transport SMTP configuré) ? Même règle
+// que le choix du transport au démarrage (email.module.ts).
+export const emailsReels = (env: NodeJS.ProcessEnv = process.env) =>
+  (env.EMAIL_TRANSPORT || 'log').toLowerCase() === 'smtp' && !!env.SMTP_HOST;
+
 export abstract class EmailService {
   // Ne lève jamais : un échec de transport renvoie `{ envoye: false }` pour que
   // l'appelant garde son repli (afficher le lien à recopier) et que la réponse

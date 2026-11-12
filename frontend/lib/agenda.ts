@@ -25,6 +25,7 @@ export type ElementAgenda = {
   // recrutement, replanifié depuis sa candidature.
   modifiable: boolean;
   entretien: boolean;
+  jeSuisOrganisateur: boolean; // la personne dont c'est l'agenda l'organise
   description: string | null;
   inviteIds: string[];
   // Demande d'absence à trancher (son agenda) : décision du N+1, ou

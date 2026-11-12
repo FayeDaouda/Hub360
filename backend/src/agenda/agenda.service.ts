@@ -28,7 +28,13 @@ const JOUR = /^\d{4}-\d{2}-\d{2}$/;
 // « jeudi 12 novembre à 09:00 » (notifications des réunions).
 const quandRendezVous = (d: Date) => `${formatWeekdayDayMonth(d.toISOString())} à ${formatTime(d.toISOString())}`;
 // Échéances, congés, demandes : rien à modifier, aucun invité.
-const SANS_ACTION = { modifiable: false, entretien: false, description: null, inviteIds: [] as string[] };
+const SANS_ACTION = {
+  modifiable: false,
+  entretien: false,
+  jeSuisOrganisateur: false,
+  description: null,
+  inviteIds: [] as string[],
+};
 // Vue « Année » : jusqu'à 366 jours d'un coup.
 const JOURS_MAX = 366;
 
@@ -139,9 +145,15 @@ export class AgendaService {
         detail: r.description,
         organisateur: noms.get(r.organisateurId) ?? null,
         invites: r.invites.map((i) => noms.get(i.utilisateurId) ?? '—'),
-        annulable: r.organisateurId === a.userId && hasRight(a.permissions, ETAPE.agenda, 'suppression'),
+        // Un entretien se replanifie et s'annule depuis sa candidature
+        // (décision du 12/11/2026).
+        annulable:
+          r.organisateurId === a.userId &&
+          hasRight(a.permissions, ETAPE.agenda, 'suppression') &&
+          !idsEntretiens.has(r.id),
         modifiable: r.organisateurId === a.userId && peutModifier && !idsEntretiens.has(r.id),
         entretien: idsEntretiens.has(r.id),
+        jeSuisOrganisateur: r.organisateurId === cible,
         description: r.description,
         // Pour le formulaire de l'organisateur seulement.
         inviteIds: r.organisateurId === a.userId ? r.invites.map((i) => i.utilisateurId) : [],
@@ -350,7 +362,8 @@ export class AgendaService {
     return { ok: true };
   }
 
-  // Annuler : l'organisateur seul (circuit), avec la Suppression de « Mon agenda ».
+  // Annuler : l'organisateur seul (circuit), avec la Suppression de « Mon agenda » ;
+  // jamais un entretien de recrutement (depuis sa candidature).
   async annuler(a: Acteur, id: string) {
     const r = await this.prisma.rendezVous.findFirst({
       where: { id, societeId: a.societeId, annuleLe: null },
@@ -358,6 +371,9 @@ export class AgendaService {
     });
     if (!r) throw new NotFoundException('Rendez-vous introuvable');
     if (r.organisateurId !== a.userId) throw new ForbiddenException('Seul l’organisateur annule ce rendez-vous.');
+    if (await this.prisma.candidature.count({ where: { rendezVousId: id } })) {
+      throw new ConflictException('Un entretien s’annule depuis le recrutement.');
+    }
     await this.prisma.rendezVous.update({ where: { id }, data: { annuleLe: new Date(), sequence: { increment: 1 } } });
     if (r.invites.length) {
       await this.notifications.envoyer({

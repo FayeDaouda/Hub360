@@ -87,7 +87,9 @@ export function FicheElement({
         )}
         {e.detail && <p className="agenda-fiche-note">{e.detail}</p>}
         {e.entretien && (
-          <p className="agenda-detail">Un entretien se replanifie depuis le recrutement, sur sa candidature.</p>
+          <p className="agenda-detail">
+            Un entretien se replanifie ou s’annule depuis le recrutement, sur sa candidature.
+          </p>
         )}
         <div className="modal-actions">
           {e.annulable && (

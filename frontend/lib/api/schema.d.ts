@@ -6374,6 +6374,7 @@ export interface components {
             annulable: boolean;
             modifiable: boolean;
             entretien: boolean;
+            jeSuisOrganisateur: boolean;
             description: string | null;
             inviteIds: string[];
             demande?: {

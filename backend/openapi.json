@@ -18677,6 +18677,9 @@
           "entretien": {
             "type": "boolean"
           },
+          "jeSuisOrganisateur": {
+            "type": "boolean"
+          },
           "description": {
             "type": "string",
             "nullable": true
@@ -18731,6 +18734,7 @@
           "annulable",
           "modifiable",
           "entretien",
+          "jeSuisOrganisateur",
           "description",
           "inviteIds"
         ]
