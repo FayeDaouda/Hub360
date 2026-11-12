@@ -28,10 +28,15 @@ export type ElementAgenda = {
   jeSuisOrganisateur: boolean; // la personne dont c'est l'agenda l'organise
   description: string | null;
   inviteIds: string[];
+  // Front seulement (12/11/2026) : élément de l'agenda d'un collègue
+  // superposé au sien, avec la couleur de ce collègue.
+  calque?: Calque;
   // Demande d'absence à trancher (son agenda) : décision du N+1, ou
   // validation finale du CEO.
   demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };
 };
+export type Calque = { id: string; nom: string; couleur: string };
+
 export type SemaineAgenda = {
   du: string;
   au: string;

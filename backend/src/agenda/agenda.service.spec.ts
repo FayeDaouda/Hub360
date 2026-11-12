@@ -3,7 +3,10 @@ import { AgendaService } from './agenda.service';
 
 const svc = () => {
   const prisma = {
-    utilisateurSocieteRole: { findMany: jest.fn().mockResolvedValue([{ utilisateurId: 'U2' }]) },
+    utilisateurSocieteRole: {
+      findMany: jest.fn().mockResolvedValue([{ utilisateurId: 'U2' }]),
+      count: jest.fn().mockResolvedValue(1),
+    },
     utilisateur: {
       findUnique: jest.fn().mockResolvedValue({ id: 'U9', prenom: 'A', nom: 'B' }),
       findMany: jest.fn().mockResolvedValue([]),
@@ -430,5 +433,13 @@ describe('AgendaService', () => {
       entretien: true,
       jeSuisOrganisateur: true,
     });
+  });
+
+  it('l’agenda d’un compte qui n’est pas membre de la société : introuvable', async () => {
+    const { s, prisma } = svc();
+    prisma.utilisateurSocieteRole.count.mockResolvedValue(0);
+    await expect(s.semaine(moi({ agenda: 'L', 'agenda.autres': 'L' }), '2026-11-02', 'U9')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

@@ -79,6 +79,13 @@ export class AgendaService {
       select: { id: true, prenom: true, nom: true },
     });
     if (!personne) throw new NotFoundException('Personne introuvable');
+    // Un collègue : un membre de la société, pas n'importe quel compte du HUB.
+    if (
+      cible !== a.userId &&
+      !(await this.prisma.utilisateurSocieteRole.count({ where: { societeId: a.societeId, utilisateurId: cible } }))
+    ) {
+      throw new NotFoundException('Personne introuvable');
+    }
     const debut = new Date(`${du}T00:00:00Z`);
     const finExclue = new Date(`${addDays(au, 1)}T00:00:00Z`);
     const jours = daysBetween(du, au) + 1;

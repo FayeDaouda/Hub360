@@ -87,4 +87,96 @@ describe('GrilleHoraire', () => {
     expect(veille.querySelector('.agenda-bloc')).toHaveStyle({ top: `${23 * 48}px` });
     expect(lendemain.querySelector('.agenda-bloc')).toHaveStyle({ top: '0px', height: `${48 - 2}px` });
   });
+
+  // Glisser-déplacer (12/11/2026).
+  describe('glisser', () => {
+    const monterGlisser = (modifiable: boolean) => {
+      const props = { onCreneau: vi.fn(), onOuvrir: vi.fn(), onDeplacer: vi.fn() };
+      render(
+        <GrilleHoraire
+          jours={[J]}
+          aujourdhui="2026-11-20"
+          elements={[{ ...ELEMENTS[0], modifiable }]}
+          peutCreer
+          {...props}
+        />,
+      );
+      return { ...props, bloc: screen.getByRole('button', { name: /Point chantier/ }) };
+    };
+
+    it('glisser d’une heure vers le bas : déplacé, sans ouvrir la fiche', () => {
+      const { bloc, onDeplacer, onOuvrir } = monterGlisser(true);
+      fireEvent.pointerDown(bloc, { button: 0, pointerType: 'mouse', clientX: 10, clientY: 100 });
+      fireEvent.pointerMove(bloc, { pointerType: 'mouse', buttons: 1, clientX: 10, clientY: 148 });
+      fireEvent.pointerUp(bloc, { pointerType: 'mouse', clientX: 10, clientY: 148 });
+      fireEvent.click(bloc);
+      expect(onDeplacer).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'Point chantier' }),
+        `${J}T10:00:00.000Z`,
+        `${J}T11:00:00.000Z`,
+      );
+      expect(onOuvrir).not.toHaveBeenCalled();
+    });
+
+    it('tirer la poignée : la fin s’allonge d’une demi-heure', () => {
+      const { bloc, onDeplacer } = monterGlisser(true);
+      const poignee = bloc.querySelector('.agenda-bloc-poignee')!;
+      fireEvent.pointerDown(poignee, { button: 0, pointerType: 'mouse', clientX: 10, clientY: 100 });
+      fireEvent.pointerMove(bloc, { pointerType: 'mouse', buttons: 1, clientX: 10, clientY: 124 });
+      fireEvent.pointerUp(bloc, { pointerType: 'mouse' });
+      expect(onDeplacer).toHaveBeenCalledWith(expect.anything(), `${J}T09:00:00.000Z`, `${J}T10:30:00.000Z`);
+    });
+
+    it('un simple clic ouvre la fiche ; un rendez-vous d’un autre ne se glisse pas', () => {
+      const a = monterGlisser(true);
+      fireEvent.pointerDown(a.bloc, { button: 0, pointerType: 'mouse', clientX: 10, clientY: 100 });
+      fireEvent.pointerUp(a.bloc, { pointerType: 'mouse' });
+      fireEvent.click(a.bloc);
+      expect(a.onOuvrir).toHaveBeenCalled();
+      expect(a.onDeplacer).not.toHaveBeenCalled();
+      a.bloc.ownerDocument.body.innerHTML = '';
+      const b = monterGlisser(false);
+      expect(b.bloc.querySelector('.agenda-bloc-poignee')).toBeNull();
+      fireEvent.pointerDown(b.bloc, { button: 0, pointerType: 'mouse', clientX: 10, clientY: 100 });
+      fireEvent.pointerMove(b.bloc, { pointerType: 'mouse', buttons: 1, clientX: 10, clientY: 200 });
+      fireEvent.pointerUp(b.bloc, { pointerType: 'mouse' });
+      expect(b.onDeplacer).not.toHaveBeenCalled();
+    });
+
+    it('Semaine : glissé vers la colonne du lendemain, le pointeur reste suivi jusqu’au bout', () => {
+      const props = { onCreneau: vi.fn(), onOuvrir: vi.fn(), onDeplacer: vi.fn() };
+      const { container } = render(
+        <GrilleHoraire
+          jours={[J, '2026-11-13']}
+          aujourdhui="2026-11-20"
+          elements={[{ ...ELEMENTS[0], modifiable: true }]}
+          peutCreer
+          {...props}
+        />,
+      );
+      container.querySelectorAll('.agenda-grille-colonne').forEach((c, i) => {
+        c.getBoundingClientRect = () => ({ left: i * 100, right: (i + 1) * 100, top: 0, bottom: 1152 }) as DOMRect;
+      });
+      const corps = container.querySelector('.agenda-grille-corps')!;
+      const bloc = screen.getByRole('button', { name: /Point chantier/ });
+      fireEvent.pointerDown(bloc, { button: 0, pointerType: 'mouse', clientX: 50, clientY: 100 });
+      fireEvent.pointerMove(bloc, { pointerType: 'mouse', buttons: 1, clientX: 150, clientY: 100 });
+      // Le bloc a changé de colonne : la suite arrive au corps de la grille.
+      fireEvent.pointerUp(corps, { pointerType: 'mouse', clientX: 150, clientY: 100 });
+      expect(props.onDeplacer).toHaveBeenCalledWith(
+        expect.anything(),
+        '2026-11-13T09:00:00.000Z',
+        '2026-11-13T10:00:00.000Z',
+      );
+    });
+
+    it('Échap abandonne le glisser', () => {
+      const { bloc, onDeplacer } = monterGlisser(true);
+      fireEvent.pointerDown(bloc, { button: 0, pointerType: 'mouse', clientX: 10, clientY: 100 });
+      fireEvent.pointerMove(bloc, { pointerType: 'mouse', buttons: 1, clientX: 10, clientY: 196 });
+      fireEvent.keyDown(window, { key: 'Escape' });
+      fireEvent.pointerUp(bloc, { pointerType: 'mouse' });
+      expect(onDeplacer).not.toHaveBeenCalled();
+    });
+  });
 });

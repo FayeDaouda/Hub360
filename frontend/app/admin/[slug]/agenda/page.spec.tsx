@@ -86,7 +86,7 @@ describe('Page Agenda', () => {
       await monter();
       expect(await screen.findByRole('button', { name: /Point chantier/ })).toBeInTheDocument();
       expect(screen.getByRole('radio', { name: 'Semaine' })).toBeChecked();
-      expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-09', '2026-11-15', undefined);
+      expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-09', '2026-11-15');
     });
 
     it('Jour charge la seule journée ; Planning les 30 jours qui viennent, en liste', async () => {
@@ -95,10 +95,10 @@ describe('Page Agenda', () => {
 
       await userEvent.click(screen.getByRole('radio', { name: 'Jour' }));
       expect(screen.getByRole('radio', { name: 'Jour' })).toBeChecked();
-      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, J, undefined));
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, J));
 
       await userEvent.click(screen.getByRole('radio', { name: 'Planning' }));
-      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11', undefined));
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11'));
       // En liste : le rendez-vous et ses actions, sans passer par la fiche.
       const ligne = (await screen.findByText('Point chantier')).closest('li')!;
       expect(within(ligne).getByRole('button', { name: 'Modifier' })).toBeInTheDocument();
@@ -109,14 +109,14 @@ describe('Page Agenda', () => {
       await monter();
       await screen.findByRole('button', { name: /Point chantier/ });
       await userEvent.click(screen.getByRole('button', { name: 'Semaine suivante' }));
-      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22', undefined));
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
     });
 
     it('sur téléphone, le planning s’ouvre par défaut', async () => {
       window.matchMedia = vi.fn().mockImplementation((q: string) => ({ matches: q === '(max-width: 640px)' }));
       await monter();
       await waitFor(() => expect(screen.getByRole('radio', { name: 'Planning' })).toBeChecked());
-      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11', undefined));
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11'));
     });
   });
 
@@ -175,6 +175,52 @@ describe('Page Agenda', () => {
       const fiche = await screen.findByRole('dialog');
       expect(within(fiche).queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument();
       expect(within(fiche).getByText(/se replanifie ou s’annule depuis le recrutement/)).toBeInTheDocument();
+    });
+  });
+
+  // Colonne de gauche (12/11/2026) : agendas de collègues superposés, types masqués.
+  describe('colonne', () => {
+    afterEach(() => localStorage.clear());
+
+    it('cocher un collègue lit son agenda et l’affiche dans sa couleur ; masquer un type le retire', async () => {
+      const deFatou: ElementAgenda = {
+        ...RDV,
+        id: 'R9',
+        titre: 'Visite terrain',
+        debut: `${J}T14:00:00.000Z`,
+        fin: `${J}T15:00:00.000Z`,
+        modifiable: false,
+        annulable: false,
+      };
+      api.getAgenda.mockImplementation((_s: string, du: string, au: string, personne?: string) =>
+        Promise.resolve(
+          personne === 'U3'
+            ? reponse(du, au, { personne: { id: 'U3', nom: 'Fatou Ba' }, elements: [deFatou] })
+            : reponse(du, au, { peutVoirAutres: true }),
+        ),
+      );
+      await monter();
+      await userEvent.click(await screen.findByLabelText('Fatou Ba'));
+      await waitFor(() => expect(api.getAgenda).toHaveBeenCalledWith('gc', '2026-11-09', '2026-11-15', 'U3'));
+      const bloc = await screen.findByRole('button', { name: /Fatou Ba : Visite terrain/ });
+      expect(bloc.getAttribute('style')).toContain('--ton: var(--azur)');
+      // Préférences propres à ce compte (U1) dans ce navigateur.
+      expect(JSON.parse(localStorage.getItem('hub.agenda.gc.U1') ?? '{}')).toMatchObject({ collegues: ['U3'] });
+
+      await userEvent.click(screen.getByLabelText('Rendez-vous'));
+      expect(screen.queryByRole('button', { name: /Visite terrain/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Point chantier/ })).not.toBeInTheDocument();
+    });
+
+    it('un collègue resté dans les préférences mais plus dans la société est ignoré', async () => {
+      localStorage.setItem('hub.agenda.gc.U1', JSON.stringify({ collegues: ['PARTI', 'U3'] }));
+      api.getAgenda.mockImplementation((_s: string, du: string, au: string) =>
+        Promise.resolve(reponse(du, au, { peutVoirAutres: true })),
+      );
+      await monter();
+      await waitFor(() => expect(api.getAgenda).toHaveBeenCalledWith('gc', '2026-11-09', '2026-11-15', 'U3'));
+      expect(api.getAgenda).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'PARTI');
+      expect(screen.getByLabelText('Fatou Ba')).toBeChecked();
     });
   });
 });
