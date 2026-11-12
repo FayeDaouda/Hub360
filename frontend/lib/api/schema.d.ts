@@ -4033,7 +4033,7 @@ export interface paths {
         delete: operations["AgendaController_annuler"];
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["AgendaController_modifier"];
         trace?: never;
     };
     "/api/agenda-abonnement/{fichier}": {
@@ -4736,7 +4736,7 @@ export interface components {
             };
         };
         LectureDto: {
-            types?: ("absence_a_decider" | "absence_decidee" | "annonce_a_valider" | "annonce_importante" | "arrivant_a_affecter" | "attente_ceo" | "attestation_delivree" | "avenant_ts" | "avoir_a_valider" | "avoir_decide" | "avoir_emis" | "bulletin_depose" | "candidat_decide" | "candidature_recue" | "checklist_assignee" | "cloture_a_faire" | "commission_a_payer" | "commission_payee" | "connexion_secours" | "contrat_signe" | "coordonnees_apporteur_modifiees" | "coordonnees_paiement_modifiees" | "decision_arbitree" | "decision_assignee" | "decision_en_retard" | "decision_proposee" | "delegation_ceo" | "demande_droit_a_valider" | "demande_droit_decidee" | "dossier_cree" | "dossier_modifie" | "dossier_perdu" | "dossier_renvoye" | "dossier_soumis" | "droits_modifies" | "ecart_temps_signale" | "ecart_temps_traite" | "embauche_decidee" | "entretien_planifie" | "facture_a_valider" | "facture_emise" | "facture_payee" | "groupe_chat" | "mention_chat" | "mention_projet" | "offre_acceptee" | "offre_envoyee" | "offre_expiree" | "offre_refusee" | "own_rights_changed" | "phase_changee" | "poste_a_approuver" | "poste_decide" | "poste_ouvert" | "projet_assigne" | "prolongation_decidee" | "prolongation_demandee" | "rappel_decision" | "rappel_demande" | "rappel_facture" | "rappel_offre" | "rappel_tache" | "rdv_annule" | "rdv_invitation" | "reglage_gouvernance_modifie" | "remboursement_a_traiter" | "remboursement_traite" | "reporting_a_deposer" | "reporting_depose" | "reporting_en_retard" | "reporting_question" | "reporting_reponse" | "salaire_a_valider" | "salaire_decide" | "signalement_recu" | "suppleance_designee" | "synthese_mensuelle" | "tache_assignee" | "tache_remise" | "tache_renvoyee" | "tache_validee" | "ts_a_valider" | "ts_decide" | "visa_a_apposer")[];
+            types?: ("absence_a_decider" | "absence_decidee" | "annonce_a_valider" | "annonce_importante" | "arrivant_a_affecter" | "attente_ceo" | "attestation_delivree" | "avenant_ts" | "avoir_a_valider" | "avoir_decide" | "avoir_emis" | "bulletin_depose" | "candidat_decide" | "candidature_recue" | "checklist_assignee" | "cloture_a_faire" | "commission_a_payer" | "commission_payee" | "connexion_secours" | "contrat_signe" | "coordonnees_apporteur_modifiees" | "coordonnees_paiement_modifiees" | "decision_arbitree" | "decision_assignee" | "decision_en_retard" | "decision_proposee" | "delegation_ceo" | "demande_droit_a_valider" | "demande_droit_decidee" | "dossier_cree" | "dossier_modifie" | "dossier_perdu" | "dossier_renvoye" | "dossier_soumis" | "droits_modifies" | "ecart_temps_signale" | "ecart_temps_traite" | "embauche_decidee" | "entretien_planifie" | "facture_a_valider" | "facture_emise" | "facture_payee" | "groupe_chat" | "mention_chat" | "mention_projet" | "offre_acceptee" | "offre_envoyee" | "offre_expiree" | "offre_refusee" | "own_rights_changed" | "phase_changee" | "poste_a_approuver" | "poste_decide" | "poste_ouvert" | "projet_assigne" | "prolongation_decidee" | "prolongation_demandee" | "rappel_decision" | "rappel_demande" | "rappel_facture" | "rappel_offre" | "rappel_tache" | "rdv_annule" | "rdv_invitation" | "rdv_modifie" | "reglage_gouvernance_modifie" | "remboursement_a_traiter" | "remboursement_traite" | "reporting_a_deposer" | "reporting_depose" | "reporting_en_retard" | "reporting_question" | "reporting_reponse" | "salaire_a_valider" | "salaire_decide" | "signalement_recu" | "suppleance_designee" | "synthese_mensuelle" | "tache_assignee" | "tache_remise" | "tache_renvoyee" | "tache_validee" | "ts_a_valider" | "ts_decide" | "visa_a_apposer")[];
             ids?: string[];
         };
         PreferencesNotificationsDto: {
@@ -6372,6 +6372,10 @@ export interface components {
             organisateur: string | null;
             invites: string[];
             annulable: boolean;
+            modifiable: boolean;
+            entretien: boolean;
+            description: string | null;
+            inviteIds: string[];
             demande?: {
                 id: string;
                 /** @enum {string} */
@@ -6407,6 +6411,14 @@ export interface components {
             lieu?: string;
             description?: string;
             inviteIds?: string[];
+        };
+        ModifierRendezVousDto: {
+            titre: string;
+            debut: string;
+            fin: string;
+            lieu?: string;
+            description?: string;
+            inviteIds: string[];
         };
         CreerLocaliteDto: {
             code: string;
@@ -12912,6 +12924,30 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgendaController_modifier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModifierRendezVousDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {

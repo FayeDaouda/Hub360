@@ -9,6 +9,7 @@ const RDV = {
   lieu: 'Plateau',
   description: null,
   organisateurId: 'U1',
+  sequence: 0,
   invites: [{ utilisateurId: 'U2' }, { utilisateurId: 'U3' }],
   societe: { nom: 'Grey Concrete', slug: 'grey-concrete' },
 };
@@ -39,8 +40,8 @@ describe('InvitationsAgendaService', () => {
     expect(i.ics).not.toContain('parti@gc.sn');
   });
 
-  it('l’annulation reprend le même UID, version suivante', async () => {
-    const { s, email } = monter();
+  it('l’annulation reprend le même UID, version suivante (incrémentée en base avant l’envoi)', async () => {
+    const { s, email } = monter({ ...RDV, sequence: 1 });
     await s.envoyer('R1', 'CANCEL');
     const { ics } = email.envoyerInvitationAgenda.mock.calls[0][0];
     expect(ics).toContain('METHOD:CANCEL');
@@ -55,5 +56,17 @@ describe('InvitationsAgendaService', () => {
     const casse = monter();
     casse.prisma.rendezVous.findUnique.mockRejectedValue(new Error('base indisponible'));
     await expect(casse.s.envoyer('R1', 'REQUEST')).resolves.toBe(0);
+  });
+
+  it('destinataires : l’envoi se limite à eux (l’annulation aux invités retirés)', async () => {
+    const { s, email, prisma } = monter({ ...RDV, invites: [{ utilisateurId: 'U3' }], sequence: 2 });
+    prisma.utilisateur.findMany.mockResolvedValue([COMPTES[0], COMPTES[1]]);
+    expect(await s.envoyer('R1', 'CANCEL', { destinataires: ['U2'] })).toBe(1);
+    const i = email.envoyerInvitationAgenda.mock.calls[0][0];
+    expect(i).toMatchObject({ email: 'moussa@gc.sn', methode: 'CANCEL' });
+    expect(i.ics).toContain('SEQUENCE:2');
+    expect(prisma.utilisateur.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: ['U1', 'U2'] } } }),
+    );
   });
 });

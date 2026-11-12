@@ -61,6 +61,10 @@ const el = (e: Partial<ElementAgendaDto> & Pick<ElementAgendaDto, 'id' | 'type' 
   organisateur: null,
   invites: [],
   annulable: false,
+  modifiable: false,
+  entretien: false,
+  description: null,
+  inviteIds: [],
   ...e,
 });
 

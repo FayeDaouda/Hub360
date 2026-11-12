@@ -455,6 +455,7 @@ export type NotificationType =
   // Agenda, Annonces (01/11/2026).
   | 'rdv_invitation'
   | 'rdv_annule'
+  | 'rdv_modifie'
   | 'annonce_importante'
   | 'annonce_a_valider'
   // Recrutement (01/11/2026).

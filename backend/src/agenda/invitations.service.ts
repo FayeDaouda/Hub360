@@ -9,6 +9,8 @@ import { lienAgendaHub, nomDe, uidEvenement } from './liens';
 // (CANCEL, même UID : la réunion disparaît de son agenda). L'abonnement
 // (abonnement.service.ts) est un agenda à part : une réunion acceptée par
 // e-mail y figure aussi, en lecture seule.
+// Une modification renvoie la réunion à jour (même UID, version suivante) ;
+// `destinataires` limite l'envoi (l'annulation aux seuls invités retirés).
 // Ne lève jamais : un e-mail qui échoue n'annule ni la réunion ni son
 // annulation (les notifications du HUB sont déjà parties).
 @Injectable()
@@ -20,23 +22,33 @@ export class InvitationsAgendaService {
     private email: EmailService,
   ) {}
 
-  async envoyer(rendezVousId: string, methode: 'REQUEST' | 'CANCEL'): Promise<number> {
+  async envoyer(
+    rendezVousId: string,
+    methode: 'REQUEST' | 'CANCEL',
+    options: { destinataires?: string[] } = {},
+  ): Promise<number> {
     try {
-      return await this.envoyerSansFilet(rendezVousId, methode);
+      return await this.envoyerSansFilet(rendezVousId, methode, options.destinataires);
     } catch (e) {
       this.log.error(`invitations ${methode} du rendez-vous ${rendezVousId} : ${e instanceof Error ? e.message : e}`);
       return 0;
     }
   }
 
-  private async envoyerSansFilet(rendezVousId: string, methode: 'REQUEST' | 'CANCEL'): Promise<number> {
+  private async envoyerSansFilet(
+    rendezVousId: string,
+    methode: 'REQUEST' | 'CANCEL',
+    destinataires?: string[],
+  ): Promise<number> {
     const r = await this.prisma.rendezVous.findUnique({
       where: { id: rendezVousId },
       include: { invites: true, societe: { select: { nom: true, slug: true } } },
     });
-    if (!r || !r.invites.length) return 0;
+    if (!r) return 0;
+    const pour = destinataires ?? r.invites.map((i) => i.utilisateurId);
+    if (!pour.length) return 0;
     const comptes = await this.prisma.utilisateur.findMany({
-      where: { id: { in: [r.organisateurId, ...r.invites.map((i) => i.utilisateurId)] } },
+      where: { id: { in: [r.organisateurId, ...pour] } },
       select: { id: true, email: true, prenom: true, nom: true, actif: true },
     });
     const organisateur = comptes.find((c) => c.id === r.organisateurId);
@@ -56,9 +68,7 @@ export class InvitationsAgendaService {
           lieu: r.lieu,
           description: [r.description, `Dans le HUB : ${lien}`].filter(Boolean).join('\n'),
           url: lien,
-          // Une réunion ne se modifie pas encore : l'annulation est la
-          // seule nouvelle version.
-          sequence: methode === 'CANCEL' ? 1 : 0,
+          sequence: r.sequence,
           organisateur: { nom: nomDe(organisateur), email: organisateur.email },
           invites: invites.map((i) => ({ nom: nomDe(i), email: i.email })),
         },

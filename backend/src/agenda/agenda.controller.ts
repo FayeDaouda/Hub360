@@ -1,11 +1,30 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ETAPE } from '@hub/domain';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { PermissionGuard } from '../commun/permission.guard';
 import { AbonnementAgendaService } from './abonnement.service';
-import { CreerRendezVousDto, EtatAbonnementAgendaDto, LienAbonnementAgendaDto, SemaineAgendaDto } from './agenda.dto';
+import {
+  CreerRendezVousDto,
+  EtatAbonnementAgendaDto,
+  LienAbonnementAgendaDto,
+  ModifierRendezVousDto,
+  SemaineAgendaDto,
+} from './agenda.dto';
 import { AgendaService } from './agenda.service';
 
 type R = { user: { userId: string; societeId: string; role: string; permissions: Record<string, string> } };
@@ -63,6 +82,16 @@ export class AgendaController {
   @RequiertPermission(ETAPE.agenda, 'ecriture')
   creer(@Req() req: R, @Body() dto: CreerRendezVousDto) {
     return this.agenda.creer(req.user, dto);
+  }
+
+  // Modifier un rendez-vous (12/11/2026) : l'organisateur seul. Débit
+  // limité : chaque modification peut écrire aux invités.
+  @Patch(':id')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @RequiertPermission(ETAPE.agenda, 'ecriture')
+  modifier(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: ModifierRendezVousDto) {
+    return this.agenda.modifier(req.user, id, dto);
   }
 
   @Delete(':id')

@@ -29,6 +29,7 @@ const jourSemaine = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
   month: 'long',
 });
+const jourSemaineCourt = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, weekday: 'short' });
 const heureMinute = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' });
 const dateHeure = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, dateStyle: 'short', timeStyle: 'short' });
 const dateHeureLongue = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, dateStyle: 'long', timeStyle: 'short' });
@@ -36,6 +37,27 @@ const dateHeureLongue = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, dat
 /** Jour ISO (AAAA-MM-JJ) d'un instant, à Dakar. */
 export function toIsoDay(date: Date): string {
   return jourIsoDakar.format(date);
+}
+
+/**
+ * Minutes écoulées depuis minuit, à Dakar, d'un instant ISO (0 → 1439). Sert
+ * à placer un rendez-vous dans la grille horaire de l'Agenda.
+ */
+export function minutesOfDay(iso: string): number {
+  // Dakar = UTC toute l'année : l'heure UTC est l'heure locale.
+  const d = new Date(iso);
+  return d.getUTCHours() * 60 + d.getUTCMinutes();
+}
+
+/** Instant ISO d'un jour (AAAA-MM-JJ) à une heure « HH:MM » de Dakar. */
+export function dakarInstant(day: string, hhmm: string): string {
+  return `${day}T${hhmm}:00.000Z`;
+}
+
+/** « HH:MM » d'un nombre de minutes depuis minuit (borné à 00:00 → 23:59). */
+export function hhmmOfMinutes(minutes: number): string {
+  const m = Math.min(Math.max(Math.round(minutes), 0), 23 * 60 + 59);
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
 /** Jour ISO (AAAA-MM-JJ) d'aujourd'hui, à Dakar. */
@@ -120,6 +142,11 @@ export function formatDayLongMonth(iso: string): string {
 /** « lundi 2 novembre » (Agenda). */
 export function formatWeekdayDayMonth(iso: string): string {
   return jourSemaine.format(new Date(iso));
+}
+
+/** « jeu. » : jour de la semaine abrégé (en-tête de la grille de l'Agenda). */
+export function formatWeekdayShort(iso: string): string {
+  return jourSemaineCourt.format(new Date(`${iso.slice(0, 10)}T12:00:00Z`));
 }
 
 export function formatTime(iso: string): string {

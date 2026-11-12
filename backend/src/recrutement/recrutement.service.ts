@@ -417,7 +417,7 @@ export class RecrutementService {
       const ancien = c.rendezVousId
         ? await tx.rendezVous.updateMany({
             where: { id: c.rendezVousId, annuleLe: null, debut: { gt: maintenant } },
-            data: { annuleLe: maintenant },
+            data: { annuleLe: maintenant, sequence: { increment: 1 } },
           })
         : { count: 0 };
       const r = await tx.rendezVous.create({

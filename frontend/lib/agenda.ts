@@ -5,6 +5,7 @@ import type { TypeAbsence } from './types';
 //   GET    …/agenda?du=AAAA-MM-JJ[&au=…][&personne=id]   la période (semaine par défaut, 366 j au plus)
 //   GET    …/agenda/personnes                    collègues (invitations, agenda des autres)
 //   POST   …/agenda                              { titre, debut, fin, lieu?, description?, inviteIds? }
+//   PATCH  …/agenda/:id                          modifier (l'organisateur, 12/11/2026)
 //   DELETE …/agenda/:id                          annuler (l'organisateur)
 //   GET|POST|DELETE …/agenda/abonnement          lien vers Google, Apple, Outlook (12/11/2026)
 
@@ -20,6 +21,12 @@ export type ElementAgenda = {
   organisateur: string | null;
   invites: string[];
   annulable: boolean;
+  // Modifiable par l'organisateur (12/11/2026) ; jamais un entretien de
+  // recrutement, replanifié depuis sa candidature.
+  modifiable: boolean;
+  entretien: boolean;
+  description: string | null;
+  inviteIds: string[];
   // Demande d'absence à trancher (son agenda) : décision du N+1, ou
   // validation finale du CEO.
   demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };
@@ -48,6 +55,9 @@ export const getPersonnesAgenda = (slug: string) =>
   apiSociete<{ id: string; nom: string }[]>(slug, '/agenda/personnes');
 export const creerRendezVous = (slug: string, r: NouveauRendezVous) =>
   apiSociete<{ id: string }>(slug, '/agenda', { method: 'POST', body: r });
+// Modifier : la fiche entière, invités compris (une liste absente les retirerait).
+export const modifierRendezVous = (slug: string, id: string, r: NouveauRendezVous & { inviteIds: string[] }) =>
+  apiSociete<{ ok: true }>(slug, `/agenda/${id}`, { method: 'PATCH', body: r });
 export const annulerRendezVous = (slug: string, id: string) =>
   apiSociete<{ ok: true }>(slug, `/agenda/${id}`, { method: 'DELETE' });
 
