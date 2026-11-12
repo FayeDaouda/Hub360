@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
 import { addDays, todayIso } from '@hub/domain';
 import { api, COMPTES, connecter, demarrer } from './app';
 
@@ -47,5 +48,54 @@ describe('Agenda', () => {
     await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
     const apres = (await api(app, cfo).get(`/agenda?du=${jour}`).expect(200)).body as Semaine;
     expect(apres.elements.some((e) => e.id === id)).toBe(false);
+  });
+
+  // Abonnement depuis Google, Apple ou Outlook (12/11/2026) : le lien se lit
+  // sans session, porte la réunion de l'invité, et cesse de marcher une fois
+  // régénéré ou supprimé.
+  it('abonnement : lu sans session, régénéré puis supprimé', async () => {
+    const dirgc = await connecter(app, COMPTES.dirgc);
+    const cfo = await connecter(app, COMPTES.cfo);
+    const jour = addDays(todayIso(), 2);
+    const cfoId = ((await api(app, cfo).get(`/agenda?du=${jour}`).expect(200)).body as Semaine).personne.id;
+    const { id } = (
+      await api(app, dirgc)
+        .post('/agenda', {
+          titre: 'Point budget',
+          debut: `${jour}T09:00:00.000Z`,
+          fin: `${jour}T09:30:00.000Z`,
+          inviteIds: [cfoId],
+        })
+        .expect(201)
+    ).body as { id: string };
+
+    const { url } = (await api(app, cfo).post('/agenda/abonnement').expect(201)).body as { url: string };
+    const chemin = new URL(url).pathname;
+    expect(chemin).toMatch(/^\/api\/agenda-abonnement\/[A-Za-z0-9_-]{43}\.ics$/);
+    const flux = await request(app.getHttpServer()).get(chemin).expect(200);
+    expect(flux.headers['content-type']).toContain('text/calendar');
+    expect(flux.text).toContain(`UID:rdv-${id}@hub360.space`);
+    expect(flux.text).toContain('SUMMARY:Point budget');
+    const etat = (await api(app, cfo).get('/agenda/abonnement').expect(200)).body as {
+      actif: boolean;
+      dernierAccesLe: string | null;
+    };
+    expect(etat.actif).toBe(true);
+    expect(etat.dernierAccesLe).not.toBeNull();
+
+    // Jeton inconnu ou malformé : la même réponse.
+    await request(app.getHttpServer()).get('/api/agenda-abonnement/inconnu.ics').expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/agenda-abonnement/${'a'.repeat(43)}.ics`)
+      .expect(404);
+
+    const { url: nouveau } = (await api(app, cfo).post('/agenda/abonnement').expect(201)).body as { url: string };
+    await request(app.getHttpServer()).get(chemin).expect(404);
+    await request(app.getHttpServer()).get(new URL(nouveau).pathname).expect(200);
+    await api(app, cfo).delete('/agenda/abonnement').expect(200);
+    await request(app.getHttpServer()).get(new URL(nouveau).pathname).expect(404);
+    expect(((await api(app, cfo).get('/agenda/abonnement').expect(200)).body as { actif: boolean }).actif).toBe(false);
+
+    await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
   });
 });

@@ -6,6 +6,7 @@ import type { TypeAbsence } from './types';
 //   GET    …/agenda/personnes                    collègues (invitations, agenda des autres)
 //   POST   …/agenda                              { titre, debut, fin, lieu?, description?, inviteIds? }
 //   DELETE …/agenda/:id                          annuler (l'organisateur)
+//   GET|POST|DELETE …/agenda/abonnement          lien vers Google, Apple, Outlook (12/11/2026)
 
 export type ElementAgenda = {
   id: string;
@@ -49,3 +50,20 @@ export const creerRendezVous = (slug: string, r: NouveauRendezVous) =>
   apiSociete<{ id: string }>(slug, '/agenda', { method: 'POST', body: r });
 export const annulerRendezVous = (slug: string, id: string) =>
   apiSociete<{ ok: true }>(slug, `/agenda/${id}`, { method: 'DELETE' });
+
+// Abonnement depuis Google Agenda, Apple Calendrier ou Outlook (12/11/2026) :
+// le lien clair n'est rendu qu'à la création (seule son empreinte est gardée).
+export type EtatAbonnementAgenda = { actif: boolean; creeLe: string | null; dernierAccesLe: string | null };
+
+export const getAbonnementAgenda = (slug: string) => apiSociete<EtatAbonnementAgenda>(slug, '/agenda/abonnement');
+export const creerAbonnementAgenda = (slug: string) =>
+  apiSociete<{ url: string }>(slug, '/agenda/abonnement', { method: 'POST' });
+export const supprimerAbonnementAgenda = (slug: string) =>
+  apiSociete<{ ok: true }>(slug, '/agenda/abonnement', { method: 'DELETE' });
+
+// Liens d'ajout : « webcal » ouvre l'agenda de l'appareil (Apple, Outlook) ;
+// Google Agenda s'abonne par son adresse « cid », en https (jamais de lecture
+// du jeton en clair, même une fois).
+export const lienWebcal = (url: string) => url.replace(/^https?:/, 'webcal:');
+export const lienGoogleAgenda = (url: string) =>
+  `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(url)}`;

@@ -4,10 +4,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DemandesService } from '../rh/demandes.service';
 import type { CreerRendezVousDto, ElementAgendaDto, SemaineAgendaDto } from './agenda.dto';
+import { InvitationsAgendaService } from './invitations.service';
+import { nomDe } from './liens';
 
-type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
+export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 
-const nomDe = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`.trim();
 const JOUR = /^\d{4}-\d{2}-\d{2}$/;
 // Vue « Année » : jusqu'à 366 jours d'un coup.
 const JOURS_MAX = 366;
@@ -15,18 +16,29 @@ const JOURS_MAX = 366;
 // Agenda (lot 11, décision du 01/11/2026) : ses rendez-vous et réunions, plus
 // — à la lecture, jamais copiés — les échéances de ses tâches et ses congés
 // validés. Mon agenda : étape « agenda » ; inviter : « Réunions » ; voir celui
-// d'un collègue : « Agenda des autres ». Pas de synchronisation externe (v1).
+// d'un collègue : « Agenda des autres ». Vers l'agenda personnel (12/11/2026) :
+// abonnement (abonnement.service.ts) et invitations par e-mail
+// (invitations.service.ts), du HUB vers l'extérieur seulement.
 @Injectable()
 export class AgendaService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private demandes: DemandesService,
+    private invitations: InvitationsAgendaService,
   ) {}
 
   // Une période (semaine, mois ou année, 01/11/2026) : `au` inclus, une
   // semaine par défaut.
-  async semaine(a: Acteur, du: string, personneId?: string, auDemande?: string): Promise<SemaineAgendaDto> {
+  // `sansDemandes` : l'abonnement externe (abonnement.service.ts), où les
+  // demandes d'absence à trancher ne sortent jamais du HUB.
+  async semaine(
+    a: Acteur,
+    du: string,
+    personneId?: string,
+    auDemande?: string,
+    options: { sansDemandes?: boolean } = {},
+  ): Promise<SemaineAgendaDto> {
     if (!JOUR.test(du)) throw new BadRequestException('Date de début invalide (AAAA-MM-JJ).');
     const au = auDemande ?? addDays(du, 6);
     if (!JOUR.test(au) || au < du || daysBetween(du, au) >= JOURS_MAX) {
@@ -135,7 +147,7 @@ export class AgendaService {
       ),
       // Demandes d'absence qu'on doit trancher (son agenda seulement) : la
       // file « À valider » du N+1 (et de la validation finale du CEO).
-      ...(cible === a.userId ? await this.demandesADecider(a, du, au, jours) : []),
+      ...(cible === a.userId && !options.sansDemandes ? await this.demandesADecider(a, du, au, jours) : []),
     ].sort((x, y) => x.jour.localeCompare(y.jour) || (x.debut ?? '').localeCompare(y.debut ?? ''));
 
     return {
@@ -209,6 +221,7 @@ export class AgendaService {
         destinataireIds: inviteIds,
         parId: a.userId,
       });
+      await this.invitations.envoyer(r.id, 'REQUEST');
     }
     return { id: r.id };
   }
@@ -230,6 +243,7 @@ export class AgendaService {
         destinataireIds: r.invites.map((i) => i.utilisateurId),
         parId: a.userId,
       });
+      await this.invitations.envoyer(id, 'CANCEL');
     }
     return { ok: true };
   }

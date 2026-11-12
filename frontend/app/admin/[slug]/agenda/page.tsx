@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useState, type FormEvent } from 'react';
-import { CalendarClock, ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
+import { CalendarClock, CalendarPlus, ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
 import {
   addDays,
   addMonths,
@@ -23,6 +23,7 @@ import {
 import { LIBELLE_TYPE_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
 import { useTitrePage } from '@/lib/layout-contexte';
 import { DecisionN1Modal } from '@/components/absences/decision-n1-modal';
+import { AbonnementAgendaModal } from '@/components/agenda/abonnement-agenda-modal';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/feedback';
@@ -69,6 +70,8 @@ function periode(vue: Vue, ancre: string) {
 // Agenda (lot 11, 01/11/2026) : rendez-vous et réunions, plus les échéances
 // des tâches et les congés validés, ajoutés d'office ; vues Semaine, Mois et
 // Année, et les demandes d'absence à trancher, décidées d'ici (01/11/2026).
+// « Ajouter à mon agenda » (12/11/2026) : le même agenda dans Google, Apple
+// ou Outlook, par un lien personnel.
 // Créer, inviter et voir l'agenda d'un collègue suivent la matrice (le
 // serveur le dit dans la réponse et revérifie).
 export default function AgendaPage(props: Props) {
@@ -82,6 +85,7 @@ export default function AgendaPage(props: Props) {
   const [personnes, setPersonnes] = useState<{ id: string; nom: string }[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
   const [creation, setCreation] = useState(false);
+  const [abonnement, setAbonnement] = useState(false);
   const [aDecider, setADecider] = useState<ADecider | null>(null);
   const { du, au } = periode(vue, ancre);
 
@@ -191,6 +195,12 @@ export default function AgendaPage(props: Props) {
               ))}
             </select>
           )}
+          {/* Son propre agenda dans Google, Apple ou Outlook (12/11/2026). */}
+          {agenda && !personne && (
+            <button type="button" className="btn-ghost" onClick={() => setAbonnement(true)}>
+              <CalendarPlus size={16} aria-hidden /> Ajouter à mon agenda
+            </button>
+          )}
           {agenda?.peutCreer && !personne && (
             <button type="button" className="btn-primary" onClick={() => setCreation(true)}>
               <Plus size={16} aria-hidden /> Nouveau rendez-vous
@@ -278,6 +288,8 @@ export default function AgendaPage(props: Props) {
           }}
         />
       )}
+
+      {abonnement && <AbonnementAgendaModal slug={slug} onClose={() => setAbonnement(false)} />}
 
       {/* La décision du N+1 : le même formulaire que « À valider » (solde,
           cellule, tâches à confier) ; la validation finale du CEO à part. */}

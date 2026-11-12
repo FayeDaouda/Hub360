@@ -3972,6 +3972,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/agenda": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgendaController_semaine"];
+        put?: never;
+        post: operations["AgendaController_creer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/personnes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgendaController_personnes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/abonnement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgendaController_etatAbonnement"];
+        put?: never;
+        post: operations["AgendaController_creerAbonnement"];
+        delete: operations["AgendaController_supprimerAbonnement"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgendaController_annuler"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agenda-abonnement/{fichier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AbonnementAgendaPublicController_flux"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/localites": {
         parameters: {
             query?: never;
@@ -4495,54 +4575,6 @@ export interface paths {
         put?: never;
         post: operations["RightsNoticesController_compris"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/agenda": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgendaController_semaine"];
-        put?: never;
-        post: operations["AgendaController_creer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/agenda/personnes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgendaController_personnes"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/agenda/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["AgendaController_annuler"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6327,6 +6359,55 @@ export interface components {
             consentement: boolean;
             siteWeb?: string;
         };
+        ElementAgendaDto: {
+            id: string;
+            /** @enum {string} */
+            type: "conge" | "demande" | "echeance" | "rendez_vous";
+            titre: string;
+            jour: string;
+            debut: string | null;
+            fin: string | null;
+            lieu: string | null;
+            detail: string | null;
+            organisateur: string | null;
+            invites: string[];
+            annulable: boolean;
+            demande?: {
+                id: string;
+                /** @enum {string} */
+                type: "autre" | "conge_paye" | "maladie" | "permission_exceptionnelle";
+                jours: number;
+                validationFinale: boolean;
+            };
+        };
+        SemaineAgendaDto: {
+            du: string;
+            au: string;
+            personne: {
+                id: string;
+                nom: string;
+            };
+            elements: components["schemas"]["ElementAgendaDto"][];
+            peutVoirAutres: boolean;
+            peutCreer: boolean;
+            peutInviter: boolean;
+        };
+        EtatAbonnementAgendaDto: {
+            actif: boolean;
+            creeLe: string | null;
+            dernierAccesLe: string | null;
+        };
+        LienAbonnementAgendaDto: {
+            url: string;
+        };
+        CreerRendezVousDto: {
+            titre: string;
+            debut: string;
+            fin: string;
+            lieu?: string;
+            description?: string;
+            inviteIds?: string[];
+        };
         CreerLocaliteDto: {
             code: string;
             nom: string;
@@ -6484,47 +6565,6 @@ export interface components {
             message: string;
             /** Format: date-time */
             createdAt: string;
-        };
-        ElementAgendaDto: {
-            id: string;
-            /** @enum {string} */
-            type: "conge" | "demande" | "echeance" | "rendez_vous";
-            titre: string;
-            jour: string;
-            debut: string | null;
-            fin: string | null;
-            lieu: string | null;
-            detail: string | null;
-            organisateur: string | null;
-            invites: string[];
-            annulable: boolean;
-            demande?: {
-                id: string;
-                /** @enum {string} */
-                type: "autre" | "conge_paye" | "maladie" | "permission_exceptionnelle";
-                jours: number;
-                validationFinale: boolean;
-            };
-        };
-        SemaineAgendaDto: {
-            du: string;
-            au: string;
-            personne: {
-                id: string;
-                nom: string;
-            };
-            elements: components["schemas"]["ElementAgendaDto"][];
-            peutVoirAutres: boolean;
-            peutCreer: boolean;
-            peutInviter: boolean;
-        };
-        CreerRendezVousDto: {
-            titre: string;
-            debut: string;
-            fin: string;
-            lieu?: string;
-            description?: string;
-            inviteIds?: string[];
         };
         AnnonceDto: {
             id: string;
@@ -12733,6 +12773,175 @@ export interface operations {
             };
         };
     };
+    AgendaController_semaine: {
+        parameters: {
+            query: {
+                du: string;
+                au?: string;
+                personne?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SemaineAgendaDto"];
+                };
+            };
+        };
+    };
+    AgendaController_creer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreerRendezVousDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgendaController_personnes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgendaController_etatAbonnement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatAbonnementAgendaDto"];
+                };
+            };
+        };
+    };
+    AgendaController_creerAbonnement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LienAbonnementAgendaDto"];
+                };
+            };
+        };
+    };
+    AgendaController_supprimerAbonnement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgendaController_annuler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AbonnementAgendaPublicController_flux: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fichier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
     LocalitesController_lister: {
         parameters: {
             query?: never;
@@ -13565,93 +13774,6 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AgendaController_semaine: {
-        parameters: {
-            query: {
-                du: string;
-                au?: string;
-                personne?: string;
-            };
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SemaineAgendaDto"];
-                };
-            };
-        };
-    };
-    AgendaController_creer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreerRendezVousDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AgendaController_personnes: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AgendaController_annuler: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
                 headers: {
                     [name: string]: unknown;
                 };

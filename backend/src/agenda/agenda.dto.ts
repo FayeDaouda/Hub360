@@ -48,3 +48,17 @@ export class SemaineAgendaDto {
   peutCreer: boolean;
   peutInviter: boolean;
 }
+
+// Abonnement à son agenda depuis Google, Apple ou Outlook (12/11/2026).
+export class EtatAbonnementAgendaDto {
+  actif: boolean;
+  creeLe: string | null; // ISO
+  // Dernière relecture par l'agenda de la personne (preuve que ça marche).
+  dernierAccesLe: string | null;
+}
+
+// Le lien clair : rendu une seule fois, à la création (seule son empreinte
+// est gardée).
+export class LienAbonnementAgendaDto {
+  url: string;
+}
