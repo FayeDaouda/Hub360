@@ -22,6 +22,8 @@ export type EvenementIcal = {
   annule?: boolean;
   // Incrémentée à chaque nouvelle version envoyée d'une invitation.
   sequence?: number;
+  // Alerte de l'agenda, ces minutes avant le début (12/11/2026).
+  rappelMinutes?: number | null;
   organisateur?: PersonneIcal | null;
   invites?: PersonneIcal[];
 };
@@ -118,8 +120,18 @@ function evenement(e: EvenementIcal, methode: MethodeIcal, maintenant: Date): st
     `SEQUENCE:${e.sequence ?? 0}`,
     `STATUS:${e.annule || methode === 'CANCEL' ? 'CANCELLED' : 'CONFIRMED'}`,
     `TRANSP:${e.libre ? 'TRANSPARENT' : 'OPAQUE'}`,
-    'END:VEVENT',
   );
+  // L'alerte vient après les propriétés de l'événement (§3.6.1).
+  if (e.rappelMinutes && methode !== 'CANCEL') {
+    lignes.push(
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:${echapperTexte(e.titre)}`,
+      `TRIGGER:-PT${Math.round(e.rappelMinutes)}M`,
+      'END:VALARM',
+    );
+  }
+  lignes.push('END:VEVENT');
   return lignes;
 }
 

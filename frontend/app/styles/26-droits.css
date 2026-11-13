@@ -980,6 +980,89 @@
 .agenda-planning .agenda-jour {
   min-height: 0;
 }
+/* B3 (12/11/2026) : réunion déclinée, réponses, disponibilités. */
+.agenda-bloc.is-decline,
+.agenda-puce.is-decline,
+.agenda-element.is-decline {
+  opacity: 0.55;
+}
+.agenda-bloc.is-decline strong,
+.agenda-puce.is-decline,
+.agenda-element.is-decline strong {
+  text-decoration: line-through;
+}
+.agenda-participants {
+  display: grid;
+  gap: var(--e-4);
+  min-width: 0;
+  flex: 1;
+}
+.agenda-participants ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agenda-participants li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e-8);
+  min-width: 0;
+}
+.agenda-participants li > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agenda-reponse,
+.agenda-dispo {
+  flex-shrink: 0;
+  padding: 0 var(--e-8);
+  border-radius: 999px;
+  font-size: var(--t-12);
+}
+.agenda-reponse.is-oui {
+  background: color-mix(in oklch, var(--pill-succes) 16%, transparent);
+}
+.agenda-reponse.is-non {
+  background: color-mix(in oklch, var(--pill-risque) 16%, transparent);
+}
+.agenda-reponse.is-peut_etre {
+  background: color-mix(in oklch, var(--pill-attention) 18%, transparent);
+}
+.agenda-reponse.is-attente {
+  color: var(--text-muted);
+}
+.agenda-ma-reponse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+}
+.agenda-ma-reponse .is-active {
+  border-color: var(--action);
+  color: var(--action);
+  font-weight: 600;
+}
+.agenda-dispo.is-occupe {
+  background: color-mix(in oklch, var(--pill-attention) 18%, transparent);
+}
+.agenda-dispo.is-absent {
+  background: color-mix(in oklch, var(--pill-risque) 16%, transparent);
+}
+.agenda-formulaire-deux {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--e-8);
+}
+@media (max-width: 720px) {
+  .agenda-formulaire-deux {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 /* Fiche d'un élément. */
 .agenda-fiche {
   display: grid;

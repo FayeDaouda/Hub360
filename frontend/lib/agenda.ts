@@ -1,3 +1,4 @@
+import type { ReponseInvitation } from '@hub/domain';
 import { apiSociete } from './client-api';
 import type { TypeAbsence } from './types';
 
@@ -8,6 +9,8 @@ import type { TypeAbsence } from './types';
 //   PATCH  …/agenda/:id                          modifier (l'organisateur, 12/11/2026)
 //   DELETE …/agenda/:id                          annuler (l'organisateur)
 //   GET|POST|DELETE …/agenda/abonnement          lien vers Google, Apple, Outlook (12/11/2026)
+//   PUT    …/agenda/:id/reponse                  répondre à une invitation (12/11/2026)
+//   GET    …/agenda/disponibilites?debut&fin[&exclure]   occupés et absents sur un créneau
 
 export type ElementAgenda = {
   id: string;
@@ -26,6 +29,11 @@ export type ElementAgenda = {
   modifiable: boolean;
   entretien: boolean;
   jeSuisOrganisateur: boolean; // la personne dont c'est l'agenda l'organise
+  // B3 (12/11/2026) : visio, rappel, sa réponse (invité), celles des invités.
+  lienVisio: string | null;
+  rappelMinutes: number | null;
+  maReponse: ReponseInvitation | null;
+  participants: { nom: string; reponse: ReponseInvitation | null }[];
   description: string | null;
   inviteIds: string[];
   // Front seulement (12/11/2026) : élément de l'agenda d'un collègue
@@ -35,6 +43,9 @@ export type ElementAgenda = {
   // validation finale du CEO.
   demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };
 };
+// Réponses et rappels : les listes de @hub/domain, les mêmes qu'au serveur.
+export { LIBELLES_REPONSE, RAPPELS_AGENDA as RAPPELS, type ReponseInvitation } from '@hub/domain';
+
 export type Calque = { id: string; nom: string; couleur: string };
 
 export type SemaineAgenda = {
@@ -53,6 +64,8 @@ export type NouveauRendezVous = {
   lieu?: string;
   description?: string;
   inviteIds?: string[];
+  lienVisio?: string | null;
+  rappelMinutes?: number | null;
 };
 
 export const getAgenda = (slug: string, du: string, au: string, personne?: string) =>
@@ -83,3 +96,12 @@ export const supprimerAbonnementAgenda = (slug: string) =>
 export const lienWebcal = (url: string) => url.replace(/^https?:/, 'webcal:');
 export const lienGoogleAgenda = (url: string) =>
   `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(url)}`;
+
+export const repondreInvitation = (slug: string, id: string, reponse: ReponseInvitation) =>
+  apiSociete<{ ok: true }>(slug, `/agenda/${id}/reponse`, { method: 'PUT', body: { reponse } });
+// Disponibilités des seules personnes envisagées (50 au plus).
+export const getDisponibilites = (slug: string, debut: string, fin: string, ids: string[], exclure?: string) =>
+  apiSociete<{ occupes: string[]; absents: string[] }>(
+    slug,
+    `/agenda/disponibilites?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}&ids=${ids.slice(0, 50).join(',')}${exclure ? `&exclure=${exclure}` : ''}`,
+  );

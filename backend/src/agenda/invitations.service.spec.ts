@@ -84,4 +84,78 @@ describe('InvitationsAgendaService', () => {
     expect(i.ics).toContain('SUMMARY:Entretien de recrutement');
     expect(i.ics).not.toContain('Awa Diop · Comptable');
   });
+  // Lot B3 (12/11/2026) : lien visio et rappel dans l'invitation.
+  describe('visio et rappel', () => {
+    // Le calendrier plie les lignes à 75 octets : on le déplie pour le lire.
+    const deplier = (ics: string) => ics.replace(/\r\n /g, '');
+    const VISIO = 'https://meet.google.com/abc-defg-hij';
+
+    it('sans lieu, la visio sert de lieu et ouvre la description du calendrier', async () => {
+      const { s, email } = monter({ ...RDV, lieu: null, lienVisio: VISIO, description: 'Ordre du jour' });
+      await s.envoyer('R1', 'REQUEST');
+      const i = email.envoyerInvitationAgenda.mock.calls[0][0];
+      const ics = deplier(i.ics);
+      expect(ics).toContain(`LOCATION:${VISIO}`);
+      expect(ics).toMatch(new RegExp(`DESCRIPTION:Visio : ${VISIO}\\\\nOrdre du jour\\\\nDans le HUB : `));
+      // L'e-mail reçoit le lien à part, et pas de lieu.
+      expect(i).toMatchObject({ lieu: null, lienVisio: VISIO });
+    });
+
+    it('avec un lieu, le lieu reste le lieu ; la visio est dans la description', async () => {
+      const { s, email } = monter({ ...RDV, lienVisio: VISIO });
+      await s.envoyer('R1', 'REQUEST');
+      const ics = deplier(email.envoyerInvitationAgenda.mock.calls[0][0].ics);
+      expect(ics).toContain('LOCATION:Plateau');
+      expect(ics).not.toContain(`LOCATION:${VISIO}`);
+      expect(ics).toContain(`DESCRIPTION:Visio : ${VISIO}`);
+    });
+
+    it('sans visio ni lieu : ni LOCATION, ni ligne « Visio » dans la description', async () => {
+      const { s, email } = monter({ ...RDV, lieu: null, lienVisio: null });
+      await s.envoyer('R1', 'REQUEST');
+      const ics = deplier(email.envoyerInvitationAgenda.mock.calls[0][0].ics);
+      expect(ics).not.toContain('LOCATION:');
+      expect(ics).not.toContain('Visio');
+    });
+
+    it('un rappel demandé ajoute une alerte au calendrier, ces minutes avant le début', async () => {
+      const { s, email } = monter({ ...RDV, rappelMinutes: 30 });
+      await s.envoyer('R1', 'REQUEST');
+      const ics = deplier(email.envoyerInvitationAgenda.mock.calls[0][0].ics);
+      expect(ics).toContain('BEGIN:VALARM');
+      expect(ics).toContain('TRIGGER:-PT30M');
+      // L'alerte est dans l'événement, avant sa fin.
+      expect(ics.indexOf('END:VALARM')).toBeLessThan(ics.indexOf('END:VEVENT'));
+    });
+
+    it('la veille : alerte de 1440 minutes', async () => {
+      const { s, email } = monter({ ...RDV, rappelMinutes: 1440 });
+      await s.envoyer('R1', 'REQUEST');
+      expect(deplier(email.envoyerInvitationAgenda.mock.calls[0][0].ics)).toContain('TRIGGER:-PT1440M');
+    });
+
+    it('sans rappel, aucune alerte ; une annulation n’en porte jamais', async () => {
+      const sans = monter({ ...RDV, rappelMinutes: null });
+      await sans.s.envoyer('R1', 'REQUEST');
+      expect(sans.email.envoyerInvitationAgenda.mock.calls[0][0].ics).not.toContain('VALARM');
+      const annulee = monter({ ...RDV, rappelMinutes: 30, sequence: 1 });
+      await annulee.s.envoyer('R1', 'CANCEL');
+      expect(annulee.email.envoyerInvitationAgenda.mock.calls[0][0].ics).not.toContain('VALARM');
+    });
+
+    it('un entretien garde la visio mais pas la note (le nom du candidat n’en sort pas)', async () => {
+      const { s, email, prisma } = monter({
+        ...RDV,
+        titre: 'Entretien · Khady Fall · Comptable',
+        description: 'Candidate Khady Fall',
+        lieu: null,
+        lienVisio: VISIO,
+      });
+      prisma.candidature.count.mockResolvedValue(1);
+      await s.envoyer('R1', 'REQUEST');
+      const ics = deplier(email.envoyerInvitationAgenda.mock.calls[0][0].ics);
+      expect(ics).toContain(`DESCRIPTION:Visio : ${VISIO}`);
+      expect(ics).not.toContain('Khady Fall');
+    });
+  });
 });

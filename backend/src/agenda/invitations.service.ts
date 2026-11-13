@@ -68,8 +68,16 @@ export class InvitationsAgendaService {
           titre,
           debut: r.debut,
           fin: r.fin,
-          lieu: r.lieu,
-          description: [entretien ? null : r.description, `Dans le HUB : ${lien}`].filter(Boolean).join('\n'),
+          // Sans lieu, la visio en tient lieu (Google et Outlook en font un lien).
+          lieu: r.lieu ?? r.lienVisio,
+          description: [
+            r.lienVisio ? `Visio : ${r.lienVisio}` : null,
+            entretien ? null : r.description,
+            `Dans le HUB : ${lien}`,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          rappelMinutes: r.rappelMinutes,
           url: lien,
           sequence: r.sequence,
           organisateur: { nom: nomDe(organisateur), email: organisateur.email },
@@ -88,6 +96,7 @@ export class InvitationsAgendaService {
           debut: r.debut,
           fin: r.fin,
           lieu: r.lieu,
+          lienVisio: r.lienVisio,
           organisateurNom: nomDe(organisateur),
           lien,
           ics,

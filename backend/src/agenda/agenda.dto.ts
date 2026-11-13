@@ -1,15 +1,22 @@
 import { OmitType } from '@nestjs/swagger';
-import { TypeAbsence } from '@prisma/client';
+import { RAPPELS_MINUTES } from '@hub/domain';
+import { ReponseInvitation, TypeAbsence } from '@prisma/client';
 import {
   ArrayMaxSize,
   IsArray,
   IsDateString,
+  IsEnum,
+  IsIn,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
+
+// Rappels proposés : la liste de @hub/domain (10 min, 30 min, 1 h, la veille).
 
 // Nouveau rendez-vous (Agenda, 01/11/2026). Avec des invités : une réunion.
 export class CreerRendezVousDto {
@@ -19,6 +26,15 @@ export class CreerRendezVousDto {
   @IsOptional() @IsString() @MaxLength(160) lieu?: string;
   @IsOptional() @IsString() @MaxLength(2000) description?: string;
   @IsOptional() @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) inviteIds?: string[];
+  // Lien de visioconférence (12/11/2026) : https seulement ; null l'efface.
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  // Sans identifiant dans l'adresse (https://meet.google.com@site-piege…).
+  @IsUrl({ protocols: ['https'], require_protocol: true, disallow_auth: true })
+  @MaxLength(500)
+  lienVisio?: string | null;
+  // Rappel avant le début, en minutes ; null : aucun.
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsIn(RAPPELS_MINUTES) rappelMinutes?: number | null;
 }
 
 // Modifier un rendez-vous (12/11/2026) : la fiche entière, comme à la
@@ -26,6 +42,23 @@ export class CreerRendezVousDto {
 // jamais retirer tout le monde. Les invités retirés reçoivent l'annulation.
 export class ModifierRendezVousDto extends OmitType(CreerRendezVousDto, ['inviteIds'] as const) {
   @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) inviteIds!: string[];
+}
+
+// Réponse d'un invité à une réunion (12/11/2026).
+export class RepondreInvitationDto {
+  @IsEnum(ReponseInvitation) reponse!: ReponseInvitation;
+}
+
+// Disponibilités au moment d'inviter (12/11/2026) : qui est déjà pris sur le
+// créneau, sans rien dire de ce qu'il fait.
+export class DisponibilitesDto {
+  occupes: string[]; // un rendez-vous en même temps
+  absents: string[]; // une absence validée ce jour-là
+}
+
+export class ParticipantDto {
+  nom: string;
+  reponse: ReponseInvitation | null;
 }
 
 // Un élément de l'agenda : rendez-vous, échéance d'une tâche ou congé validé.
@@ -50,6 +83,12 @@ export class ElementAgendaDto {
   jeSuisOrganisateur: boolean;
   description: string | null; // la note du rendez-vous, telle que saisie
   inviteIds: string[]; // comptes invités (le formulaire de modification)
+  // B3 (12/11/2026) : visio, rappel, réponse de la personne dont c'est
+  // l'agenda (si elle est invitée), réponses de chaque invité.
+  lienVisio: string | null;
+  rappelMinutes: number | null;
+  maReponse: ReponseInvitation | null;
+  participants: ParticipantDto[];
   // Demande d'absence à trancher : son identifiant ; `validationFinale` = celle
   // du CEO (demande de la RH), sinon la décision du N+1.
   demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };

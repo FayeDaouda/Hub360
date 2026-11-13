@@ -17,6 +17,10 @@ const el = (e: Partial<ElementAgenda> & Pick<ElementAgenda, 'id' | 'type'>): Ele
   modifiable: false,
   entretien: false,
   jeSuisOrganisateur: true,
+  lienVisio: null,
+  rappelMinutes: null,
+  maReponse: null,
+  participants: [],
   description: null,
   inviteIds: [],
   ...e,
@@ -177,6 +181,51 @@ describe('GrilleHoraire', () => {
       fireEvent.keyDown(window, { key: 'Escape' });
       fireEvent.pointerUp(bloc, { pointerType: 'mouse' });
       expect(onDeplacer).not.toHaveBeenCalled();
+    });
+  });
+  // Lot B3 (12/11/2026) : une réunion déclinée reste visible, effacée.
+  describe('réunion déclinée', () => {
+    const reunion = (x: Partial<ElementAgenda>) =>
+      el({
+        id: 'Revue',
+        type: 'rendez_vous',
+        debut: `${J}T09:00:00.000Z`,
+        fin: `${J}T10:00:00.000Z`,
+        jeSuisOrganisateur: false,
+        ...x,
+      });
+    const rendre = (e: ElementAgenda) => {
+      render(
+        <GrilleHoraire
+          jours={[J]}
+          aujourdhui="2026-11-20"
+          elements={[e]}
+          peutCreer
+          onCreneau={vi.fn()}
+          onOuvrir={vi.fn()}
+          onJour={vi.fn()}
+        />,
+      );
+      return screen.getByRole('button', { name: /Revue/ });
+    };
+
+    it('déclinée (« Non ») : le bloc est marqué effacé, mais reste là et s’ouvre', () => {
+      const bloc = rendre(reunion({ maReponse: 'non' }));
+      expect(bloc).toHaveClass('is-decline');
+      expect(bloc).toHaveTextContent('09:00 – 10:00');
+    });
+
+    it.each([
+      ['acceptée', 'oui' as const],
+      ['en suspens', 'peut_etre' as const],
+      ['sans réponse', null],
+    ])('%s : le bloc n’est pas effacé', (_cas, maReponse) => {
+      expect(rendre(reunion({ maReponse }))).not.toHaveClass('is-decline');
+    });
+
+    it('déclinée par un collègue dont l’agenda est superposé : pas effacée (ce n’est pas sa réponse)', () => {
+      const bloc = rendre(reunion({ maReponse: 'non', calque: { id: 'U3', nom: 'Fatou Ba', couleur: 'azur' } }));
+      expect(bloc).not.toHaveClass('is-decline');
     });
   });
 });

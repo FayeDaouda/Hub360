@@ -5,30 +5,24 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  addDays,
-  daysBetween,
-  ETAPE,
-  formatDate,
-  formatTime,
-  formatWeekdayDayMonth,
-  hasRight,
-  toIsoDay,
-} from '@hub/domain';
+import { addDays, daysBetween, ETAPE, formatDate, hasRight, LIBELLES_REPONSE, toIsoDay } from '@hub/domain';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { ReponseInvitation } from '@prisma/client';
 import { DemandesService } from '../rh/demandes.service';
 import type { CreerRendezVousDto, ElementAgendaDto, ModifierRendezVousDto, SemaineAgendaDto } from './agenda.dto';
 import { InvitationsAgendaService } from './invitations.service';
-import { nomDe } from './liens';
+import { nomDe, quandRendezVous } from './liens';
 
 export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 
 const JOUR = /^\d{4}-\d{2}-\d{2}$/;
-// « jeudi 12 novembre à 09:00 » (notifications des réunions).
-const quandRendezVous = (d: Date) => `${formatWeekdayDayMonth(d.toISOString())} à ${formatTime(d.toISOString())}`;
 // Échéances, congés, demandes : rien à modifier, aucun invité.
 const SANS_ACTION = {
+  lienVisio: null,
+  rappelMinutes: null,
+  maReponse: null,
+  participants: [],
   modifiable: false,
   entretien: false,
   jeSuisOrganisateur: false,
@@ -159,6 +153,10 @@ export class AgendaService {
           hasRight(a.permissions, ETAPE.agenda, 'suppression') &&
           !idsEntretiens.has(r.id),
         modifiable: r.organisateurId === a.userId && peutModifier && !idsEntretiens.has(r.id),
+        lienVisio: r.lienVisio,
+        rappelMinutes: r.rappelMinutes,
+        maReponse: r.invites.find((i) => i.utilisateurId === cible)?.reponse ?? null,
+        participants: r.invites.map((i) => ({ nom: noms.get(i.utilisateurId) ?? '—', reponse: i.reponse })),
         entretien: idsEntretiens.has(r.id),
         jeSuisOrganisateur: r.organisateurId === cible,
         description: r.description,
@@ -256,6 +254,8 @@ export class AgendaService {
         fin,
         lieu: dto.lieu?.trim() || null,
         description: dto.description?.trim() || null,
+        lienVisio: dto.lienVisio?.trim() || null,
+        rappelMinutes: dto.rappelMinutes ?? null,
         organisateurId: a.userId,
         invites: { create: inviteIds.map((utilisateurId) => ({ utilisateurId })) },
       },
@@ -320,6 +320,8 @@ export class AgendaService {
       fin,
       lieu: dto.lieu?.trim() || null,
       description: dto.description?.trim() || null,
+      lienVisio: dto.lienVisio?.trim() || null,
+      rappelMinutes: dto.rappelMinutes ?? null,
     };
     // Le contenu (pas la liste des invités) : ce que les invités gardés
     // doivent apprendre ; retirer quelqu'un ne les dérange pas.
@@ -328,8 +330,13 @@ export class AgendaService {
       +donnees.debut !== +r.debut ||
       +donnees.fin !== +r.fin ||
       donnees.lieu !== r.lieu ||
-      donnees.description !== r.description;
-    if (!contenuChange && !ajoutes.length && !retires.length) return { ok: true };
+      donnees.description !== r.description ||
+      donnees.lienVisio !== r.lienVisio;
+    // Le rappel ne regarde que l'organisateur : le changer seul ne dérange
+    // pas les invités. Nouvelle heure ou nouveau rappel : il repartira.
+    const rappelChange = donnees.rappelMinutes !== r.rappelMinutes;
+    const rappelARefaire = +donnees.debut !== +r.debut || rappelChange;
+    if (!contenuChange && !rappelChange && !ajoutes.length && !retires.length) return { ok: true };
 
     // Jamais une réunion annulée entre-temps (elle réapparaîtrait chez les
     // invités) ; deux modifications simultanées qui ajoutent la même personne
@@ -337,7 +344,7 @@ export class AgendaService {
     await this.prisma.$transaction(async (tx) => {
       const maj = await tx.rendezVous.updateMany({
         where: { id, annuleLe: null },
-        data: { ...donnees, sequence: { increment: 1 } },
+        data: { ...donnees, sequence: { increment: 1 }, ...(rappelARefaire && { rappelEnvoyeLe: null }) },
       });
       if (!maj.count) throw new NotFoundException('Rendez-vous introuvable');
       await tx.inviteRendezVous.deleteMany({ where: { rendezVousId: id, utilisateurId: { in: retires } } });
@@ -393,6 +400,98 @@ export class AgendaService {
       await this.invitations.envoyer(id, 'CANCEL');
     }
     return { ok: true };
+  }
+
+  // Répondre à une invitation (12/11/2026) : l'invité seul, sur une réunion
+  // à venir ou en cours, non annulée ; l'organisateur est prévenu d'un
+  // changement de réponse.
+  async repondre(a: Acteur, id: string, reponse: ReponseInvitation) {
+    const r = await this.prisma.rendezVous.findFirst({
+      where: { id, societeId: a.societeId, annuleLe: null },
+      include: { invites: { where: { utilisateurId: a.userId } } },
+    });
+    const invite = r?.invites[0];
+    if (!r || !invite) throw new NotFoundException('Invitation introuvable');
+    if (r.fin <= new Date()) throw new ConflictException('Cette réunion est passée.');
+    if (invite.reponse === reponse) return { ok: true };
+    await this.prisma.inviteRendezVous.update({
+      where: { rendezVousId_utilisateurId: { rendezVousId: id, utilisateurId: a.userId } },
+      data: { reponse, reponduLe: new Date() },
+    });
+    const moi = await this.prisma.utilisateur.findUnique({
+      where: { id: a.userId },
+      select: { prenom: true, nom: true },
+    });
+    await this.notifications.envoyer({
+      societeId: a.societeId,
+      type: 'rdv_reponse',
+      titre: `${moi ? nomDe(moi) : 'Un invité'} · ${LIBELLES_REPONSE[reponse]} · ${r.titre} · ${quandRendezVous(r.debut)}`,
+      destinataireIds: [r.organisateurId],
+      parId: a.userId,
+    });
+    return { ok: true };
+  }
+
+  // Disponibilités au moment d'inviter (12/11/2026) : parmi les membres de la
+  // société, qui a déjà un rendez-vous sur le créneau (organisé, ou accepté
+  // sans l'avoir décliné) et qui est absent ce jour-là. Rien d'autre : ni
+  // titre, ni lieu. Demande l'Écriture de « Réunions » (qui invite).
+  // Seulement pour les personnes qu'on s'apprête à inviter (50 au plus), sur
+  // un créneau d'hier à un an ; sans la Lecture de « Agenda des autres »,
+  // une absence (donnée RH) se dit seulement « occupé ».
+  async disponibilites(a: Acteur, debutIso: string, finIso: string, pour: string[], exclure?: string) {
+    const debut = new Date(debutIso);
+    const fin = new Date(finIso);
+    const maintenant = Date.now();
+    if (
+      !(fin > debut) ||
+      +fin - +debut > 7 * 86_400_000 ||
+      +debut < maintenant - 86_400_000 ||
+      +debut > maintenant + 366 * 86_400_000
+    ) {
+      throw new BadRequestException('Créneau invalide (sept jours au plus, d’hier à un an).');
+    }
+    if (!pour.length) return { occupes: [], absents: [] };
+    const membres = await this.prisma.utilisateurSocieteRole.findMany({
+      where: { societeId: a.societeId, utilisateurId: { in: pour }, utilisateur: { actif: true } },
+      select: { utilisateurId: true },
+    });
+    const ids = [...new Set(membres.map((m) => m.utilisateurId))];
+    const [rdv, absences] = await Promise.all([
+      this.prisma.rendezVous.findMany({
+        where: {
+          societeId: a.societeId,
+          annuleLe: null,
+          debut: { lt: fin },
+          fin: { gt: debut },
+          ...(exclure && { id: { not: exclure } }),
+        },
+        select: { organisateurId: true, invites: { select: { utilisateurId: true, reponse: true } } },
+      }),
+      this.prisma.demandeAbsence.findMany({
+        where: {
+          statut: 'validee',
+          dateDebut: { lte: toIsoDay(new Date(+fin - 1)) },
+          dateFin: { gte: toIsoDay(debut) },
+          dossier: { utilisateurId: { in: ids } },
+        },
+        select: { dossier: { select: { utilisateurId: true } } },
+      }),
+    ]);
+    const membresSet = new Set(ids);
+    const occupes = new Set<string>();
+    for (const r of rdv) {
+      occupes.add(r.organisateurId);
+      for (const i of r.invites) if (i.reponse !== 'non') occupes.add(i.utilisateurId);
+    }
+    const absents = new Set(absences.map((x) => x.dossier.utilisateurId).filter((x): x is string => !!x));
+    if (!hasRight(a.permissions, ETAPE.agendaAutres, 'lecture')) {
+      return { occupes: [...new Set([...occupes, ...absents])].filter((x) => membresSet.has(x)), absents: [] };
+    }
+    return {
+      occupes: [...occupes].filter((x) => membresSet.has(x) && !absents.has(x)),
+      absents: [...absents].filter((x) => membresSet.has(x)),
+    };
   }
 
   // Collègues de la société (invitations, agenda des autres).

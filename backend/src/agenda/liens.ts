@@ -1,7 +1,12 @@
-// Liens et identifiants partagés par l'abonnement (abonnement.service.ts) et
-// les invitations (invitations.service.ts) — sans aucun import : ces deux
-// services ne s'importent jamais l'un l'autre (cycle de chargement, Nest
-// n'injecterait plus rien).
+// Liens, identifiants et libellés partagés par l'agenda, l'abonnement, les
+// invitations et les rappels — sans aucun import d'un service : ces services
+// ne s'importent jamais l'un l'autre (cycle de chargement, Nest n'injecterait
+// plus rien).
+import { formatTime, formatWeekdayDayMonth } from '@hub/domain';
+
+// « jeudi 12 novembre à 09:00 » (notifications des réunions).
+export const quandRendezVous = (d: Date) =>
+  `${formatWeekdayDayMonth(d.toISOString())} à ${formatTime(d.toISOString())}`;
 
 // Domaine des identifiants d'événements (UID) : stable, jamais une adresse.
 const DOMAINE_UID = 'hub360.space';

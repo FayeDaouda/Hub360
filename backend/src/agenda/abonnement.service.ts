@@ -163,8 +163,17 @@ export function evenementsDuFlux(
         titre: e.entretien ? TITRE_ENTRETIEN : e.titre,
         debut: new Date(e.debut),
         fin: new Date(e.fin),
-        lieu: e.lieu,
-        description: [e.entretien ? null : e.detail, avec, par, `Dans le HUB : ${lienHub}`].filter(Boolean).join('\n'),
+        lieu: e.lieu ?? e.lienVisio,
+        rappelMinutes: e.rappelMinutes,
+        description: [
+          e.lienVisio ? `Visio : ${e.lienVisio}` : null,
+          e.entretien ? null : e.detail,
+          avec,
+          par,
+          `Dans le HUB : ${lienHub}`,
+        ]
+          .filter(Boolean)
+          .join('\n'),
         url: lienHub,
       });
     } else if (e.type === 'echeance') {

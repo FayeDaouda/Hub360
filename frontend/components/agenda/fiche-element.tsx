@@ -1,13 +1,24 @@
 'use client';
 
-import { CalendarClock, MapPin, Users } from 'lucide-react';
+import { Bell, CalendarClock, MapPin, Users, Video } from 'lucide-react';
 import { formatTime, formatWeekdayDayMonth } from '@hub/domain';
-import type { ElementAgenda } from '@/lib/agenda';
+import { LIBELLES_REPONSE, RAPPELS, type ElementAgenda, type ReponseInvitation } from '@/lib/agenda';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { useConfirmer } from '@/components/confirmation';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { TONS } from './grille-horaire';
+
+// Lien visio affichable : https seulement, avec son site (en punycode).
+export function siteVisio(lien: string | null): { href: string; site: string } | null {
+  if (!lien) return null;
+  try {
+    const u = new URL(lien);
+    return u.protocol === 'https:' && !u.username ? { href: u.href, site: u.hostname } : null;
+  } catch {
+    return null;
+  }
+}
 
 export const LIBELLES: Record<ElementAgenda['type'], string> = {
   rendez_vous: 'Rendez-vous',
@@ -25,15 +36,29 @@ export function FicheElement({
   onModifier,
   onAnnuler,
   onDecider,
+  onRepondre,
 }: {
   e: ElementAgenda;
   onClose: () => void;
   onModifier: (e: ElementAgenda) => void;
   onAnnuler: (e: ElementAgenda) => void;
   onDecider: (e: ElementAgenda) => void;
+  // Son invitation (pas celle d'un collègue superposé) : Oui / Non / Peut-être.
+  onRepondre?: (e: ElementAgenda, reponse: ReponseInvitation) => void;
 }) {
   const confirmer = useConfirmer();
   const avec = e.invites.length > 0;
+  // Son invitation, sur une réunion pas encore terminée.
+  const invite =
+    e.type === 'rendez_vous' &&
+    !e.jeSuisOrganisateur &&
+    !e.calque &&
+    !!onRepondre &&
+    (!e.fin || new Date(e.fin) > new Date());
+  // Lien visio : https seulement (défense en profondeur), son site affiché
+  // à côté du bouton (un lien trompeur se voit).
+  const visio = siteVisio(e.lienVisio);
+  const rappel = RAPPELS.find((r) => r.minutes === e.rappelMinutes);
 
   async function annuler() {
     const ok = await confirmer({
@@ -80,14 +105,53 @@ export function FicheElement({
             <MapPin size={16} aria-hidden /> <span>{e.lieu}</span>
           </p>
         )}
-        {avec && (
+        {visio && (
           <p className="agenda-fiche-ligne">
-            <Users size={16} aria-hidden />
-            <span>
-              Avec {e.invites.join(', ')}
-              {e.organisateur ? ` · organisé par ${e.organisateur}` : ''}
-            </span>
+            <Video size={16} aria-hidden />
+            <a className="btn-primary btn-primary--sm" href={visio.href} target="_blank" rel="noopener noreferrer">
+              Rejoindre la visio
+            </a>
+            <span className="agenda-detail">{visio.site}</span>
           </p>
+        )}
+        {rappel && (
+          <p className="agenda-fiche-ligne">
+            <Bell size={16} aria-hidden /> <span>Rappel {rappel.libelle.toLowerCase()}</span>
+          </p>
+        )}
+        {avec && (
+          <div className="agenda-fiche-ligne">
+            <Users size={16} aria-hidden />
+            <div className="agenda-participants">
+              {e.organisateur && <span>Organisé par {e.organisateur}</span>}
+              <ul>
+                {e.participants.map((p, i) => (
+                  <li key={`${p.nom}-${i}`}>
+                    <span>{p.nom}</span>
+                    <span className={`agenda-reponse is-${p.reponse ?? 'attente'}`}>
+                      {p.reponse ? LIBELLES_REPONSE[p.reponse] : 'Sans réponse'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+        {invite && (
+          <div className="agenda-ma-reponse" role="group" aria-label="Votre réponse">
+            <span>Vous venez ?</span>
+            {(['oui', 'peut_etre', 'non'] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`btn-ghost btn-ghost--sm${e.maReponse === r ? ' is-active' : ''}`}
+                aria-pressed={e.maReponse === r}
+                onClick={() => onRepondre?.(e, r)}
+              >
+                {LIBELLES_REPONSE[r]}
+              </button>
+            ))}
+          </div>
         )}
         {e.demande && (
           <p className="agenda-fiche-ligne">

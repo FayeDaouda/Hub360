@@ -217,7 +217,7 @@ export function GrilleHoraire({
                 <button
                   key={e.id}
                   type="button"
-                  className={`agenda-puce agenda-puce--${TONS[e.type]}`}
+                  className={`agenda-puce agenda-puce--${TONS[e.type]}${e.maReponse === 'non' && !e.calque ? ' is-decline' : ''}`}
                   style={styleCalque(e)}
                   onClick={() => onOuvrir(e)}
                   title={titreAffiche(e)}
@@ -265,6 +265,8 @@ export function GrilleHoraire({
                   `agenda-puce--${TONS[p.e.type]}`,
                   glissable(p.e) && 'is-glissable',
                   glisse?.bouge && glisse.e.id === p.e.id && 'is-glisse',
+                  // Déclinée : visible, mais effacée (comme Google Agenda).
+                  p.e.maReponse === 'non' && !p.e.calque && 'is-decline',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -277,7 +279,7 @@ export function GrilleHoraire({
                 }}
                 onClick={() => ouvrir(p.e)}
                 onPointerDown={(ev) => commencer(p.e, ev)}
-                aria-label={`${p.e.calque ? `${p.e.calque.nom} : ` : ''}${p.e.titre}, ${formatWeekdayDayMonth(j)}, ${formatTime(p.e.debut!)} – ${formatTime(p.e.fin!)}`}
+                aria-label={`${p.e.calque ? `${p.e.calque.nom} : ` : ''}${p.e.titre}${p.e.maReponse === 'non' && !p.e.calque ? ' (déclinée)' : ''}, ${formatWeekdayDayMonth(j)}, ${formatTime(p.e.debut!)} – ${formatTime(p.e.fin!)}`}
               >
                 <strong>{p.e.titre}</strong>
                 <span>

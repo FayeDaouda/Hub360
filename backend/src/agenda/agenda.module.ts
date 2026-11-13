@@ -7,10 +7,17 @@ import { AbonnementAgendaService } from './abonnement.service';
 import { AgendaController } from './agenda.controller';
 import { AgendaService } from './agenda.service';
 import { InvitationsAgendaService } from './invitations.service';
+import { RappelsAgendaService } from './rappels.service';
 
 @Module({
   imports: [NotificationsModule, RhModule], // demandes d'absence à trancher
-  providers: [AgendaService, AbonnementAgendaService, AbonnementAgendaGuard, InvitationsAgendaService],
+  providers: [
+    AgendaService,
+    AbonnementAgendaService,
+    AbonnementAgendaGuard,
+    InvitationsAgendaService,
+    RappelsAgendaService,
+  ],
   controllers: [AgendaController, AbonnementAgendaPublicController],
   exports: [InvitationsAgendaService], // entretiens du recrutement
 })

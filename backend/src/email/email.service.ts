@@ -119,6 +119,7 @@ export type InvitationAgendaEmail = {
   debut: Date;
   fin: Date;
   lieu: string | null;
+  lienVisio?: string | null; // https (validé à la saisie)
   organisateurNom: string;
   lien: string; // l'Agenda dans le HUB
   ics: string;

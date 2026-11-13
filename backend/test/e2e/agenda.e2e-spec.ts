@@ -143,4 +143,48 @@ describe('Agenda', () => {
 
     await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
   });
+
+  // B3 (12/11/2026) : réponse de l'invité, disponibilités, visio et rappel.
+  it('répondre, voir les réponses et qui est occupé ; visio en https seulement', async () => {
+    const dirgc = await connecter(app, COMPTES.dirgc);
+    const cfo = await connecter(app, COMPTES.cfo);
+    const jour = addDays(todayIso(), 4);
+    const cfoId = ((await api(app, cfo).get(`/agenda?du=${jour}`).expect(200)).body as Semaine).personne.id;
+    const base = { titre: 'Comité', debut: `${jour}T08:00:00.000Z`, fin: `${jour}T09:00:00.000Z`, inviteIds: [cfoId] };
+    await api(app, dirgc)
+      .post('/agenda', { ...base, lienVisio: 'http://meet.example.com/x' })
+      .expect(400);
+    const { id } = (
+      await api(app, dirgc)
+        .post('/agenda', { ...base, lienVisio: 'https://meet.google.com/abc-defg-hij', rappelMinutes: 30 })
+        .expect(201)
+    ).body as { id: string };
+
+    await api(app, cfo).put(`/agenda/${id}/reponse`, { reponse: 'peut_etre' }).expect(200);
+    await api(app, dirgc).put(`/agenda/${id}/reponse`, { reponse: 'oui' }).expect(404); // pas invité
+
+    type Vu = { id: string; participants: { nom: string; reponse: string | null }[]; maReponse: string | null };
+    const chezDirgc = ((await api(app, dirgc).get(`/agenda?du=${jour}`).expect(200)).body as { elements: Vu[] })
+      .elements;
+    expect(chezDirgc.find((e) => e.id === id)?.participants).toEqual([
+      expect.objectContaining({ reponse: 'peut_etre' }),
+    ]);
+    const chezCfo = ((await api(app, cfo).get(`/agenda?du=${jour}`).expect(200)).body as { elements: Vu[] }).elements;
+    expect(chezCfo.find((e) => e.id === id)).toMatchObject({ maReponse: 'peut_etre' });
+
+    const dispo = (
+      await api(app, dirgc)
+        .get(`/agenda/disponibilites?debut=${jour}T08:30:00.000Z&fin=${jour}T09:30:00.000Z&ids=${cfoId}`)
+        .expect(200)
+    ).body as { occupes: string[] };
+    expect(dispo.occupes).toContain(cfoId);
+    const sansLui = (
+      await api(app, dirgc)
+        .get(`/agenda/disponibilites?debut=${jour}T08:30:00.000Z&fin=${jour}T09:30:00.000Z&ids=${cfoId}&exclure=${id}`)
+        .expect(200)
+    ).body as { occupes: string[] };
+    expect(sansLui.occupes).not.toContain(cfoId);
+
+    await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
+  });
 });

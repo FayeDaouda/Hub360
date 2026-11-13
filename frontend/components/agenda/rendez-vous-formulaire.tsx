@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { CalendarClock } from 'lucide-react';
 import { dakarInstant } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
-import { creerRendezVous, modifierRendezVous } from '@/lib/agenda';
+import { creerRendezVous, getDisponibilites, modifierRendezVous, RAPPELS } from '@/lib/agenda';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 
@@ -16,6 +16,8 @@ export type ValeursRendezVous = {
   lieu: string;
   description: string;
   inviteIds: string[];
+  lienVisio: string;
+  rappelMinutes: number | null;
 };
 
 export const valeursVides = (jour: string, debut = '09:00', fin = '10:00'): ValeursRendezVous => ({
@@ -26,17 +28,25 @@ export const valeursVides = (jour: string, debut = '09:00', fin = '10:00'): Vale
   lieu: '',
   description: '',
   inviteIds: [],
+  lienVisio: '',
+  rappelMinutes: null,
 });
+
+// Disponibilités relues 300 ms après le dernier changement du créneau.
+const ATTENTE_DISPO_MS = 300;
 
 // Nouveau rendez-vous ou modification (12/11/2026) : le même formulaire.
 // `rendezVousId` présent : modification (l'organisateur). `personnes` : qui
 // peut être invité ; sans le droit « Réunions », seuls les invités déjà là
-// restent proposés (on peut les retirer, pas en ajouter).
+// restent proposés (on peut les retirer, pas en ajouter). B3 (12/11/2026) :
+// lien visio, rappel, et — pour qui peut inviter — qui est occupé ou absent
+// sur le créneau, à côté de chaque nom.
 export function RendezVousFormulaire({
   slug,
   rendezVousId,
   initial,
   personnes,
+  avecDisponibilites = false,
   onClose,
   onEnregistre,
 }: {
@@ -44,6 +54,7 @@ export function RendezVousFormulaire({
   rendezVousId?: string;
   initial: ValeursRendezVous;
   personnes: { id: string; nom: string }[];
+  avecDisponibilites?: boolean;
   onClose: () => void;
   onEnregistre: () => void;
 }) {
@@ -53,6 +64,35 @@ export function RendezVousFormulaire({
   const modification = !!rendezVousId;
   const champ = <K extends keyof ValeursRendezVous>(k: K, valeur: ValeursRendezVous[K]) =>
     setV((x) => ({ ...x, [k]: valeur }));
+
+  const [dispo, setDispo] = useState<{ occupes: string[]; absents: string[] } | null>(null);
+  const creneauValide = /^\d{4}-\d{2}-\d{2}$/.test(v.jour) && v.debut < v.fin;
+  const lireDispo = avecDisponibilites && personnes.length > 0 && creneauValide;
+  const idsDispo = personnes
+    .slice(0, 50)
+    .map((p) => p.id)
+    .join(',');
+  useEffect(() => {
+    if (!lireDispo) return;
+    let annule = false;
+    const t = setTimeout(() => {
+      getDisponibilites(
+        slug,
+        dakarInstant(v.jour, v.debut),
+        dakarInstant(v.jour, v.fin),
+        idsDispo.split(','),
+        rendezVousId,
+      )
+        .then((d) => !annule && setDispo(d))
+        .catch(() => !annule && setDispo(null));
+    }, ATTENTE_DISPO_MS);
+    return () => {
+      annule = true;
+      clearTimeout(t);
+    };
+  }, [slug, lireDispo, v.jour, v.debut, v.fin, rendezVousId, idsDispo]);
+  const etatDe = (id: string) =>
+    !lireDispo || !dispo ? null : dispo.absents.includes(id) ? 'absent' : dispo.occupes.includes(id) ? 'occupé' : null;
 
   async function enregistrer(e: FormEvent) {
     e.preventDefault();
@@ -69,6 +109,8 @@ export function RendezVousFormulaire({
       lieu: v.lieu || undefined,
       description: v.description || undefined,
       inviteIds: v.inviteIds,
+      lienVisio: v.lienVisio.trim() || null,
+      rappelMinutes: v.rappelMinutes,
     };
     try {
       if (rendezVousId) await modifierRendezVous(slug, rendezVousId, corps);
@@ -143,6 +185,35 @@ export function RendezVousFormulaire({
             onChange={(e) => champ('lieu', e.target.value)}
           />
         </Field>
+        <div className="agenda-formulaire-deux">
+          <Field label="Lien visio (facultatif)">
+            <input
+              className="field-input"
+              type="url"
+              inputMode="url"
+              placeholder="https://meet.google.com/…"
+              pattern="https://.*"
+              title="Un lien qui commence par https://"
+              maxLength={500}
+              value={v.lienVisio}
+              onChange={(e) => champ('lienVisio', e.target.value)}
+            />
+          </Field>
+          <Field label="Rappel">
+            <select
+              className="field-input"
+              value={v.rappelMinutes ?? ''}
+              onChange={(e) => champ('rappelMinutes', e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Aucun</option>
+              {RAPPELS.map((r) => (
+                <option key={r.minutes} value={r.minutes}>
+                  {r.libelle}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
         <Field label="Note (facultatif)">
           <textarea
             className="field-input"
@@ -167,7 +238,12 @@ export function RendezVousFormulaire({
                     )
                   }
                 />
-                {p.nom}
+                <span>{p.nom}</span>
+                {etatDe(p.id) && (
+                  <span className={`agenda-dispo is-${etatDe(p.id) === 'absent' ? 'absent' : 'occupe'}`}>
+                    {etatDe(p.id)}
+                  </span>
+                )}
               </label>
             ))}
           </fieldset>
