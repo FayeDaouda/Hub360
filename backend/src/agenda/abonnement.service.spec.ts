@@ -64,6 +64,10 @@ const el = (e: Partial<ElementAgendaDto> & Pick<ElementAgendaDto, 'id' | 'type' 
   modifiable: false,
   entretien: false,
   jeSuisOrganisateur: true,
+  lienVisio: null,
+  rappelMinutes: null,
+  maReponse: null,
+  participants: [],
   description: null,
   inviteIds: [],
   ...e,
@@ -227,5 +231,24 @@ describe('evenementsDuFlux', () => {
     expect(e.titre).toBe('Entretien de recrutement');
     expect(e.description).not.toContain('Recrutement');
     expect(JSON.stringify(e)).not.toContain('Awa');
+  });
+
+  it('visio et rappel : la visio tient lieu de lieu, l’alerte est reprise', () => {
+    const [e] = evenementsDuFlux(
+      [
+        el({
+          id: 'R3',
+          type: 'rendez_vous',
+          jour: '2026-11-13',
+          debut: '2026-11-13T09:00:00.000Z',
+          fin: '2026-11-13T10:00:00.000Z',
+          lienVisio: 'https://meet.google.com/abc-defg-hij',
+          rappelMinutes: 30,
+        }),
+      ],
+      LIEN,
+    );
+    expect(e).toMatchObject({ lieu: 'https://meet.google.com/abc-defg-hij', rappelMinutes: 30 });
+    expect(e.description).toContain('Visio : https://meet.google.com/abc-defg-hij');
   });
 });

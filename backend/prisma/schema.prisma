@@ -314,6 +314,8 @@ enum NotificationType {
   rdv_invitation // Agenda (01/11/2026) : vous êtes invité à une réunion
   rdv_annule // Agenda : une réunion où vous étiez invité est annulée
   rdv_modifie // Agenda : une réunion où vous êtes invité change (12/11/2026)
+  rdv_reponse // Agenda : un invité répond (Oui, Non, Peut-être) à votre réunion
+  rdv_rappel // Agenda : votre rendez-vous commence bientôt
   annonce_importante // Annonces (01/11/2026) : une annonce importante à lire
   annonce_a_valider // Annonces : une annonce attend sa validation avant publication
   poste_a_approuver // Recrutement (01/11/2026) : ouverture d'un poste à approuver
@@ -3026,6 +3028,12 @@ model RendezVous {
   // Version envoyée aux agendas des invités (iCalendar) : +1 à chaque
   // modification et à l'annulation (12/11/2026).
   sequence       Int       @default(0)
+  // Lien de visioconférence (Meet, Zoom, Teams), https seulement.
+  lienVisio      String?   @map("lien_visio")
+  // Rappel avant le début, en minutes (10, 30, 60 ou 1440), pour
+  // l'organisateur et les invités qui n'ont pas décliné ; envoyé une fois.
+  rappelMinutes  Int?      @map("rappel_minutes")
+  rappelEnvoyeLe DateTime? @map("rappel_envoye_le")
   createdAt      DateTime  @default(now()) @map("created_at")
 
   societe Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
@@ -3035,9 +3043,18 @@ model RendezVous {
   @@map("rendez_vous")
 }
 
+// Réponse d'un invité (12/11/2026) : sans réponse tant qu'il n'a rien dit.
+enum ReponseInvitation {
+  oui
+  non
+  peut_etre
+}
+
 model InviteRendezVous {
-  rendezVousId  String @map("rendez_vous_id")
-  utilisateurId String @map("utilisateur_id")
+  rendezVousId  String             @map("rendez_vous_id")
+  utilisateurId String             @map("utilisateur_id")
+  reponse       ReponseInvitation?
+  reponduLe     DateTime?          @map("repondu_le")
 
   rendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
 

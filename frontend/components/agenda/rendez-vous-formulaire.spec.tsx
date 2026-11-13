@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RendezVousFormulaire, valeursVides } from './rendez-vous-formulaire';
 
-const api = vi.hoisted(() => ({ creerRendezVous: vi.fn(), modifierRendezVous: vi.fn() }));
+const api = vi.hoisted(() => ({ creerRendezVous: vi.fn(), modifierRendezVous: vi.fn(), getDisponibilites: vi.fn() }));
 vi.mock('@/lib/agenda', async (original) => ({ ...(await original<typeof import('@/lib/agenda')>()), ...api }));
 
 const PERSONNES = [
@@ -40,6 +40,8 @@ describe('RendezVousFormulaire', () => {
       lieu: undefined,
       description: undefined,
       inviteIds: ['U3'],
+      lienVisio: null,
+      rappelMinutes: null,
     });
     expect(onEnregistre).toHaveBeenCalled();
   });
@@ -71,5 +73,52 @@ describe('RendezVousFormulaire', () => {
       'R1',
       expect.objectContaining({ fin: '2026-11-12T11:00:00.000Z', inviteIds: ['U3'] }),
     );
+  });
+
+  // B3 (12/11/2026).
+  it('visio et rappel envoyés ; disponibilités à côté des noms, le rendez-vous modifié exclu', async () => {
+    api.getDisponibilites.mockResolvedValue({ occupes: ['U2'], absents: ['U3'] });
+    render(
+      <RendezVousFormulaire
+        slug="gc"
+        rendezVousId="R1"
+        initial={{ ...valeursVides('2026-11-12'), titre: 'Point', inviteIds: ['U2'] }}
+        personnes={PERSONNES}
+        avecDisponibilites
+        onClose={vi.fn()}
+        onEnregistre={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText('occupé')).toBeInTheDocument();
+    expect(screen.getByText('absent')).toBeInTheDocument();
+    expect(api.getDisponibilites).toHaveBeenCalledWith(
+      'gc',
+      '2026-11-12T09:00:00.000Z',
+      '2026-11-12T10:00:00.000Z',
+      ['U2', 'U3'], // les seules personnes envisagées
+      'R1',
+    );
+    await userEvent.type(screen.getByLabelText('Lien visio (facultatif)'), 'https://zoom.us/j/1');
+    await userEvent.selectOptions(screen.getByLabelText('Rappel'), '30');
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(api.modifierRendezVous).toHaveBeenCalledWith(
+      'gc',
+      'R1',
+      expect.objectContaining({ lienVisio: 'https://zoom.us/j/1', rappelMinutes: 30 }),
+    );
+  });
+
+  it('sans le droit d’inviter, aucune disponibilité n’est lue', async () => {
+    render(
+      <RendezVousFormulaire
+        slug="gc"
+        initial={valeursVides('2026-11-12')}
+        personnes={PERSONNES}
+        onClose={vi.fn()}
+        onEnregistre={vi.fn()}
+      />,
+    );
+    await new Promise((r) => setTimeout(r, 400));
+    expect(api.getDisponibilites).not.toHaveBeenCalled();
   });
 });

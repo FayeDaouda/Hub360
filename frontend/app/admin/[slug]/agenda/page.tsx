@@ -17,7 +17,9 @@ import {
   getAgenda,
   getPersonnesAgenda,
   modifierRendezVous,
+  repondreInvitation,
   type ElementAgenda,
+  type ReponseInvitation,
   type SemaineAgenda,
 } from '@/lib/agenda';
 import { LIBELLE_TYPE_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
@@ -48,6 +50,8 @@ const lundi = (jour: string) => {
 const TYPES = Object.fromEntries(
   (Object.keys(LIBELLES) as ElementAgenda['type'][]).map((t) => [t, { libelle: LIBELLES[t], tone: TONS[t] }]),
 ) as Record<ElementAgenda['type'], { libelle: string; tone: (typeof TONS)[ElementAgenda['type']] }>;
+// Une réunion qu'on a déclinée : visible, mais effacée (sa propre réponse).
+const decline = (e: ElementAgenda) => e.maReponse === 'non' && !e.calque;
 // Vue Année : la pastille d'un jour prend la couleur de son élément le plus pressant.
 const PRIORITE: ElementAgenda['type'][] = ['demande', 'echeance', 'rendez_vous', 'conge'];
 const VUES: { cle: Vue; libelle: string }[] = [
@@ -248,6 +252,8 @@ export default function AgendaPage(props: Props) {
         lieu: e.lieu ?? '',
         description: e.description ?? '',
         inviteIds: e.inviteIds,
+        lienVisio: e.lienVisio ?? '',
+        rappelMinutes: e.rappelMinutes,
       },
     });
   }
@@ -280,12 +286,36 @@ export default function AgendaPage(props: Props) {
         lieu: e.lieu ?? undefined,
         description: e.description ?? undefined,
         inviteIds: e.inviteIds,
+        lienVisio: e.lienVisio,
+        rappelMinutes: e.rappelMinutes,
       });
       setErreur(null);
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : 'Le rendez-vous n’a pas été déplacé.');
     }
     charger();
+  }
+  // Répondre à une invitation depuis sa fiche (12/11/2026) : la fiche suit.
+  async function repondre(e: ElementAgenda, reponse: ReponseInvitation) {
+    try {
+      await repondreInvitation(slug, e.id, reponse);
+      // Sa réponse et sa ligne dans la liste des participants.
+      const moi = agenda?.personne.nom;
+      setFiche((f) =>
+        f && f.id === e.id
+          ? {
+              ...f,
+              maReponse: reponse,
+              participants: f.participants.map((p) => (p.nom === moi ? { ...p, reponse } : p)),
+            }
+          : f,
+      );
+      setErreur(null);
+      charger();
+    } catch (err) {
+      setFiche(null);
+      setErreur(err instanceof ApiError ? err.message : 'La réponse n’a pas été enregistrée.');
+    }
   }
   function deciderDepuisFiche(e: ElementAgenda) {
     setFiche(null);
@@ -473,6 +503,7 @@ export default function AgendaPage(props: Props) {
           rendezVousId={formulaire.rendezVousId}
           initial={formulaire.initial}
           personnes={invitables(formulaire)}
+          avecDisponibilites={!!agenda.peutInviter}
           onClose={() => setFormulaire(null)}
           onEnregistre={() => {
             setFormulaire(null);
@@ -488,6 +519,7 @@ export default function AgendaPage(props: Props) {
           onModifier={modifier}
           onAnnuler={annuler}
           onDecider={deciderDepuisFiche}
+          onRepondre={repondre}
         />
       )}
 
@@ -543,7 +575,7 @@ function Element({ e, onAnnuler, onDecider, onModifier }: { e: ElementAgenda } &
     if (ok) onAnnuler(x);
   }
   return (
-    <li className={`agenda-element agenda-element--${e.type}`}>
+    <li className={`agenda-element agenda-element--${e.type}${decline(e) ? ' is-decline' : ''}`}>
       {e.calque && (
         <span className="agenda-detail">
           <span className="agenda-cote-pastille" style={styleCalque(e)} aria-hidden /> Agenda de {e.calque.nom}
@@ -674,7 +706,11 @@ function VueMois({
           >
             <span className="agenda-mois-numero">{Number(j.slice(8))}</span>
             {du_jour.slice(0, 3).map((e) => (
-              <span key={e.id} className={`agenda-puce agenda-puce--${TYPES[e.type].tone}`} style={styleCalque(e)}>
+              <span
+                key={e.id}
+                className={`agenda-puce agenda-puce--${TYPES[e.type].tone}${decline(e) ? ' is-decline' : ''}`}
+                style={styleCalque(e)}
+              >
                 {e.debut ? `${formatTime(e.debut)} ` : ''}
                 {titreAffiche(e)}
               </span>

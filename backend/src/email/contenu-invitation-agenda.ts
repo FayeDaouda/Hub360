@@ -19,16 +19,31 @@ export function contenuInvitationAgenda(i: InvitationAgendaEmail): { sujet: stri
     ? [`${i.organisateurNom} a annulé cette réunion. Elle est retirée de votre agenda.`]
     : [
         `${i.organisateurNom} vous invite à une réunion.`,
-        'Répondez avec « Oui » ou « Non » dans votre messagerie : la réunion s’ajoute à votre agenda.',
+        // Répondre dans le HUB (décision du 13/11/2026) : une réponse donnée
+        // depuis la messagerie part chez l'organisateur, jamais au HUB.
+        'Elle s’ajoute à votre agenda. Répondez dans l’Agenda du HUB (Oui, Peut-être, Non) : c’est là que l’organisateur voit qui vient.',
       ];
-  const details = [`${i.titre}`, `Date : ${quand}`, ...(i.lieu ? [`Lieu : ${i.lieu}`] : [])];
+  const details = [
+    `${i.titre}`,
+    `Date : ${quand}`,
+    ...(i.lieu ? [`Lieu : ${i.lieu}`] : []),
+    ...(i.lienVisio && !annulee ? [`Visio : ${i.lienVisio}`] : []),
+  ];
   const pied = `${i.societeNom} · envoyé via ${marque}. Votre agenda du HUB : ${i.lien}`;
 
   const texte = [`Bonjour ${i.prenom},`, '', ...corps, '', ...details, '', pied].join('\n');
   const html = [
     `<p>Bonjour ${escapeHtml(i.prenom)},</p>`,
     ...corps.map((p) => `<p>${escapeHtml(p)}</p>`),
-    `<p><strong>${escapeHtml(i.titre)}</strong><br>${details.slice(1).map(escapeHtml).join('<br>')}</p>`,
+    `<p><strong>${escapeHtml(i.titre)}</strong><br>${details
+      .slice(1)
+      .map((d) =>
+        // La visio, cliquable (lien https validé à la saisie, échappé ici).
+        i.lienVisio && d === `Visio : ${i.lienVisio}`
+          ? `Visio : <a href="${escapeHtml(i.lienVisio)}">${escapeHtml(i.lienVisio)}</a>`
+          : escapeHtml(d),
+      )
+      .join('<br>')}</p>`,
     `<p style="color:#6c6960;font-size:13px">${escapeHtml(`${i.societeNom} · envoyé via ${marque}.`)} <a href="${escapeHtml(i.lien)}">Votre agenda du HUB</a></p>`,
   ].join('');
   return { sujet, texte, html };

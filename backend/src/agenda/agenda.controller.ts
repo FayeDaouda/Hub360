@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -20,12 +22,16 @@ import { PermissionGuard } from '../commun/permission.guard';
 import { AbonnementAgendaService } from './abonnement.service';
 import {
   CreerRendezVousDto,
+  DisponibilitesDto,
   EtatAbonnementAgendaDto,
   LienAbonnementAgendaDto,
   ModifierRendezVousDto,
+  RepondreInvitationDto,
   SemaineAgendaDto,
 } from './agenda.dto';
 import { AgendaService } from './agenda.service';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type R = { user: { userId: string; societeId: string; role: string; permissions: Record<string, string> } };
 
@@ -82,6 +88,39 @@ export class AgendaController {
   @RequiertPermission(ETAPE.agenda, 'ecriture')
   creer(@Req() req: R, @Body() dto: CreerRendezVousDto) {
     return this.agenda.creer(req.user, dto);
+  }
+
+  // Disponibilités au moment d'inviter (12/11/2026) : occupé ou absent sur
+  // le créneau, rien d'autre ; pour qui peut inviter.
+  @Get('disponibilites')
+  @RequiertPermission(ETAPE.agendaReunions, 'ecriture')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  disponibilites(
+    @Req() req: R,
+    @Query('debut') debut: string,
+    @Query('fin') fin: string,
+    @Query('exclure') exclure?: string,
+    @Query('ids') ids?: string,
+  ): Promise<DisponibilitesDto> {
+    if (!debut || !fin || Number.isNaN(Date.parse(debut)) || Number.isNaN(Date.parse(fin))) {
+      throw new BadRequestException('Créneau invalide.');
+    }
+    if (exclure && !UUID.test(exclure)) throw new BadRequestException('Rendez-vous invalide.');
+    // Les personnes envisagées, séparées par des virgules (50 au plus).
+    const pour = [...new Set((ids ?? '').split(',').filter(Boolean))];
+    if (pour.length > 50 || pour.some((x) => !UUID.test(x))) throw new BadRequestException('Personnes invalides.');
+    return this.agenda.disponibilites(req.user, debut, fin, pour, exclure || undefined);
+  }
+
+  // Répondre à une invitation (12/11/2026) : l'invité, Oui / Non / Peut-être.
+  // Débit limité : chaque changement de réponse prévient l'organisateur.
+  @Put(':id/reponse')
+  @RequiertPermission(ETAPE.agenda, 'lecture')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  repondre(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: RepondreInvitationDto) {
+    return this.agenda.repondre(req.user, id, dto.reponse);
   }
 
   // Modifier un rendez-vous (12/11/2026) : l'organisateur seul. Débit

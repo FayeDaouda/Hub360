@@ -456,6 +456,8 @@ export type NotificationType =
   | 'rdv_invitation'
   | 'rdv_annule'
   | 'rdv_modifie'
+  | 'rdv_reponse'
+  | 'rdv_rappel'
   | 'annonce_importante'
   | 'annonce_a_valider'
   // Recrutement (01/11/2026).

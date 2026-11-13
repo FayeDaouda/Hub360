@@ -22,6 +22,10 @@ const RDV: ElementAgenda = {
   modifiable: true,
   entretien: false,
   jeSuisOrganisateur: true,
+  lienVisio: null,
+  rappelMinutes: null,
+  maReponse: null,
+  participants: [{ nom: 'Moussa Sow', reponse: null }],
   description: 'Apporter les plans',
   inviteIds: ['U2'],
 };
@@ -36,7 +40,9 @@ describe('FicheElement', () => {
 
   it('son rendez-vous : détail, Modifier, et Annuler après confirmation', async () => {
     const p = monter(RDV);
-    expect(screen.getByText(/Avec Moussa Sow · organisé par Awa Diop/)).toBeInTheDocument();
+    expect(screen.getByText('Organisé par Awa Diop')).toBeInTheDocument();
+    expect(screen.getByText('Moussa Sow')).toBeInTheDocument();
+    expect(screen.getByText('Sans réponse')).toBeInTheDocument();
     expect(screen.getByText('Apporter les plans')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Modifier' }));
     expect(p.onModifier).toHaveBeenCalledWith(RDV);
@@ -61,5 +67,89 @@ describe('FicheElement', () => {
     expect(screen.getByText(/toute la journée/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Décider' }));
     expect(p.onDecider).toHaveBeenCalled();
+  });
+
+  // B3 (12/11/2026).
+  it('visio et rappel : « Rejoindre la visio » ouvre le lien dans un nouvel onglet', () => {
+    monter({ ...RDV, lienVisio: 'https://meet.google.com/abc-defg-hij', rappelMinutes: 30 });
+    const lien = screen.getByRole('link', { name: 'Rejoindre la visio' });
+    expect(lien).toHaveAttribute('href', 'https://meet.google.com/abc-defg-hij');
+    expect(lien).toHaveAttribute('target', '_blank');
+    expect(lien).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByText('Rappel 30 minutes avant')).toBeInTheDocument();
+  });
+
+  it('invité : Oui / Peut-être / Non, sa réponse en évidence ; jamais sur l’agenda d’un collègue', async () => {
+    const onRepondre = vi.fn();
+    const invite = {
+      ...RDV,
+      // À venir : on peut encore répondre.
+      jour: '2099-01-01',
+      debut: '2099-01-01T09:00:00.000Z',
+      fin: '2099-01-01T10:00:00.000Z',
+      jeSuisOrganisateur: false,
+      annulable: false,
+      modifiable: false,
+      maReponse: 'oui' as const,
+    };
+    const { unmount } = render(
+      <FicheElement
+        e={invite}
+        onClose={vi.fn()}
+        onModifier={vi.fn()}
+        onAnnuler={vi.fn()}
+        onDecider={vi.fn()}
+        onRepondre={onRepondre}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Oui' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Non' }));
+    expect(onRepondre).toHaveBeenCalledWith(invite, 'non');
+    unmount();
+    render(
+      <FicheElement
+        e={{ ...invite, calque: { id: 'U3', nom: 'Fatou Ba', couleur: 'azur' } }}
+        onClose={vi.fn()}
+        onModifier={vi.fn()}
+        onAnnuler={vi.fn()}
+        onDecider={vi.fn()}
+        onRepondre={onRepondre}
+      />,
+    );
+    expect(screen.queryByRole('group', { name: 'Votre réponse' })).not.toBeInTheDocument();
+  });
+
+  it('réunion terminée : plus de boutons de réponse ; lien visio non https ou trompeur : pas de bouton', () => {
+    const passe = { ...RDV, jeSuisOrganisateur: false, annulable: false, modifiable: false };
+    const { unmount } = render(
+      <FicheElement
+        e={passe}
+        onClose={vi.fn()}
+        onModifier={vi.fn()}
+        onAnnuler={vi.fn()}
+        onDecider={vi.fn()}
+        onRepondre={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('group', { name: 'Votre réponse' })).not.toBeInTheDocument();
+    unmount();
+    for (const lien of ['javascript:alert(1)', 'http://meet.example.com', 'https://meet.google.com@piege.example/x']) {
+      const { unmount: u } = render(
+        <FicheElement
+          e={{ ...RDV, lienVisio: lien }}
+          onClose={vi.fn()}
+          onModifier={vi.fn()}
+          onAnnuler={vi.fn()}
+          onDecider={vi.fn()}
+        />,
+      );
+      expect(screen.queryByRole('link', { name: 'Rejoindre la visio' })).not.toBeInTheDocument();
+      u();
+    }
+  });
+
+  it('visio : son site s’affiche à côté du bouton', () => {
+    monter({ ...RDV, lienVisio: 'https://meet.google.com/abc-defg-hij' });
+    expect(screen.getByText('meet.google.com')).toBeInTheDocument();
   });
 });

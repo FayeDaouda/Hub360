@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ElementAgenda, SemaineAgenda } from '@/lib/agenda';
+import { ApiError } from '@/lib/client-api';
 import AgendaPage from './page';
 
 const api = vi.hoisted(() => ({
@@ -11,6 +12,8 @@ const api = vi.hoisted(() => ({
   creerRendezVous: vi.fn(),
   modifierRendezVous: vi.fn(),
   annulerRendezVous: vi.fn(),
+  repondreInvitation: vi.fn(),
+  getDisponibilites: vi.fn(),
 }));
 vi.mock('@/lib/agenda', async (original) => ({ ...(await original<typeof import('@/lib/agenda')>()), ...api }));
 vi.mock('@/lib/layout-contexte', () => ({ useTitrePage: () => undefined }));
@@ -35,6 +38,10 @@ const RDV: ElementAgenda = {
   modifiable: true,
   entretien: false,
   jeSuisOrganisateur: true,
+  lienVisio: null,
+  rappelMinutes: null,
+  maReponse: null,
+  participants: [],
   description: 'Apporter les plans',
   inviteIds: ['U2'],
 };
@@ -74,6 +81,8 @@ describe('Page Agenda', () => {
     api.getAgenda.mockImplementation((_slug: string, du: string, au: string) => Promise.resolve(reponse(du, au)));
     api.getPersonnesAgenda.mockResolvedValue(PERSONNES);
     api.modifierRendezVous.mockResolvedValue({ ok: true });
+    api.repondreInvitation.mockResolvedValue({ ok: true });
+    api.getDisponibilites.mockResolvedValue({ occupes: [], absents: [] });
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -148,6 +157,8 @@ describe('Page Agenda', () => {
         lieu: 'Plateau',
         description: 'Apporter les plans',
         inviteIds: ['U2'],
+        lienVisio: null,
+        rappelMinutes: null,
       });
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(api.getAgenda.mock.calls.length).toBeGreaterThan(appels);
@@ -221,6 +232,116 @@ describe('Page Agenda', () => {
       await waitFor(() => expect(api.getAgenda).toHaveBeenCalledWith('gc', '2026-11-09', '2026-11-15', 'U3'));
       expect(api.getAgenda).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'PARTI');
       expect(screen.getByLabelText('Fatou Ba')).toBeChecked();
+    });
+  });
+  // Lot B3 (12/11/2026) : l'invité répond depuis la fiche.
+  describe('répondre à une invitation', () => {
+    const INVITATION: ElementAgenda = {
+      ...RDV,
+      // Pas encore terminée à l'heure figée du test (10 h) : on peut répondre.
+      debut: `${J}T14:00:00.000Z`,
+      fin: `${J}T15:00:00.000Z`,
+      organisateur: 'Fatou Ba',
+      invites: ['Awa Diop', 'Moussa Sow'],
+      participants: [
+        { nom: 'Awa Diop', reponse: null },
+        { nom: 'Moussa Sow', reponse: 'oui' },
+      ],
+      jeSuisOrganisateur: false,
+      modifiable: false,
+      annulable: false,
+      maReponse: null,
+      inviteIds: [],
+    };
+    const avecInvitation = (e: ElementAgenda = INVITATION) =>
+      api.getAgenda.mockImplementation((_s: string, du: string, au: string) =>
+        Promise.resolve(reponse(du, au, { elements: [e] })),
+      );
+
+    it('« Oui » envoie la réponse, la fiche la montre choisie et l’agenda se recharge', async () => {
+      avecInvitation();
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      const groupe = within(await screen.findByRole('dialog')).getByRole('group', { name: 'Votre réponse' });
+      const appels = api.getAgenda.mock.calls.length;
+      await userEvent.click(within(groupe).getByRole('button', { name: 'Oui' }));
+
+      expect(api.repondreInvitation).toHaveBeenCalledWith('gc', 'R1', 'oui');
+      await waitFor(() =>
+        expect(within(groupe).getByRole('button', { name: 'Oui' })).toHaveAttribute('aria-pressed', 'true'),
+      );
+      expect(within(groupe).getByRole('button', { name: 'Non' })).toHaveAttribute('aria-pressed', 'false');
+      // La fiche reste ouverte, l'agenda est relu.
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      await waitFor(() => expect(api.getAgenda.mock.calls.length).toBeGreaterThan(appels));
+    });
+
+    it('changer d’avis : « Non » remplace « Oui »', async () => {
+      avecInvitation({ ...INVITATION, maReponse: 'oui' });
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      const groupe = within(await screen.findByRole('dialog')).getByRole('group', { name: 'Votre réponse' });
+      expect(within(groupe).getByRole('button', { name: 'Oui' })).toHaveAttribute('aria-pressed', 'true');
+      await userEvent.click(within(groupe).getByRole('button', { name: 'Non' }));
+      expect(api.repondreInvitation).toHaveBeenCalledWith('gc', 'R1', 'non');
+      await waitFor(() =>
+        expect(within(groupe).getByRole('button', { name: 'Non' })).toHaveAttribute('aria-pressed', 'true'),
+      );
+      expect(within(groupe).getByRole('button', { name: 'Oui' })).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('refusée par le serveur : la fiche se ferme et le message s’affiche', async () => {
+      avecInvitation();
+      api.repondreInvitation.mockRejectedValue(new ApiError('Cette réunion est passée.', 409));
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Peut-être' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(await screen.findByText('Cette réunion est passée.')).toBeInTheDocument();
+    });
+
+    it('panne réseau : message générique', async () => {
+      avecInvitation();
+      api.repondreInvitation.mockRejectedValue(new TypeError('Failed to fetch'));
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Oui' }));
+      expect(await screen.findByText('La réponse n’a pas été enregistrée.')).toBeInTheDocument();
+    });
+
+    it('l’organisateur n’a pas de boutons de réponse', async () => {
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      expect(
+        within(await screen.findByRole('dialog')).queryByRole('group', { name: 'Votre réponse' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('la réunion déclinée est effacée dans la grille', async () => {
+      avecInvitation({ ...INVITATION, maReponse: 'non' });
+      await monter();
+      expect(await screen.findByRole('button', { name: /Point chantier/ })).toHaveClass('is-decline');
+    });
+
+    // Après sa réponse, sa ligne dans la liste des participants de la fiche
+    // ouverte suit aussi (corrigé le 13/11/2026).
+    it('la liste des participants de la fiche suit sa propre réponse', async () => {
+      avecInvitation();
+      // Après la réponse, le serveur renvoie la réunion à jour.
+      api.repondreInvitation.mockImplementation(async () => {
+        avecInvitation({
+          ...INVITATION,
+          maReponse: 'oui',
+          participants: [{ nom: 'Awa Diop', reponse: 'oui' }, INVITATION.participants[1]],
+        });
+        return { ok: true };
+      });
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      const fiche = await screen.findByRole('dialog');
+      await userEvent.click(within(fiche).getByRole('button', { name: 'Oui' }));
+      const ligne = (await within(fiche).findByText('Awa Diop')).closest('li')!;
+      await waitFor(() => expect(ligne).toHaveTextContent('Oui'));
     });
   });
 });

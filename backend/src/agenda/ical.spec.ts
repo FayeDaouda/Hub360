@@ -137,4 +137,26 @@ describe('calendrierIcal', () => {
       }),
     ).toThrow();
   });
+
+  it('rappel : une alerte après les propriétés de l’événement, jamais sur une annulation', () => {
+    const e = {
+      uid: 'rdv-1@hub360.space',
+      titre: 'Point',
+      debut: new Date('2026-11-13T09:00:00.000Z'),
+      fin: new Date('2026-11-13T10:00:00.000Z'),
+      rappelMinutes: 30,
+    };
+    const l = lignes(calendrierIcal({ nom: 'HUB', methode: 'REQUEST', evenements: [e] }));
+    const debutAlerte = l.indexOf('BEGIN:VALARM');
+    expect(l.slice(debutAlerte, debutAlerte + 5)).toEqual([
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      'DESCRIPTION:Point',
+      'TRIGGER:-PT30M',
+      'END:VALARM',
+    ]);
+    expect(debutAlerte).toBeGreaterThan(l.indexOf('TRANSP:OPAQUE'));
+    expect(l[debutAlerte + 5]).toBe('END:VEVENT');
+    expect(calendrierIcal({ nom: 'HUB', methode: 'CANCEL', evenements: [e] })).not.toContain('VALARM');
+  });
 });

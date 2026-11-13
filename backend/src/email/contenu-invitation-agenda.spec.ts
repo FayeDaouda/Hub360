@@ -63,4 +63,47 @@ describe('contenuInvitationAgenda', () => {
     const m = contenuInvitationAgenda({ ...base, lien: 'https://hub.sn/agenda?a=1&b="x"' });
     expect(m.html).toContain('href="https://hub.sn/agenda?a=1&amp;b=&quot;x&quot;"');
   });
+  // Lot B3 (12/11/2026) : le lien visio dans l'e-mail.
+  describe('visio', () => {
+    const VISIO = 'https://meet.google.com/abc-defg-hij';
+
+    it('invitation : une ligne « Visio : » avec le lien, dans le texte et le HTML', () => {
+      const m = contenuInvitationAgenda({ ...base, lienVisio: VISIO });
+      expect(m.texte).toContain(`Visio : ${VISIO}`);
+      // Cliquable dans le HTML.
+      expect(m.html).toContain(`Visio : <a href="${VISIO}">${VISIO}</a>`);
+      // Après le lieu, comme dans la fiche.
+      expect(m.texte.indexOf('Lieu : ')).toBeLessThan(m.texte.indexOf('Visio : '));
+    });
+
+    it('sans lieu, la visio s’affiche seule', () => {
+      const m = contenuInvitationAgenda({ ...base, lieu: null, lienVisio: VISIO });
+      expect(m.texte).not.toContain('Lieu');
+      expect(m.texte).toContain(`Visio : ${VISIO}`);
+    });
+
+    it('annulation : pas de lien visio (la réunion n’a plus lieu)', () => {
+      const m = contenuInvitationAgenda({ ...base, methode: 'CANCEL', lienVisio: VISIO });
+      expect(m.texte).not.toContain('Visio');
+      expect(m.html).not.toContain('Visio');
+    });
+
+    it('sans visio (null ou absente), aucune ligne « Visio »', () => {
+      expect(contenuInvitationAgenda({ ...base, lienVisio: null }).texte).not.toContain('Visio');
+      expect(contenuInvitationAgenda(base).texte).not.toContain('Visio');
+    });
+
+    it('le lien visio est échappé dans le HTML', () => {
+      const m = contenuInvitationAgenda({ ...base, lienVisio: 'https://meet.sn/a?b=1&c="<x>"' });
+      const echappe = 'https://meet.sn/a?b=1&amp;c=&quot;&lt;x&gt;&quot;';
+      expect(m.html).toContain(`Visio : <a href="${echappe}">${echappe}</a>`);
+      expect(m.html).not.toContain('<x>');
+    });
+  });
+
+  it('on répond dans le HUB, où l’organisateur voit qui vient', () => {
+    const m = contenuInvitationAgenda(base);
+    expect(m.texte).toContain('Répondez dans l’Agenda du HUB');
+    expect(m.texte).not.toContain('dans votre messagerie');
+  });
 });

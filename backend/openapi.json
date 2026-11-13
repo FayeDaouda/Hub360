@@ -9898,6 +9898,109 @@
         ]
       }
     },
+    "/api/societes/{slug}/agenda/disponibilites": {
+      "get": {
+        "operationId": "AgendaController_disponibilites",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "debut",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fin",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclure",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisponibilitesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/{id}/reponse": {
+      "put": {
+        "operationId": "AgendaController_repondre",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepondreInvitationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
     "/api/societes/{slug}/agenda/{id}": {
       "patch": {
         "operationId": "AgendaController_modifier",
@@ -11784,6 +11887,8 @@
                 "rdv_annule",
                 "rdv_invitation",
                 "rdv_modifie",
+                "rdv_rappel",
+                "rdv_reponse",
                 "reglage_gouvernance_modifie",
                 "remboursement_a_traiter",
                 "remboursement_traite",
@@ -18621,6 +18726,27 @@
           "consentement"
         ]
       },
+      "ParticipantDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "reponse": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "non",
+              "oui",
+              "peut_etre"
+            ]
+          }
+        },
+        "required": [
+          "nom",
+          "reponse"
+        ]
+      },
       "ElementAgendaDto": {
         "type": "object",
         "properties": {
@@ -18690,6 +18816,29 @@
               "type": "string"
             }
           },
+          "lienVisio": {
+            "type": "string",
+            "nullable": true
+          },
+          "rappelMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "maReponse": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "non",
+              "oui",
+              "peut_etre"
+            ]
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParticipantDto"
+            }
+          },
           "demande": {
             "type": "object",
             "properties": {
@@ -18736,7 +18885,11 @@
           "entretien",
           "jeSuisOrganisateur",
           "description",
-          "inviteIds"
+          "inviteIds",
+          "lienVisio",
+          "rappelMinutes",
+          "maReponse",
+          "participants"
         ]
       },
       "SemaineAgendaDto": {
@@ -18850,12 +19003,65 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "lienVisio": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "rappelMinutes": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              10,
+              30,
+              60,
+              1440
+            ]
           }
         },
         "required": [
           "titre",
           "debut",
           "fin"
+        ]
+      },
+      "DisponibilitesDto": {
+        "type": "object",
+        "properties": {
+          "occupes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "absents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "occupes",
+          "absents"
+        ]
+      },
+      "RepondreInvitationDto": {
+        "type": "object",
+        "properties": {
+          "reponse": {
+            "type": "string",
+            "enum": [
+              "non",
+              "oui",
+              "peut_etre"
+            ]
+          }
+        },
+        "required": [
+          "reponse"
         ]
       },
       "ModifierRendezVousDto": {
@@ -18879,6 +19085,22 @@
           "description": {
             "type": "string",
             "maxLength": 2000
+          },
+          "lienVisio": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "rappelMinutes": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              10,
+              30,
+              60,
+              1440
+            ]
           },
           "inviteIds": {
             "maxItems": 50,

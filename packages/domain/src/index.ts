@@ -6,3 +6,4 @@ export * from './roles';
 export * from './text';
 export * from './notifications';
 export * from './offres';
+export * from './agenda';
