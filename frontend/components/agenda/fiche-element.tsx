@@ -58,6 +58,16 @@ export function FicheElement({
         <CloseButton onClick={onClose} />
       </header>
       <div className="modal-body agenda-fiche">
+        {e.calque && (
+          <p className="agenda-fiche-ligne">
+            <span
+              className="agenda-cote-pastille"
+              style={{ ['--ton' as string]: `var(--${e.calque.couleur})` }}
+              aria-hidden
+            />
+            <span>Agenda de {e.calque.nom}</span>
+          </p>
+        )}
         <p className="agenda-fiche-ligne">
           <CalendarClock size={16} aria-hidden />
           <span>
