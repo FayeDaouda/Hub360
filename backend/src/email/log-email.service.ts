@@ -6,6 +6,7 @@ import {
   ContratEmail,
   DevisEmail,
   EmailService,
+  InvitationAgendaEmail,
   LienCompte,
   RelanceDevisEmail,
   RelanceFactureEmail,
@@ -39,6 +40,11 @@ export class LogEmailService extends EmailService {
 
   async envoyerCandidat(c: CandidatEmail): Promise<{ envoye: boolean }> {
     this.log.log(`[log] candidat ${c.reference} (${c.type}) pour ${c.email}`);
+    return { envoye: false };
+  }
+
+  async envoyerInvitationAgenda(i: InvitationAgendaEmail): Promise<{ envoye: boolean }> {
+    this.log.log(`[log] invitation agenda (${i.methode}) pour ${i.email}`);
     return { envoye: false };
   }
 

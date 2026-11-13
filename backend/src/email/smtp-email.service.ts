@@ -7,6 +7,7 @@ import {
   ContratEmail,
   DevisEmail,
   EmailService,
+  InvitationAgendaEmail,
   LienCompte,
   RelanceDevisEmail,
   RelanceFactureEmail,
@@ -18,6 +19,7 @@ import { contenuRelanceDevis } from './contenu-relance-devis';
 import { contenuContrat } from './contenu-contrat';
 import { contenuAvisSecurite } from './contenu-avis-securite';
 import { contenuCandidat } from './contenu-candidat';
+import { contenuInvitationAgenda } from './contenu-invitation-agenda';
 
 // Transport SMTP (nodemailer). Instancié uniquement quand EMAIL_TRANSPORT=smtp
 // ET SMTP_HOST est renseigné (cf. email.module.ts) — donc jamais actif sans
@@ -136,6 +138,29 @@ export class SmtpEmailService extends EmailService {
     } catch (e) {
       this.log.error(
         `[smtp] échec d'envoi candidat ${c.reference} (${c.type}) à ${c.email} : ${e instanceof Error ? e.message : e}`,
+      );
+      return { envoye: false };
+    }
+  }
+
+  // Le calendrier part en partie « text/calendar » (icalEvent) : c'est elle
+  // que Gmail et Outlook lisent pour proposer « Oui / Non ».
+  async envoyerInvitationAgenda(i: InvitationAgendaEmail): Promise<{ envoye: boolean }> {
+    const { sujet, texte, html } = contenuInvitationAgenda(i);
+    try {
+      await this.transport.sendMail({
+        from: this.from,
+        to: i.email,
+        subject: sujet,
+        text: texte,
+        html,
+        icalEvent: { method: i.methode, filename: 'invitation.ics', content: i.ics },
+      });
+      this.log.log(`[smtp] invitation agenda (${i.methode}) envoyée à ${i.email}`);
+      return { envoye: true };
+    } catch (e) {
+      this.log.error(
+        `[smtp] échec d'envoi invitation agenda (${i.methode}) à ${i.email} : ${e instanceof Error ? e.message : e}`,
       );
       return { envoye: false };
     }

@@ -83,7 +83,8 @@ model Societe {
   signalements      Signalement[]
   journalDroits     JournalDroit[]
 
-  rendezVous RendezVous[]
+  rendezVous        RendezVous[]
+  abonnementsAgenda AbonnementAgenda[]
 
   annonces Annonce[]
 
@@ -151,6 +152,7 @@ model Utilisateur {
   abonnementsPush          AbonnementPush[]
   // Préférences de notification (catégories, heures calmes) — @hub/domain.
   preferencesNotifications Json?                    @map("preferences_notifications")
+  abonnementsAgenda        AbonnementAgenda[]
   canauxDmP2               Canal[]                  @relation("CanalDmP2")
   lecturesCanal            LectureCanal[]
   dossiersCrees            DossierCrm[]             @relation("DossierCreePar")
@@ -3038,6 +3040,28 @@ model InviteRendezVous {
   @@id([rendezVousId, utilisateurId])
   @@index([utilisateurId])
   @@map("invites_rendez_vous")
+}
+
+// Abonnement à son agenda depuis Google Agenda, Apple Calendrier ou Outlook
+// (12/11/2026) : un lien secret par personne et par société, relu par son
+// agenda. Seule l'empreinte SHA-256 du jeton est gardée ; régénérer remplace
+// l'empreinte, et l'ancien lien cesse de fonctionner.
+model AbonnementAgenda {
+  id             String    @id @default(uuid())
+  societeId      String    @map("societe_id")
+  utilisateurId  String    @map("utilisateur_id")
+  jetonHash      String    @unique @map("jeton_hash")
+  creeLe         DateTime  @default(now()) @map("cree_le")
+  // Dernière relecture par l'agenda de la personne (au plus une écriture
+  // toutes les 10 minutes) : lui montre que l'abonnement fonctionne.
+  dernierAccesLe DateTime? @map("dernier_acces_le")
+
+  societe     Societe     @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, utilisateurId])
+  @@index([utilisateurId])
+  @@map("abonnements_agenda")
 }
 
 // Annonces (lot 12, 01/11/2026) : à une société, à tout le groupe, ou à une

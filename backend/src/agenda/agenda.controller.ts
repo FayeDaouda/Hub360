@@ -4,7 +4,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { PermissionGuard } from '../commun/permission.guard';
-import { CreerRendezVousDto, SemaineAgendaDto } from './agenda.dto';
+import { AbonnementAgendaService } from './abonnement.service';
+import { CreerRendezVousDto, EtatAbonnementAgendaDto, LienAbonnementAgendaDto, SemaineAgendaDto } from './agenda.dto';
 import { AgendaService } from './agenda.service';
 
 type R = { user: { userId: string; societeId: string; role: string; permissions: Record<string, string> } };
@@ -13,7 +14,10 @@ type R = { user: { userId: string; societeId: string; role: string; permissions:
 @Controller('societes/:slug/agenda')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard, PermissionGuard)
 export class AgendaController {
-  constructor(private agenda: AgendaService) {}
+  constructor(
+    private agenda: AgendaService,
+    private abonnements: AbonnementAgendaService,
+  ) {}
 
   // Du `du` au `au` (AAAA-MM-JJ, une semaine par défaut ; mois ou année) ;
   // `personne` : l'agenda d'un collègue.
@@ -32,6 +36,27 @@ export class AgendaController {
   @RequiertPermission(ETAPE.agenda, 'lecture')
   personnes(@Req() req: R) {
     return this.agenda.personnes(req.user);
+  }
+
+  // Abonnement depuis Google, Apple ou Outlook : son propre agenda, avec la
+  // Lecture de « Mon agenda » (revérifiée à chaque relecture du lien).
+  @Get('abonnement')
+  @RequiertPermission(ETAPE.agenda, 'lecture')
+  etatAbonnement(@Req() req: R): Promise<EtatAbonnementAgendaDto> {
+    return this.abonnements.etat(req.user);
+  }
+
+  // Crée le lien, ou le remplace (l'ancien cesse de fonctionner).
+  @Post('abonnement')
+  @RequiertPermission(ETAPE.agenda, 'lecture')
+  creerAbonnement(@Req() req: R): Promise<LienAbonnementAgendaDto> {
+    return this.abonnements.creer(req.user);
+  }
+
+  @Delete('abonnement')
+  @RequiertPermission(ETAPE.agenda, 'lecture')
+  supprimerAbonnement(@Req() req: R) {
+    return this.abonnements.supprimer(req.user);
   }
 
   @Post()

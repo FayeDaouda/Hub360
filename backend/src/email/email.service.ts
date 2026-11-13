@@ -106,6 +106,24 @@ export type CandidatEmail = {
   | { type: 'reponse'; retenu: boolean }
 );
 
+// Invitation à une réunion de l'Agenda (12/11/2026), aux collègues invités :
+// l'e-mail porte le calendrier (REQUEST à l'envoi, CANCEL à l'annulation),
+// que Gmail, Outlook et Apple ajoutent à l'agenda de la personne, avec
+// « Oui / Non » ; la réponse part à l'organisateur.
+export type InvitationAgendaEmail = {
+  email: string;
+  prenom: string;
+  societeNom: string;
+  methode: 'REQUEST' | 'CANCEL';
+  titre: string;
+  debut: Date;
+  fin: Date;
+  lieu: string | null;
+  organisateurNom: string;
+  lien: string; // l'Agenda dans le HUB
+  ics: string;
+};
+
 export abstract class EmailService {
   // Ne lève jamais : un échec de transport renvoie `{ envoye: false }` pour que
   // l'appelant garde son repli (afficher le lien à recopier) et que la réponse
@@ -118,4 +136,5 @@ export abstract class EmailService {
   abstract envoyerAlerte(a: AlerteEmail): Promise<{ envoye: boolean }>;
   abstract envoyerAvisSecurite(a: AvisSecurite): Promise<{ envoye: boolean }>;
   abstract envoyerCandidat(c: CandidatEmail): Promise<{ envoye: boolean }>;
+  abstract envoyerInvitationAgenda(i: InvitationAgendaEmail): Promise<{ envoye: boolean }>;
 }

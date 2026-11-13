@@ -799,6 +799,49 @@
   }
 }
 
+/* « Ajouter à mon agenda » (12/11/2026) : lien personnel vers Google, Apple,
+   Outlook. */
+.agenda-abonnement {
+  display: grid;
+  gap: var(--e-12);
+}
+.agenda-abonnement-notes {
+  display: grid;
+  gap: var(--e-4);
+  margin: 0;
+  padding-left: var(--e-24);
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}
+.agenda-abonnement-lien {
+  display: grid;
+  gap: var(--e-8);
+}
+.agenda-abonnement-copie {
+  display: flex;
+  gap: var(--e-8);
+}
+.agenda-abonnement-copie .field-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--t-13);
+}
+.agenda-abonnement-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-8);
+}
+.agenda-abonnement-etat {
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .agenda-abonnement-boutons > * {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
 /* --- Annonces (lot 12) -------------------------------------------------- */
 .annonces {
   display: grid;
