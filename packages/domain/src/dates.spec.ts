@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   addDays,
+  dakarInstant,
+  formatWeekdayShort,
+  hhmmOfMinutes,
+  minutesOfDay,
   addMonths,
   daysBetween,
   daysSince,
@@ -157,4 +161,25 @@ describe('heure de Dakar, quel que soit le lieu de l’utilisateur', () => {
 
 it('jour de la semaine (Agenda)', () => {
   expect(formatWeekdayDayMonth('2026-11-02')).toBe('lundi 2 novembre');
+});
+
+// Grille horaire de l'Agenda (12/11/2026).
+describe('minutesOfDay · dakarInstant · hhmmOfMinutes', () => {
+  it('heure de Dakar (UTC) : minutes depuis minuit, aller-retour', () => {
+    expect(minutesOfDay('2026-11-12T09:30:00.000Z')).toBe(570);
+    expect(dakarInstant('2026-11-12', '09:30')).toBe('2026-11-12T09:30:00.000Z');
+    expect(minutesOfDay(dakarInstant('2026-11-12', hhmmOfMinutes(570)))).toBe(570);
+  });
+  it('hhmmOfMinutes reste dans la journée', () => {
+    expect(hhmmOfMinutes(-5)).toBe('00:00');
+    expect(hhmmOfMinutes(24 * 60)).toBe('23:59');
+    expect(hhmmOfMinutes(605)).toBe('10:05');
+  });
+});
+
+describe('formatWeekdayShort', () => {
+  it('jour abrégé, quel que soit le format reçu', () => {
+    expect(formatWeekdayShort('2026-11-12')).toBe('jeu.');
+    expect(formatWeekdayShort('2026-11-16T23:30:00.000Z')).toBe('lun.');
+  });
 });

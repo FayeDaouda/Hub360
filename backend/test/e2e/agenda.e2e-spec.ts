@@ -98,4 +98,49 @@ describe('Agenda', () => {
 
     await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
   });
+
+  // Modifier une réunion (12/11/2026) : l'organisateur seul ; l'invité gardé
+  // voit la nouvelle heure, l'invité retiré ne la voit plus.
+  it('modifier : nouvelle heure pour l’invité gardé, disparue pour le retiré', async () => {
+    const dirgc = await connecter(app, COMPTES.dirgc);
+    const cfo = await connecter(app, COMPTES.cfo);
+    const coo = await connecter(app, COMPTES.coo);
+    const jour = addDays(todayIso(), 3);
+    const idDe = async (j: string) =>
+      ((await api(app, j).get(`/agenda?du=${jour}`).expect(200)).body as Semaine).personne.id;
+    const [cfoId, cooId] = [await idDe(cfo), await idDe(coo)];
+    const { id } = (
+      await api(app, dirgc)
+        .post('/agenda', {
+          titre: 'Revue',
+          debut: `${jour}T10:00:00.000Z`,
+          fin: `${jour}T11:00:00.000Z`,
+          inviteIds: [cfoId, cooId],
+        })
+        .expect(201)
+    ).body as { id: string };
+
+    const nouvelle = { titre: 'Revue décalée', debut: `${jour}T15:00:00.000Z`, fin: `${jour}T16:00:00.000Z` };
+    await api(app, cfo)
+      .patch(`/agenda/${id}`, { ...nouvelle, inviteIds: [cfoId] })
+      .expect(403);
+    await api(app, dirgc)
+      .patch(`/agenda/${id}`, { ...nouvelle, inviteIds: [cfoId] })
+      .expect(200);
+
+    type Vu = Semaine['elements'][number] & { debut: string; modifiable: boolean };
+    const chezCfo = ((await api(app, cfo).get(`/agenda?du=${jour}`).expect(200)).body as { elements: Vu[] }).elements;
+    expect(chezCfo.find((e) => e.id === id)).toMatchObject({
+      titre: 'Revue décalée',
+      debut: `${jour}T15:00:00.000Z`,
+      modifiable: false,
+    });
+    const chezCoo = (await api(app, coo).get(`/agenda?du=${jour}`).expect(200)).body as Semaine;
+    expect(chezCoo.elements.some((e) => e.id === id)).toBe(false);
+    const chezDirgc = ((await api(app, dirgc).get(`/agenda?du=${jour}`).expect(200)).body as { elements: Vu[] })
+      .elements;
+    expect(chezDirgc.find((e) => e.id === id)?.modifiable).toBe(true);
+
+    await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
+  });
 });

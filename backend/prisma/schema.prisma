@@ -313,6 +313,7 @@ enum NotificationType {
   own_rights_changed // aux titulaires d'un rôle : leurs droits viennent de changer (matrice, 31/10/2026)
   rdv_invitation // Agenda (01/11/2026) : vous êtes invité à une réunion
   rdv_annule // Agenda : une réunion où vous étiez invité est annulée
+  rdv_modifie // Agenda : une réunion où vous êtes invité change (12/11/2026)
   annonce_importante // Annonces (01/11/2026) : une annonce importante à lire
   annonce_a_valider // Annonces : une annonce attend sa validation avant publication
   poste_a_approuver // Recrutement (01/11/2026) : ouverture d'un poste à approuver
@@ -3022,6 +3023,9 @@ model RendezVous {
   description    String?
   organisateurId String    @map("organisateur_id") // compte, sans clé (comme parId)
   annuleLe       DateTime? @map("annule_le")
+  // Version envoyée aux agendas des invités (iCalendar) : +1 à chaque
+  // modification et à l'annulation (12/11/2026).
+  sequence       Int       @default(0)
   createdAt      DateTime  @default(now()) @map("created_at")
 
   societe Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)

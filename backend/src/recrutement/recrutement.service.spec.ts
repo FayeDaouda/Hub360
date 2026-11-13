@@ -131,6 +131,18 @@ describe('RecrutementService · côté RH', () => {
     ]);
   });
 
+  it('replanifier : l’ancien rendez-vous passe à la version suivante avec son annulation (SEQUENCE iCalendar)', async () => {
+    const { s, tx } = monter();
+    await s.planifierEntretien(moi(), 'C1', {
+      debut: '2026-11-04T10:00:00.000Z',
+      fin: '2026-11-04T11:00:00.000Z',
+    });
+    const { data } = tx.rendezVous.updateMany.mock.calls[0][0];
+    expect(data).toEqual({ annuleLe: expect.any(Date), sequence: { increment: 1 } });
+    // Le nouveau rendez-vous part en version 0 (valeur par défaut en base).
+    expect(tx.rendezVous.create.mock.calls[0][0].data).not.toHaveProperty('sequence');
+  });
+
   it('replanifier un entretien déjà annulé ou passé : aucune annulation ne repart', async () => {
     const { s, tx, invitations } = monter();
     tx.rendezVous.updateMany.mockResolvedValueOnce({ count: 0 });

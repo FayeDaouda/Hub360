@@ -1,3 +1,4 @@
+import { OmitType } from '@nestjs/swagger';
 import { TypeAbsence } from '@prisma/client';
 import {
   ArrayMaxSize,
@@ -20,6 +21,13 @@ export class CreerRendezVousDto {
   @IsOptional() @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) inviteIds?: string[];
 }
 
+// Modifier un rendez-vous (12/11/2026) : la fiche entière, comme à la
+// création, invités compris — obligatoires : une liste absente ne doit
+// jamais retirer tout le monde. Les invités retirés reçoivent l'annulation.
+export class ModifierRendezVousDto extends OmitType(CreerRendezVousDto, ['inviteIds'] as const) {
+  @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) inviteIds!: string[];
+}
+
 // Un élément de l'agenda : rendez-vous, échéance d'une tâche ou congé validé.
 export class ElementAgendaDto {
   id: string;
@@ -34,6 +42,14 @@ export class ElementAgendaDto {
   invites: string[];
   // L'organisateur peut l'annuler (rendez-vous seulement).
   annulable: boolean;
+  // L'organisateur peut le modifier (12/11/2026) ; jamais un entretien de
+  // recrutement, qui se replanifie depuis sa candidature.
+  modifiable: boolean;
+  entretien: boolean;
+  // La personne dont c'est l'agenda l'organise (sinon : elle y est invitée).
+  jeSuisOrganisateur: boolean;
+  description: string | null; // la note du rendez-vous, telle que saisie
+  inviteIds: string[]; // comptes invités (le formulaire de modification)
   // Demande d'absence à trancher : son identifiant ; `validationFinale` = celle
   // du CEO (demande de la RH), sinon la décision du N+1.
   demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };

@@ -9899,6 +9899,45 @@
       }
     },
     "/api/societes/{slug}/agenda/{id}": {
+      "patch": {
+        "operationId": "AgendaController_modifier",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifierRendezVousDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      },
       "delete": {
         "operationId": "AgendaController_annuler",
         "parameters": [
@@ -11744,6 +11783,7 @@
                 "rappel_tache",
                 "rdv_annule",
                 "rdv_invitation",
+                "rdv_modifie",
                 "reglage_gouvernance_modifie",
                 "remboursement_a_traiter",
                 "remboursement_traite",
@@ -18631,6 +18671,25 @@
           "annulable": {
             "type": "boolean"
           },
+          "modifiable": {
+            "type": "boolean"
+          },
+          "entretien": {
+            "type": "boolean"
+          },
+          "jeSuisOrganisateur": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "inviteIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "demande": {
             "type": "object",
             "properties": {
@@ -18672,7 +18731,12 @@
           "detail",
           "organisateur",
           "invites",
-          "annulable"
+          "annulable",
+          "modifiable",
+          "entretien",
+          "jeSuisOrganisateur",
+          "description",
+          "inviteIds"
         ]
       },
       "SemaineAgendaDto": {
@@ -18792,6 +18856,44 @@
           "titre",
           "debut",
           "fin"
+        ]
+      },
+      "ModifierRendezVousDto": {
+        "type": "object",
+        "properties": {
+          "titre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "debut": {
+            "type": "string"
+          },
+          "fin": {
+            "type": "string"
+          },
+          "lieu": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "inviteIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "titre",
+          "debut",
+          "fin",
+          "inviteIds"
         ]
       },
       "CreerLocaliteDto": {
