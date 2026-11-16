@@ -83,8 +83,13 @@ model Societe {
   signalements      Signalement[]
   journalDroits     JournalDroit[]
 
-  rendezVous        RendezVous[]
-  abonnementsAgenda AbonnementAgenda[]
+  rendezVous           RendezVous[]
+  abonnementsAgenda    AbonnementAgenda[]
+  connexionsAgenda     ConnexionAgenda[]
+  agendasExternes      AgendaExterne[]
+  evenementsExternes   EvenementExterne[]
+  liensExportAgenda    LienExportAgenda[]
+  etatsConnexionAgenda EtatConnexionAgenda[]
 
   annonces Annonce[]
 
@@ -153,6 +158,7 @@ model Utilisateur {
   // Préférences de notification (catégories, heures calmes) — @hub/domain.
   preferencesNotifications Json?                    @map("preferences_notifications")
   abonnementsAgenda        AbonnementAgenda[]
+  connexionsAgenda         ConnexionAgenda[]
   canauxDmP2               Canal[]                  @relation("CanalDmP2")
   lecturesCanal            LectureCanal[]
   dossiersCrees            DossierCrm[]             @relation("DossierCreePar")
@@ -3106,6 +3112,117 @@ model RappelOccurrence {
 
   @@id([rendezVousId, occurrence])
   @@map("rappels_occurrences")
+}
+
+// Synchronisation de l'Agenda avec Google et Apple (16/11/2026).
+enum FournisseurAgenda {
+  google
+  apple
+}
+
+// Un agenda externe connecté par une personne, dans une société : l'accès
+// (jeton de rafraîchissement Google, mot de passe pour application Apple)
+// est chiffré (agenda/synchro/chiffrement.ts), jamais renvoyé à l'écran.
+model ConnexionAgenda {
+  id                String            @id @default(uuid())
+  societeId         String            @map("societe_id")
+  utilisateurId     String            @map("utilisateur_id")
+  fournisseur       FournisseurAgenda
+  compte            String // adresse du compte externe
+  accesChiffre      String            @map("acces_chiffre")
+  derniereSynchroLe DateTime?         @map("derniere_synchro_le")
+  erreur            String? // dernière erreur, en clair, pour la personne
+  creeLe            DateTime          @default(now()) @map("cree_le")
+
+  societe     Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur        @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  agendas     AgendaExterne[]
+  liens       LienExportAgenda[]
+
+  @@unique([societeId, utilisateurId, fournisseur])
+  @@map("connexions_agenda")
+}
+
+// Les agendas d'un compte externe : ceux que la personne importe dans le HUB,
+// et celui où le HUB écrit ses réunions (un seul).
+model AgendaExterne {
+  id          String   @id @default(uuid())
+  societeId   String   @map("societe_id")
+  connexionId String   @map("connexion_id")
+  idExterne   String   @map("id_externe") // identifiant Google, adresse CalDAV
+  nom         String
+  couleur     String?
+  importe     Boolean  @default(false)
+  cible       Boolean  @default(false) // le HUB y écrit ses réunions
+  majLe       DateTime @default(now()) @updatedAt @map("maj_le")
+
+  societe    Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  connexion  ConnexionAgenda    @relation(fields: [connexionId], references: [id], onDelete: Cascade)
+  evenements EvenementExterne[]
+
+  @@unique([connexionId, idExterne])
+  @@map("agendas_externes")
+}
+
+// Un rendez-vous personnel importé (une occurrence par ligne) : son titre
+// n'est montré qu'à la personne elle-même ; ses collègues et les
+// disponibilités ne voient qu'« occupé » (décision du 16/11/2026).
+model EvenementExterne {
+  id        String   @id @default(uuid())
+  societeId String   @map("societe_id")
+  agendaId  String   @map("agenda_id")
+  idExterne String   @map("id_externe")
+  titre     String
+  lieu      String?
+  debut     DateTime
+  fin       DateTime
+  journee   Boolean  @default(false)
+  majLe     DateTime @default(now()) @updatedAt @map("maj_le")
+
+  societe Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  agenda  AgendaExterne @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+
+  @@unique([agendaId, idExterne])
+  @@index([societeId, debut])
+  @@map("evenements_externes")
+}
+
+// Une réunion du HUB écrite dans l'agenda externe d'une personne : `cle` =
+// le rendez-vous, ou « rendez-vous:début d'origine » pour une occurrence ;
+// `empreinte` = son contenu tel qu'écrit (pour voir ce qui a changé, d'un
+// côté ou de l'autre).
+model LienExportAgenda {
+  societeId    String    @map("societe_id")
+  connexionId  String    @map("connexion_id")
+  cle          String
+  rendezVousId String    @map("rendez_vous_id")
+  occurrence   DateTime?
+  agendaId     String    @map("agenda_id") // idExterne de l'agenda cible
+  idExterne    String    @map("id_externe")
+  empreinte    String
+  majLe        DateTime  @default(now()) @updatedAt @map("maj_le")
+
+  societe   Societe         @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  connexion ConnexionAgenda @relation(fields: [connexionId], references: [id], onDelete: Cascade)
+
+  @@id([connexionId, cle])
+  @@map("liens_export_agenda")
+}
+
+// Une connexion Google en cours (le temps d'autoriser chez Google) : l'état
+// renvoyé par Google (seule son empreinte est gardée) et le vérificateur
+// PKCE ; dix minutes au plus.
+model EtatConnexionAgenda {
+  id            String   @id @default(uuid())
+  societeId     String   @map("societe_id")
+  utilisateurId String   @map("utilisateur_id")
+  etatHash      String   @unique @map("etat_hash")
+  verificateur  String
+  expireLe      DateTime @map("expire_le")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@map("etats_connexion_agenda")
 }
 
 // Abonnement à son agenda depuis Google Agenda, Apple Calendrier ou Outlook
