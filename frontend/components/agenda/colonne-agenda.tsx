@@ -12,7 +12,7 @@ const JOURS_COURTS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 // (Ni le turquoise ni l'ocre : trop proches des rendez-vous et des échéances.)
 export const COULEURS_CALQUES = ['azur', 'mandarine', 'jade', 'fuchsia', 'corail'] as const;
 export const CALQUES_MAX = COULEURS_CALQUES.length;
-const TYPES: ElementAgenda['type'][] = ['rendez_vous', 'echeance', 'conge', 'demande'];
+const TYPES: ElementAgenda['type'][] = ['rendez_vous', 'echeance', 'conge', 'demande', 'externe'];
 
 // Colonne de gauche de l'Agenda (12/11/2026), façon Google Agenda : un
 // mini-calendrier pour sauter à une date, ses agendas à afficher ou masquer,

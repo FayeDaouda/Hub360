@@ -4084,6 +4084,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/agenda/connexions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ConnexionsAgendaController_etat"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/connexions/google": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConnexionsAgendaController_debutGoogle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/connexions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ConnexionsAgendaController_choisir"];
+        post?: never;
+        delete: operations["ConnexionsAgendaController_deconnecter"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/connexions/{id}/synchroniser": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConnexionsAgendaController_synchroniser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agenda/google/retour": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RetourGoogleController_retour"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/localites": {
         parameters: {
             query?: never;
@@ -6407,7 +6487,7 @@ export interface components {
         ElementAgendaDto: {
             id: string;
             /** @enum {string} */
-            type: "conge" | "demande" | "echeance" | "rendez_vous";
+            type: "conge" | "demande" | "echeance" | "externe" | "rendez_vous";
             titre: string;
             jour: string;
             debut: string | null;
@@ -6497,6 +6577,38 @@ export interface components {
             /** @enum {string} */
             portee?: "occurrence" | "suivantes" | "toutes";
             occurrence?: string;
+        };
+        DisponiblesConnexionDto: {
+            google: boolean;
+            apple: boolean;
+        };
+        AgendaExterneDto: {
+            id: string;
+            nom: string;
+            couleur: string | null;
+            importe: boolean;
+            cible: boolean;
+        };
+        ConnexionAgendaDto: {
+            id: string;
+            /** @enum {string} */
+            fournisseur: "apple" | "google";
+            compte: string;
+            derniereSynchroLe: string | null;
+            erreur: string | null;
+            agendas: components["schemas"]["AgendaExterneDto"][];
+        };
+        EtatConnexionsDto: {
+            disponibles: components["schemas"]["DisponiblesConnexionDto"];
+            connexions: components["schemas"]["ConnexionAgendaDto"][];
+        };
+        DebutConnexionDto: {
+            url: string;
+        };
+        ChoisirAgendasDto: {
+            importes: string[];
+            /** Format: uuid */
+            cible: string | null;
         };
         CreerLocaliteDto: {
             code: string;
@@ -13106,6 +13218,139 @@ export interface operations {
                 content: {
                     "application/json": string;
                 };
+            };
+        };
+    };
+    ConnexionsAgendaController_etat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatConnexionsDto"];
+                };
+            };
+        };
+    };
+    ConnexionsAgendaController_debutGoogle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebutConnexionDto"];
+                };
+            };
+        };
+    };
+    ConnexionsAgendaController_choisir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChoisirAgendasDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatConnexionsDto"];
+                };
+            };
+        };
+    };
+    ConnexionsAgendaController_deconnecter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatConnexionsDto"];
+                };
+            };
+        };
+    };
+    ConnexionsAgendaController_synchroniser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatConnexionsDto"];
+                };
+            };
+        };
+    };
+    RetourGoogleController_retour: {
+        parameters: {
+            query?: {
+                state?: string;
+                code?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

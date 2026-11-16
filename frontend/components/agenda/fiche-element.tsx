@@ -25,6 +25,7 @@ export const LIBELLES: Record<ElementAgenda['type'], string> = {
   echeance: 'Échéance',
   conge: 'Absence',
   demande: 'À décider',
+  externe: 'Google / Apple',
 };
 
 // Fiche d'un élément de l'Agenda (12/11/2026), ouverte d'un clic dans la

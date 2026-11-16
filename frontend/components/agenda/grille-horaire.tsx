@@ -38,11 +38,13 @@ const px = (minutes: number) => (minutes / 60) * HEURE_PX;
 // À l'ouverture : la journée de travail en vue (7 h 30), ou l'heure actuelle.
 const DEFILEMENT_MIN = 7 * 60 + 30;
 
-export const TONS: Record<ElementAgenda['type'], 'info' | 'attention' | 'neutre' | 'risque'> = {
+export const TONS: Record<ElementAgenda['type'], 'info' | 'attention' | 'neutre' | 'risque' | 'validation'> = {
   rendez_vous: 'info',
   echeance: 'attention',
   conge: 'neutre',
   demande: 'risque',
+  // Rendez-vous personnels importés de Google ou d'Apple (16/11/2026).
+  externe: 'validation',
 };
 
 // Vues Jour et Semaine en grille horaire (12/11/2026), façon Google Agenda :

@@ -14,7 +14,8 @@ import type { TypeAbsence } from './types';
 
 export type ElementAgenda = {
   id: string;
-  type: 'rendez_vous' | 'echeance' | 'conge' | 'demande';
+  // externe : rendez-vous personnel importé de Google ou d'Apple (16/11/2026).
+  type: 'rendez_vous' | 'echeance' | 'conge' | 'demande' | 'externe';
   titre: string;
   jour: string;
   debut: string | null;
@@ -133,3 +134,30 @@ export const getDisponibilites = (slug: string, debut: string, fin: string, ids:
     slug,
     `/agenda/disponibilites?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}&ids=${ids.slice(0, 50).join(',')}${exclure ? `&exclure=${exclure}` : ''}`,
   );
+
+// Agendas connectés (Google, Apple), 16/11/2026 — API NestJS :
+//   GET    …/agenda/connexions                  état (jamais l'accès chiffré)
+//   POST   …/agenda/connexions/google           adresse où autoriser chez Google
+//   PUT    …/agenda/connexions/:id              { importes, cible } agendas choisis
+//   POST   …/agenda/connexions/:id/synchroniser synchroniser maintenant
+//   DELETE …/agenda/connexions/:id              déconnecter
+export type AgendaExterne = { id: string; nom: string; couleur: string | null; importe: boolean; cible: boolean };
+export type ConnexionAgenda = {
+  id: string;
+  fournisseur: 'google' | 'apple';
+  compte: string;
+  derniereSynchroLe: string | null;
+  erreur: string | null;
+  agendas: AgendaExterne[];
+};
+export type EtatConnexions = { disponibles: { google: boolean; apple: boolean }; connexions: ConnexionAgenda[] };
+
+export const getConnexions = (slug: string) => apiSociete<EtatConnexions>(slug, '/agenda/connexions');
+export const connecterGoogle = (slug: string) =>
+  apiSociete<{ url: string }>(slug, '/agenda/connexions/google', { method: 'POST' });
+export const choisirAgendas = (slug: string, id: string, importes: string[], cible: string | null) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}`, { method: 'PUT', body: { importes, cible } });
+export const synchroniserConnexion = (slug: string, id: string) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}/synchroniser`, { method: 'POST' });
+export const deconnecterAgenda = (slug: string, id: string) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}`, { method: 'DELETE' });

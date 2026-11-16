@@ -699,6 +699,9 @@
 .agenda-puce--risque {
   --ton: var(--pill-risque);
 }
+.agenda-puce--validation {
+  --ton: var(--pill-validation);
+}
 :root[data-theme='dark'] .agenda-puce {
   color: color-mix(in oklch, var(--ton) 45%, var(--text));
 }
@@ -1128,6 +1131,58 @@
   margin: 0;
   padding: 0;
   border: none;
+}
+
+/* Agendas connectés (Google, Apple), 16/11/2026. */
+.agenda-connexions,
+.agenda-connexion {
+  display: grid;
+  gap: var(--e-12);
+}
+.agenda-connexion {
+  padding: var(--e-12);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  overflow-x: auto;
+}
+.agenda-connexion-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-8);
+}
+.agenda-connexion-resultat {
+  margin: 0;
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+}
+.agenda-connexion-resultat.is-ok {
+  background: color-mix(in oklch, var(--pill-succes) 14%, transparent);
+}
+.agenda-connexion-agendas {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-14);
+}
+.agenda-connexion-agendas th {
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  font-weight: 600;
+  text-align: left;
+}
+.agenda-connexion-agendas th + th,
+.agenda-connexion-agendas td + td {
+  text-align: center;
+}
+.agenda-connexion-agendas td,
+.agenda-connexion-agendas th {
+  padding: var(--e-4) var(--e-8);
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.agenda-connexion-actions {
+  flex-wrap: wrap;
 }
 
 /* Fiche d'un élément. */

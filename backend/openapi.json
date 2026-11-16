@@ -10117,6 +10117,227 @@
         ]
       }
     },
+    "/api/societes/{slug}/agenda/connexions": {
+      "get": {
+        "operationId": "ConnexionsAgendaController_etat",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/google": {
+      "post": {
+        "operationId": "ConnexionsAgendaController_debutGoogle",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebutConnexionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}": {
+      "put": {
+        "operationId": "ConnexionsAgendaController_choisir",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChoisirAgendasDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      },
+      "delete": {
+        "operationId": "ConnexionsAgendaController_deconnecter",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}/synchroniser": {
+      "post": {
+        "operationId": "ConnexionsAgendaController_synchroniser",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/agenda/google/retour": {
+      "get": {
+        "operationId": "RetourGoogleController_retour",
+        "parameters": [
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "RetourGoogle"
+        ]
+      }
+    },
     "/api/societes/{slug}/localites": {
       "get": {
         "operationId": "LocalitesController_lister",
@@ -18809,6 +19030,7 @@
               "conge",
               "demande",
               "echeance",
+              "externe",
               "rendez_vous"
             ]
           },
@@ -19221,6 +19443,140 @@
           "debut",
           "fin",
           "inviteIds"
+        ]
+      },
+      "DisponiblesConnexionDto": {
+        "type": "object",
+        "properties": {
+          "google": {
+            "type": "boolean"
+          },
+          "apple": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "google",
+          "apple"
+        ]
+      },
+      "AgendaExterneDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "couleur": {
+            "type": "string",
+            "nullable": true
+          },
+          "importe": {
+            "type": "boolean"
+          },
+          "cible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "couleur",
+          "importe",
+          "cible"
+        ]
+      },
+      "ConnexionAgendaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fournisseur": {
+            "type": "string",
+            "enum": [
+              "apple",
+              "google"
+            ]
+          },
+          "compte": {
+            "type": "string"
+          },
+          "derniereSynchroLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "erreur": {
+            "type": "string",
+            "nullable": true
+          },
+          "agendas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgendaExterneDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fournisseur",
+          "compte",
+          "derniereSynchroLe",
+          "erreur",
+          "agendas"
+        ]
+      },
+      "EtatConnexionsDto": {
+        "type": "object",
+        "properties": {
+          "disponibles": {
+            "$ref": "#/components/schemas/DisponiblesConnexionDto"
+          },
+          "connexions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnexionAgendaDto"
+            }
+          }
+        },
+        "required": [
+          "disponibles",
+          "connexions"
+        ]
+      },
+      "DebutConnexionDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "ChoisirAgendasDto": {
+        "type": "object",
+        "properties": {
+          "importes": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "cible": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "importes",
+          "cible"
         ]
       },
       "CreerLocaliteDto": {

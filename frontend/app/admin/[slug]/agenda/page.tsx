@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarPlus, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus } from 'lucide-react';
+import { CalendarPlus, CalendarSync, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus } from 'lucide-react';
 import {
   addDays,
   addMonths,
@@ -32,6 +32,7 @@ import { LIBELLE_TYPE_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
 import { useTitrePage } from '@/lib/layout-contexte';
 import { DecisionN1Modal } from '@/components/absences/decision-n1-modal';
 import { AbonnementAgendaModal } from '@/components/agenda/abonnement-agenda-modal';
+import { AgendasConnectes } from '@/components/agenda/agendas-connectes';
 import { CALQUES_MAX, ColonneAgenda, COULEURS_CALQUES } from '@/components/agenda/colonne-agenda';
 import { FicheElement, LIBELLES } from '@/components/agenda/fiche-element';
 import { useChoixPortee } from '@/components/agenda/choix-portee';
@@ -65,7 +66,7 @@ const TYPES = Object.fromEntries(
 // Une réunion qu'on a déclinée : visible, mais effacée (sa propre réponse).
 const decline = (e: ElementAgenda) => e.maReponse === 'non' && !e.calque;
 // Vue Année : la pastille d'un jour prend la couleur de son élément le plus pressant.
-const PRIORITE: ElementAgenda['type'][] = ['demande', 'echeance', 'rendez_vous', 'conge'];
+const PRIORITE: ElementAgenda['type'][] = ['demande', 'echeance', 'rendez_vous', 'externe', 'conge'];
 const VUES: { cle: Vue; libelle: string }[] = [
   { cle: 'jour', libelle: 'Jour' },
   { cle: 'semaine', libelle: 'Semaine' },
@@ -128,6 +129,18 @@ export default function AgendaPage(props: Props) {
   const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
   const [fiche, setFiche] = useState<ElementAgenda | null>(null);
   const [abonnement, setAbonnement] = useState(false);
+  // Agendas connectés (Google) : ouverte d'un bouton, ou au retour de Google
+  // avec son résultat (« ?connexion=… », retiré de l'adresse aussitôt).
+  const [connectes, setConnectes] = useState<{ resultat: string | null } | null>(null);
+  useEffect(() => {
+    const resultat = new URLSearchParams(window.location.search).get('connexion');
+    if (!resultat) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConnectes({ resultat });
+    const url = new URL(window.location.href);
+    url.searchParams.delete('connexion');
+    window.history.replaceState(null, '', url.toString());
+  }, []);
   const [aDecider, setADecider] = useState<ADecider | null>(null);
   const confirmer = useConfirmer();
   // Sur une série : cet événement, les suivants ou tous (16/11/2026).
@@ -464,6 +477,11 @@ export default function AgendaPage(props: Props) {
               <CalendarPlus size={16} aria-hidden /> Ajouter à mon agenda
             </button>
           )}
+          {agenda && (
+            <button type="button" className="btn-ghost" onClick={() => setConnectes({ resultat: null })}>
+              <CalendarSync size={16} aria-hidden /> Agendas connectés
+            </button>
+          )}
           {peutCreer && (
             <button
               type="button"
@@ -587,6 +605,15 @@ export default function AgendaPage(props: Props) {
       )}
 
       {portee.fenetre}
+
+      {connectes && (
+        <AgendasConnectes
+          slug={slug}
+          resultat={connectes.resultat}
+          onClose={() => setConnectes(null)}
+          onChange={charger}
+        />
+      )}
 
       {abonnement && <AbonnementAgendaModal slug={slug} onClose={() => setAbonnement(false)} />}
 
