@@ -428,6 +428,7 @@ export class RecrutementService {
           fin: new Date(dto.fin),
           lieu: dto.lieu?.trim() || null,
           description: 'Recrutement',
+          finSerie: new Date(dto.fin), // un rendez-vous unique
           organisateurId: a.userId,
           invites: { create: invites.map((utilisateurId) => ({ utilisateurId })) },
         },

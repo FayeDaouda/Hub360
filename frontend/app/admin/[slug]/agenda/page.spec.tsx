@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ElementAgenda, SemaineAgenda } from '@/lib/agenda';
@@ -38,6 +38,12 @@ const RDV: ElementAgenda = {
   modifiable: true,
   entretien: false,
   jeSuisOrganisateur: true,
+  serieId: null,
+  occurrence: null,
+  regle: null,
+  regleTexte: null,
+  occurrenceModifiee: false,
+  serie: null,
   lienVisio: null,
   rappelMinutes: null,
   maReponse: null,
@@ -159,6 +165,7 @@ describe('Page Agenda', () => {
         inviteIds: ['U2'],
         lienVisio: null,
         rappelMinutes: null,
+        regle: null,
       });
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(api.getAgenda.mock.calls.length).toBeGreaterThan(appels);
@@ -342,6 +349,178 @@ describe('Page Agenda', () => {
       await userEvent.click(within(fiche).getByRole('button', { name: 'Oui' }));
       const ligne = (await within(fiche).findByText('Awa Diop')).closest('li')!;
       await waitFor(() => expect(ligne).toHaveTextContent('Oui'));
+    });
+  });
+
+  // Récurrence (16/11/2026) : sur une occurrence d'une série, la portée.
+  describe('série', () => {
+    const OCC: ElementAgenda = {
+      ...RDV,
+      id: 'S1:2026-11-12T09:00:00.000Z',
+      serieId: 'S1',
+      occurrence: '2026-11-12T09:00:00.000Z',
+      regle: 'FREQ=WEEKLY;BYDAY=TH',
+      regleTexte: 'Chaque semaine le jeudi',
+      // La série commence le jeudi 5 novembre, de 9 h à 10 h.
+      serie: {
+        debut: '2026-11-05T09:00:00.000Z',
+        fin: '2026-11-05T10:00:00.000Z',
+        titre: 'Point chantier',
+        lieu: 'Plateau',
+        description: 'Apporter les plans',
+        lienVisio: null,
+      },
+    };
+    const avecSerie = () =>
+      api.getAgenda.mockImplementation((_s: string, du: string, au: string) =>
+        Promise.resolve(reponse(du, au, { elements: [OCC] })),
+      );
+
+    it('modifier : la portée d’abord, puis le formulaire ; la série reçoit portée et occurrence', async () => {
+      avecSerie();
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      expect(screen.getByText('Chaque semaine le jeudi')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Modifier' }));
+      // La fenêtre de portée, avant le formulaire.
+      const fenetre = await screen.findByRole('dialog', { name: /Modifier un événement récurrent/ });
+      await userEvent.click(within(fenetre).getByLabelText('Cet événement et les suivants'));
+      await userEvent.click(within(fenetre).getByRole('button', { name: 'Continuer' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Enregistrer' }));
+      await waitFor(() =>
+        expect(api.modifierRendezVous).toHaveBeenCalledWith(
+          'gc',
+          'S1',
+          expect.objectContaining({
+            portee: 'suivantes',
+            occurrence: '2026-11-12T09:00:00.000Z',
+            regle: 'FREQ=WEEKLY;BYDAY=TH',
+          }),
+        ),
+      );
+    });
+
+    it('modifier « tous les événements » : le formulaire montre la série, pas l’occurrence déplacée', async () => {
+      api.getAgenda.mockImplementation((_s: string, du: string, au: string) =>
+        Promise.resolve(
+          reponse(du, au, {
+            elements: [
+              {
+                ...OCC,
+                debut: `${J}T14:00:00.000Z`,
+                fin: `${J}T15:00:00.000Z`,
+                lieu: 'Chantier',
+                occurrenceModifiee: true,
+                serie: {
+                  debut: '2026-11-05T09:00:00.000Z',
+                  fin: '2026-11-05T10:00:00.000Z',
+                  titre: 'Point chantier',
+                  lieu: 'Plateau',
+                  description: null,
+                  lienVisio: null,
+                },
+              },
+            ],
+          }),
+        ),
+      );
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Modifier' }));
+      const fenetre = await screen.findByRole('dialog', { name: /Modifier un événement récurrent/ });
+      await userEvent.click(within(fenetre).getByLabelText('Tous les événements'));
+      await userEvent.click(within(fenetre).getByRole('button', { name: 'Continuer' }));
+      expect(await screen.findByLabelText('Date')).toHaveValue('2026-11-05');
+      expect(screen.getByLabelText('Début')).toHaveValue('09:00');
+      expect(screen.getByLabelText('Lieu (facultatif)')).toHaveValue('Plateau');
+    });
+
+    it('annuler : la portée tient lieu de confirmation ; « Cet événement » vise cette date ; « Retour » abandonne', async () => {
+      avecSerie();
+      api.annulerRendezVous.mockResolvedValue({ ok: true });
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Annuler le rendez-vous' }));
+      expect(confirmer).not.toHaveBeenCalled();
+      let fenetre = await screen.findByRole('dialog', { name: /Annuler un événement récurrent/ });
+      await userEvent.click(within(fenetre).getByRole('button', { name: 'Retour' }));
+      expect(api.annulerRendezVous).not.toHaveBeenCalled();
+
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Annuler le rendez-vous' }));
+      fenetre = await screen.findByRole('dialog', { name: /Annuler un événement récurrent/ });
+      await userEvent.click(within(fenetre).getByRole('button', { name: 'Confirmer' }));
+      await waitFor(() =>
+        expect(api.annulerRendezVous).toHaveBeenCalledWith('gc', 'S1', 'occurrence', '2026-11-12T09:00:00.000Z'),
+      );
+    });
+
+    // Glisser d'une heure vers le bas dans la grille (pointeur ; même geste
+    // que dans grille-horaire.spec.tsx).
+    const glisserDUneHeure = (bloc: HTMLElement) => {
+      fireEvent.pointerDown(bloc, { button: 0, pointerType: 'mouse', clientX: 10, clientY: 100 });
+      fireEvent.pointerMove(bloc, { pointerType: 'mouse', buttons: 1, clientX: 10, clientY: 148 });
+      fireEvent.pointerUp(bloc, { pointerType: 'mouse', clientX: 10, clientY: 148 });
+    };
+
+    it('glisser une occurrence : la portée est demandée (sans autre confirmation), puis la série reçoit portée et occurrence', async () => {
+      avecSerie();
+      await monter();
+      glisserDUneHeure(await screen.findByRole('button', { name: /Point chantier/ }));
+      const fenetre = await screen.findByRole('dialog', { name: /Déplacer un événement récurrent/ });
+      expect(confirmer).not.toHaveBeenCalled();
+      expect(api.modifierRendezVous).not.toHaveBeenCalled();
+      await userEvent.click(within(fenetre).getByRole('radio', { name: 'Tous les événements' }));
+      await userEvent.click(within(fenetre).getByRole('button', { name: 'Déplacer' }));
+      await waitFor(() =>
+        expect(api.modifierRendezVous).toHaveBeenCalledWith(
+          'gc',
+          'S1',
+          // Toute la série décalée d'une heure, depuis son premier rendez-vous.
+          expect.objectContaining({
+            debut: '2026-11-05T10:00:00.000Z',
+            fin: '2026-11-05T11:00:00.000Z',
+            portee: 'toutes',
+            occurrence: '2026-11-12T09:00:00.000Z',
+            regle: 'FREQ=WEEKLY;BYDAY=TH',
+            inviteIds: ['U2'],
+          }),
+        ),
+      );
+    });
+
+    it('glisser une occurrence puis « Retour » : rien n’est enregistré', async () => {
+      avecSerie();
+      await monter();
+      glisserDUneHeure(await screen.findByRole('button', { name: /Point chantier/ }));
+      const fenetre = await screen.findByRole('dialog', { name: /Déplacer un événement récurrent/ });
+      await userEvent.click(within(fenetre).getByRole('button', { name: 'Retour' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(api.modifierRendezVous).not.toHaveBeenCalled();
+      expect(confirmer).not.toHaveBeenCalled();
+    });
+
+    it('glisser un rendez-vous unique avec invités : confirmation classique, aucune portée envoyée', async () => {
+      confirmer.mockResolvedValueOnce(true);
+      await monter();
+      glisserDUneHeure(await screen.findByRole('button', { name: /Point chantier/ }));
+      await waitFor(() => expect(api.modifierRendezVous).toHaveBeenCalled());
+      expect(confirmer).toHaveBeenCalledWith(expect.objectContaining({ titre: 'Déplacer la réunion ?' }));
+      expect(screen.queryByRole('dialog', { name: /événement récurrent/ })).not.toBeInTheDocument();
+      const [, id, corps] = api.modifierRendezVous.mock.calls[0];
+      expect(id).toBe('R1');
+      expect(corps).toMatchObject({ debut: `${J}T10:00:00.000Z`, fin: `${J}T11:00:00.000Z` });
+      expect(corps).not.toHaveProperty('portee');
+      expect(corps).not.toHaveProperty('occurrence');
+    });
+
+    it('fiche d’une occurrence modifiée : « cette date modifiée » après la règle', async () => {
+      api.getAgenda.mockImplementation((_s: string, du: string, au: string) =>
+        Promise.resolve(reponse(du, au, { elements: [{ ...OCC, occurrenceModifiee: true }] })),
+      );
+      await monter();
+      await userEvent.click(await screen.findByRole('button', { name: /Point chantier/ }));
+      expect(await screen.findByText('Chaque semaine le jeudi · cette date modifiée')).toBeInTheDocument();
     });
   });
 });

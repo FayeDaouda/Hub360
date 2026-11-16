@@ -42,6 +42,7 @@ describe('RendezVousFormulaire', () => {
       inviteIds: ['U3'],
       lienVisio: null,
       rappelMinutes: null,
+      regle: null,
     });
     expect(onEnregistre).toHaveBeenCalled();
   });
@@ -120,5 +121,43 @@ describe('RendezVousFormulaire', () => {
     );
     await new Promise((r) => setTimeout(r, 400));
     expect(api.getDisponibilites).not.toHaveBeenCalled();
+  });
+
+  // Récurrence (16/11/2026) : la règle suit la date du premier rendez-vous.
+  it('changer la date recale « chaque lundi » sur le nouveau jour', async () => {
+    render(
+      <RendezVousFormulaire
+        slug="gc"
+        initial={{ ...valeursVides('2026-11-16'), titre: 'Point', regle: 'FREQ=WEEKLY;BYDAY=MO' }}
+        personnes={[]}
+        onClose={vi.fn()}
+        onEnregistre={vi.fn()}
+      />,
+    );
+    const date = screen.getByLabelText('Date');
+    await userEvent.clear(date);
+    await userEvent.type(date, '2026-11-17');
+    expect(screen.getByText('Chaque semaine le mardi', { selector: 'p' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(api.creerRendezVous).toHaveBeenCalledWith('gc', expect.objectContaining({ regle: 'FREQ=WEEKLY;BYDAY=TU' }));
+  });
+
+  it('date avancée puis ramenée : « lundi et mercredi » redevient lui-même (aucun jour ajouté)', async () => {
+    render(
+      <RendezVousFormulaire
+        slug="gc"
+        initial={{ ...valeursVides('2026-11-16'), titre: 'Point', regle: 'FREQ=WEEKLY;BYDAY=MO,WE' }}
+        personnes={[]}
+        onClose={vi.fn()}
+        onEnregistre={vi.fn()}
+      />,
+    );
+    const date = screen.getByLabelText('Date');
+    await userEvent.clear(date);
+    await userEvent.type(date, '2026-11-17');
+    expect(screen.getByText('Chaque semaine le mardi et jeudi', { selector: 'p' })).toBeInTheDocument();
+    await userEvent.clear(date);
+    await userEvent.type(date, '2026-11-16');
+    expect(screen.getByText('Chaque semaine le lundi et mercredi', { selector: 'p' })).toBeInTheDocument();
   });
 });

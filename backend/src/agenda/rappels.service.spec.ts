@@ -10,7 +10,8 @@ const MAINTENANT = new Date('2026-11-13T08:45:00.000Z');
 const monter = (candidats: { id: string; societeId: string; debut: Date; rappelMinutes: number }[]) => {
   const prisma = {
     rendezVous: {
-      findMany: jest.fn().mockResolvedValue(candidats),
+      // 1re lecture : rendez-vous uniques ; 2e : séries (aucune ici).
+      findMany: jest.fn().mockResolvedValueOnce(candidats).mockResolvedValue([]),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findUnique: jest.fn().mockResolvedValue({
         titre: 'Point chantier',
@@ -24,6 +25,8 @@ const monter = (candidats: { id: string; societeId: string; debut: Date; rappelM
         ],
       }),
     },
+    // Traces des rappels de séries (purgées à chaque tournée).
+    rappelOccurrence: { createMany: jest.fn().mockResolvedValue({ count: 1 }), deleteMany: jest.fn() },
     // Membres actifs de la société : tous ceux demandés, par défaut.
     utilisateurSocieteRole: {
       findMany: jest.fn(({ where }: { where: { utilisateurId: { in: string[] } } }) =>
@@ -74,6 +77,7 @@ describe('RappelsAgendaService', () => {
       expect.objectContaining({
         where: {
           annuleLe: null,
+          regle: null, // les séries ont leur propre lecture
           rappelEnvoyeLe: null,
           rappelMinutes: { not: null },
           debut: { gt: MAINTENANT, lte: new Date(+MAINTENANT + 1440 * 60_000) },
@@ -278,7 +282,92 @@ describe('RappelsAgendaService', () => {
       expect(await s.tourner(MAINTENANT)).toBe(0);
       liberer();
       await premiere;
-      expect(prisma.rendezVous.findMany).toHaveBeenCalledTimes(1);
+      // Une tournée : une lecture des rendez-vous uniques, une des séries.
+      expect(prisma.rendezVous.findMany).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // Séries (16/11/2026) : un rappel par occurrence.
+  describe('séries', () => {
+    const SERIE = {
+      id: 'S1',
+      societeId: 'S1',
+      titre: 'Point hebdo',
+      debut: new Date('2026-11-06T09:00:00.000Z'),
+      fin: new Date('2026-11-06T10:00:00.000Z'),
+      lieu: null,
+      description: null,
+      lienVisio: null,
+      regle: 'FREQ=WEEKLY;BYDAY=FR',
+      rappelMinutes: 30,
+      exceptions: [] as unknown[],
+    };
+    const monterSerie = (serie = SERIE) => {
+      const x = monter([]);
+      x.prisma.rendezVous.findMany.mockReset().mockResolvedValueOnce([]).mockResolvedValue([serie]);
+      x.prisma.rendezVous.findUnique.mockResolvedValue({
+        organisateurId: 'U1',
+        invites: [{ utilisateurId: 'U2', reponse: null }],
+      });
+      const rappelOccurrence = { createMany: jest.fn().mockResolvedValue({ count: 1 }), deleteMany: jest.fn() };
+      Object.assign(x.prisma, { rappelOccurrence });
+      return { ...x, rappelOccurrence };
+    };
+
+    it('l’occurrence du jour, à l’heure du rappel : prise une fois, notifiée', async () => {
+      const { s, rappelOccurrence, notifications } = monterSerie();
+      expect(await s.tourner(MAINTENANT)).toBe(1);
+      expect(rappelOccurrence.createMany).toHaveBeenCalledWith({
+        data: [{ rendezVousId: 'S1', occurrence: new Date('2026-11-13T09:00:00.000Z') }],
+        skipDuplicates: true,
+      });
+      expect(notifications.envoyer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'rdv_rappel',
+          destinataireIds: ['U1', 'U2'],
+          titre: expect.stringContaining('Point hebdo'),
+        }),
+      );
+    });
+
+    it('déjà prise : rien ; échec d’envoi : rendue ; occurrence annulée : pas de rappel', async () => {
+      const deja = monterSerie();
+      deja.rappelOccurrence.createMany.mockResolvedValue({ count: 0 });
+      expect(await deja.s.tourner(MAINTENANT)).toBe(0);
+      expect(deja.notifications.envoyer).not.toHaveBeenCalled();
+
+      const echec = monterSerie();
+      echec.notifications.envoyer.mockResolvedValue(0);
+      expect(await echec.s.tourner(MAINTENANT)).toBe(0);
+      expect(echec.rappelOccurrence.deleteMany).toHaveBeenCalledWith({
+        where: { rendezVousId: 'S1', occurrence: new Date('2026-11-13T09:00:00.000Z') },
+      });
+
+      const annulee = monterSerie({
+        ...SERIE,
+        exceptions: [
+          {
+            occurrence: new Date('2026-11-13T09:00:00.000Z'),
+            annulee: true,
+            titre: null,
+            debut: null,
+            fin: null,
+            lieu: null,
+            description: null,
+            lienVisio: null,
+          },
+        ],
+      });
+      expect(await annulee.s.tourner(MAINTENANT)).toBe(0);
+      expect(annulee.rappelOccurrence.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  it('purge : sur la date d’envoi, jamais sur la date d’origine d’une occurrence déplacée', async () => {
+    const { s, prisma } = monter([]);
+    await s.tourner(MAINTENANT);
+    expect(prisma.rappelOccurrence.deleteMany).toHaveBeenCalledWith({
+      where: { envoyeLe: { lt: new Date(+MAINTENANT - 2 * 86_400_000) } },
     });
   });
 });

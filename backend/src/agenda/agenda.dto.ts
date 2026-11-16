@@ -35,13 +35,24 @@ export class CreerRendezVousDto {
   lienVisio?: string | null;
   // Rappel avant le début, en minutes ; null : aucun.
   @IsOptional() @ValidateIf((_, v) => v !== null) @IsIn(RAPPELS_MINUTES) rappelMinutes?: number | null;
+  // Répétition (16/11/2026) : règle RRULE du sous-ensemble de @hub/domain
+  // (relue et refusée si elle en sort) ; null : un rendez-vous unique.
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsString() @MaxLength(200) regle?: string | null;
 }
+
+// Portée d'une modification ou d'une annulation sur une série (comme Google
+// Agenda) : cette occurrence, celle-ci et les suivantes, ou toute la série.
+export const PORTEES = ['occurrence', 'suivantes', 'toutes'] as const;
+export type Portee = (typeof PORTEES)[number];
 
 // Modifier un rendez-vous (12/11/2026) : la fiche entière, comme à la
 // création, invités compris — obligatoires : une liste absente ne doit
 // jamais retirer tout le monde. Les invités retirés reçoivent l'annulation.
 export class ModifierRendezVousDto extends OmitType(CreerRendezVousDto, ['inviteIds'] as const) {
   @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) inviteIds!: string[];
+  // Sur une série : la portée, et le début d'origine de l'occurrence visée.
+  @IsOptional() @IsIn(PORTEES) portee?: Portee;
+  @IsOptional() @IsDateString() occurrence?: string;
 }
 
 // Réponse d'un invité à une réunion (12/11/2026).
@@ -54,6 +65,15 @@ export class RepondreInvitationDto {
 export class DisponibilitesDto {
   occupes: string[]; // un rendez-vous en même temps
   absents: string[]; // une absence validée ce jour-là
+}
+
+export class SerieAgendaDto {
+  debut: string;
+  fin: string;
+  titre: string;
+  lieu: string | null;
+  description: string | null;
+  lienVisio: string | null;
 }
 
 export class ParticipantDto {
@@ -83,6 +103,17 @@ export class ElementAgendaDto {
   jeSuisOrganisateur: boolean;
   description: string | null; // la note du rendez-vous, telle que saisie
   inviteIds: string[]; // comptes invités (le formulaire de modification)
+  // Récurrence (16/11/2026) : pour une occurrence d'une série, la série
+  // (cible des actions) et le début d'origine de l'occurrence ; la règle et
+  // sa description ; l'occurrence modifiée seule.
+  serieId: string | null;
+  occurrence: string | null;
+  regle: string | null;
+  regleTexte: string | null;
+  occurrenceModifiee: boolean;
+  // Pour « tous les événements » : les valeurs de la série elle-même (son
+  // premier rendez-vous), pas celles de cette occurrence.
+  serie: SerieAgendaDto | null;
   // B3 (12/11/2026) : visio, rappel, réponse de la personne dont c'est
   // l'agenda (si elle est invitée), réponses de chaque invité.
   lienVisio: string | null;

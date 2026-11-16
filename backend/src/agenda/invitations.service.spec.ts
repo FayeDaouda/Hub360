@@ -9,6 +9,8 @@ const RDV = {
   lieu: 'Plateau',
   description: null,
   organisateurId: 'U1',
+  regle: null,
+  exceptions: [],
   sequence: 0,
   invites: [{ utilisateurId: 'U2' }, { utilisateurId: 'U3' }],
   societe: { nom: 'Grey Concrete', slug: 'grey-concrete' },
@@ -157,5 +159,66 @@ describe('InvitationsAgendaService', () => {
       expect(ics).toContain(`DESCRIPTION:Visio : ${VISIO}`);
       expect(ics).not.toContain('Khady Fall');
     });
+  });
+
+  // Récurrence (16/11/2026).
+  it('série : la règle, les dates annulées, puis chaque occurrence modifiée (même UID)', async () => {
+    const { s, email } = monter({
+      ...RDV,
+      regle: 'FREQ=WEEKLY;BYDAY=FR',
+      exceptions: [
+        {
+          occurrence: new Date('2026-11-20T09:00:00.000Z'),
+          annulee: true,
+          titre: null,
+          debut: null,
+          fin: null,
+          lieu: null,
+          description: null,
+          lienVisio: null,
+        },
+        {
+          occurrence: new Date('2026-11-27T09:00:00.000Z'),
+          annulee: false,
+          titre: null,
+          debut: new Date('2026-11-27T14:00:00.000Z'),
+          fin: new Date('2026-11-27T15:00:00.000Z'),
+          lieu: 'Chantier',
+          description: null,
+          lienVisio: null,
+        },
+      ],
+    });
+    await s.envoyer('R1', 'REQUEST');
+    const ics: string = email.envoyerInvitationAgenda.mock.calls[0][0].ics.replace(/\r\n /g, '');
+    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=FR');
+    expect(ics).toContain('EXDATE:20261120T090000Z');
+    expect(ics).toContain('RECURRENCE-ID:20261127T090000Z');
+    expect(ics).toContain('DTSTART:20261127T140000Z');
+    expect(ics).toContain('LOCATION:Chantier');
+    expect(ics.match(/UID:rdv-R1@hub360.space/g)).toHaveLength(2);
+  });
+
+  it('série annulée (CANCEL) : la série seule, sans ses occurrences modifiées', async () => {
+    const { s, email } = monter({
+      ...RDV,
+      regle: 'FREQ=WEEKLY;BYDAY=FR',
+      exceptions: [
+        {
+          occurrence: new Date('2026-11-27T09:00:00.000Z'),
+          annulee: false,
+          titre: 'X',
+          debut: null,
+          fin: null,
+          lieu: null,
+          description: null,
+          lienVisio: null,
+        },
+      ],
+    });
+    await s.envoyer('R1', 'CANCEL');
+    const ics: string = email.envoyerInvitationAgenda.mock.calls[0][0].ics;
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+    expect(ics).not.toContain('RECURRENCE-ID');
   });
 });

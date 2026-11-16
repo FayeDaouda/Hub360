@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CalendarClock } from 'lucide-react';
-import { dakarInstant } from '@hub/domain';
+import { alignRecurrence, dakarInstant, daysBetween, formatRRule, parseRRule, shiftRecurrence } from '@hub/domain';
+import { ChampRepetition } from './champ-repetition';
+import type { Portee } from './choix-portee';
 import { ApiError } from '@/lib/client-api';
 import { creerRendezVous, getDisponibilites, modifierRendezVous, RAPPELS } from '@/lib/agenda';
 import { CloseButton, Modal } from '@/components/ui/dialog';
@@ -18,6 +20,7 @@ export type ValeursRendezVous = {
   inviteIds: string[];
   lienVisio: string;
   rappelMinutes: number | null;
+  regle: string | null; // RRULE (@hub/domain) ; null : ne se répète pas
 };
 
 export const valeursVides = (jour: string, debut = '09:00', fin = '10:00'): ValeursRendezVous => ({
@@ -30,6 +33,7 @@ export const valeursVides = (jour: string, debut = '09:00', fin = '10:00'): Vale
   inviteIds: [],
   lienVisio: '',
   rappelMinutes: null,
+  regle: null,
 });
 
 // Disponibilités relues 300 ms après le dernier changement du créneau.
@@ -40,13 +44,19 @@ const ATTENTE_DISPO_MS = 300;
 // peut être invité ; sans le droit « Réunions », seuls les invités déjà là
 // restent proposés (on peut les retirer, pas en ajouter). B3 (12/11/2026) :
 // lien visio, rappel, et — pour qui peut inviter — qui est occupé ou absent
-// sur le créneau, à côté de chaque nom.
+// sur le créneau, à côté de chaque nom. Récurrence (16/11/2026) : la
+// répétition ; pour une occurrence d'une série (`occurrence`), la portée
+// (elle, les suivantes ou toute la série) est choisie avant d'ouvrir le
+// formulaire, rempli en conséquence. Changer la date recale la règle
+// (« chaque mardi » déplacé un jeudi devient « chaque jeudi »).
 export function RendezVousFormulaire({
   slug,
   rendezVousId,
   initial,
   personnes,
   avecDisponibilites = false,
+  occurrence,
+  portee,
   onClose,
   onEnregistre,
 }: {
@@ -55,15 +65,38 @@ export function RendezVousFormulaire({
   initial: ValeursRendezVous;
   personnes: { id: string; nom: string }[];
   avecDisponibilites?: boolean;
+  occurrence?: string; // début d'origine de l'occurrence modifiée
+  portee?: Portee; // choisie avant d'ouvrir le formulaire
   onClose: () => void;
   onEnregistre: () => void;
 }) {
   const [v, setV] = useState(initial);
+  // Dernière date valide saisie : le décalage de la règle se mesure depuis
+  // elle, même si le champ a été vidé entre-temps.
+  const dernierJour = useRef(initial.jour);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const modification = !!rendezVousId;
-  const champ = <K extends keyof ValeursRendezVous>(k: K, valeur: ValeursRendezVous[K]) =>
-    setV((x) => ({ ...x, [k]: valeur }));
+  // Nouvelle date : la règle suit le jour (le premier rendez-vous en est
+  // toujours la première occurrence). Ses jours se décalent d'autant depuis
+  // la dernière date valide (un aller-retour n'en ajoute aucun), puis elle
+  // est recalée si besoin. Calculé ici, hors de la mise à jour de l'état.
+  function regleSuivante(jour: string): string | null {
+    if (!v.regle || !/^\d{4}-\d{2}-\d{2}$/.test(jour)) return v.regle;
+    try {
+      const ecart = /^\d{4}-\d{2}-\d{2}$/.test(dernierJour.current) ? daysBetween(dernierJour.current, jour) : 0;
+      dernierJour.current = jour;
+      return formatRRule(
+        alignRecurrence(shiftRecurrence(parseRRule(v.regle), ecart), dakarInstant(jour, v.debut || '09:00')),
+      );
+    } catch {
+      return v.regle; // Règle illisible : laissée telle quelle (le serveur la refusera).
+    }
+  }
+  const champ = <K extends keyof ValeursRendezVous>(k: K, valeur: ValeursRendezVous[K]) => {
+    const regle = k === 'jour' ? regleSuivante(valeur as string) : undefined;
+    setV((x) => ({ ...x, [k]: valeur, ...(regle !== undefined && { regle }) }));
+  };
 
   const [dispo, setDispo] = useState<{ occupes: string[]; absents: string[] } | null>(null);
   const creneauValide = /^\d{4}-\d{2}-\d{2}$/.test(v.jour) && v.debut < v.fin;
@@ -111,6 +144,9 @@ export function RendezVousFormulaire({
       inviteIds: v.inviteIds,
       lienVisio: v.lienVisio.trim() || null,
       rappelMinutes: v.rappelMinutes,
+      // La règle ne se change pas pour une seule occurrence.
+      ...(portee !== 'occurrence' && { regle: v.regle }),
+      ...(portee && occurrence && { portee, occurrence }),
     };
     try {
       if (rendezVousId) await modifierRendezVous(slug, rendezVousId, corps);
@@ -185,6 +221,14 @@ export function RendezVousFormulaire({
             onChange={(e) => champ('lieu', e.target.value)}
           />
         </Field>
+        {/* Une seule occurrence : sa règle ne se change pas. */}
+        {portee !== 'occurrence' && (
+          <ChampRepetition
+            regle={v.regle}
+            premier={/^\d{4}-\d{2}-\d{2}$/.test(v.jour) ? dakarInstant(v.jour, v.debut || '09:00') : null}
+            onChange={(r) => champ('regle', r)}
+          />
+        )}
         <div className="agenda-formulaire-deux">
           <Field label="Lien visio (facultatif)">
             <input

@@ -295,6 +295,8 @@ describe('AgendaService', () => {
           description: null,
           lienVisio: null,
           rappelMinutes: null,
+          regle: null,
+          finSerie: new Date(rdv.fin),
           sequence: { increment: 1 },
         },
       });
@@ -779,7 +781,7 @@ describe('AgendaService', () => {
       await expect(s.repondre(moi({ agenda: 'L' }), 'R1', 'oui')).rejects.toThrow(NotFoundException);
       expect(prisma.rendezVous.findFirst).toHaveBeenCalledWith({
         where: { id: 'R1', societeId: 'S1', annuleLe: null },
-        include: { invites: { where: { utilisateurId: 'U1' } } },
+        include: { invites: { where: { utilisateurId: 'U1' } }, exceptions: true },
       });
       expect(prisma.inviteRendezVous.update).not.toHaveBeenCalled();
     });

@@ -24,6 +24,11 @@ export type EvenementIcal = {
   sequence?: number;
   // Alerte de l'agenda, ces minutes avant le début (12/11/2026).
   rappelMinutes?: number | null;
+  // Série (16/11/2026) : sa règle, ses dates annulées ; ou, pour une
+  // occurrence modifiée seule, le début d'origine qu'elle remplace.
+  regle?: string | null;
+  exdates?: Date[];
+  recurrenceId?: Date | null;
   organisateur?: PersonneIcal | null;
   invites?: PersonneIcal[];
 };
@@ -106,6 +111,9 @@ function evenement(e: EvenementIcal, methode: MethodeIcal, maintenant: Date): st
     ...dates(e),
     `SUMMARY:${echapperTexte(e.titre)}`,
   ];
+  if (e.regle) lignes.push(`RRULE:${e.regle.replace(/[\r\n]/g, '')}`);
+  if (e.exdates?.length) lignes.push(`EXDATE:${e.exdates.map(horodatage).join(',')}`);
+  if (e.recurrenceId) lignes.push(`RECURRENCE-ID:${horodatage(e.recurrenceId)}`);
   if (e.lieu) lignes.push(`LOCATION:${echapperTexte(e.lieu)}`);
   if (e.description) lignes.push(`DESCRIPTION:${echapperTexte(e.description)}`);
   if (e.url) lignes.push(`URL:${e.url}`);

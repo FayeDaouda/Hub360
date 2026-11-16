@@ -6391,6 +6391,14 @@ export interface components {
             consentement: boolean;
             siteWeb?: string;
         };
+        SerieAgendaDto: {
+            debut: string;
+            fin: string;
+            titre: string;
+            lieu: string | null;
+            description: string | null;
+            lienVisio: string | null;
+        };
         ParticipantDto: {
             nom: string;
             /** @enum {string|null} */
@@ -6414,6 +6422,12 @@ export interface components {
             jeSuisOrganisateur: boolean;
             description: string | null;
             inviteIds: string[];
+            serieId: string | null;
+            occurrence: string | null;
+            regle: string | null;
+            regleTexte: string | null;
+            occurrenceModifiee: boolean;
+            serie: components["schemas"]["SerieAgendaDto"] | null;
             lienVisio: string | null;
             rappelMinutes: number | null;
             /** @enum {string|null} */
@@ -6458,6 +6472,7 @@ export interface components {
             lienVisio?: string | null;
             /** @enum {number|null} */
             rappelMinutes?: 10 | 30 | 60 | 1440 | null;
+            regle?: string | null;
         };
         DisponibilitesDto: {
             occupes: string[];
@@ -6477,7 +6492,11 @@ export interface components {
             lienVisio?: string | null;
             /** @enum {number|null} */
             rappelMinutes?: 10 | 30 | 60 | 1440 | null;
+            regle?: string | null;
             inviteIds: string[];
+            /** @enum {string} */
+            portee?: "occurrence" | "suivantes" | "toutes";
+            occurrence?: string;
         };
         CreerLocaliteDto: {
             code: string;
@@ -13024,7 +13043,10 @@ export interface operations {
     };
     AgendaController_annuler: {
         parameters: {
-            query?: never;
+            query?: {
+                portee?: string;
+                occurrence?: string;
+            };
             header?: never;
             path: {
                 slug: string;

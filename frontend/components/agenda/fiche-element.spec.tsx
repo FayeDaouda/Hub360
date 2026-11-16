@@ -22,6 +22,12 @@ const RDV: ElementAgenda = {
   modifiable: true,
   entretien: false,
   jeSuisOrganisateur: true,
+  serieId: null,
+  occurrence: null,
+  regle: null,
+  regleTexte: null,
+  occurrenceModifiee: false,
+  serie: null,
   lienVisio: null,
   rappelMinutes: null,
   maReponse: null,
@@ -151,5 +157,41 @@ describe('FicheElement', () => {
   it('visio : son site s’affiche à côté du bouton', () => {
     monter({ ...RDV, lienVisio: 'https://meet.google.com/abc-defg-hij' });
     expect(screen.getByText('meet.google.com')).toBeInTheDocument();
+  });
+
+  // Récurrence (16/11/2026) : la règle en clair, la date modifiée signalée.
+  describe('série', () => {
+    const OCC: ElementAgenda = {
+      ...RDV,
+      id: 'S1:2026-11-12T09:00:00.000Z',
+      serieId: 'S1',
+      occurrence: '2026-11-12T09:00:00.000Z',
+      regle: 'FREQ=WEEKLY;BYDAY=TH',
+      regleTexte: 'Chaque semaine le jeudi',
+    };
+
+    it('une occurrence ordinaire : la règle seule, sans mention de modification', () => {
+      monter(OCC);
+      expect(screen.getByText('Chaque semaine le jeudi')).toBeInTheDocument();
+      expect(screen.queryByText(/cette date modifiée/)).not.toBeInTheDocument();
+    });
+
+    it('une occurrence modifiée : « cette date modifiée » après la règle', () => {
+      monter({ ...OCC, occurrenceModifiee: true });
+      expect(screen.getByText('Chaque semaine le jeudi · cette date modifiée')).toBeInTheDocument();
+    });
+
+    it('un rendez-vous unique n’affiche aucune répétition', () => {
+      monter(RDV);
+      expect(screen.queryByText(/Chaque|Tous les|Toutes les/)).not.toBeInTheDocument();
+    });
+
+    it('annuler une occurrence : pas de confirmation ici, la page demandera la portée', async () => {
+      const p = monter(OCC);
+      confirmer.mockClear();
+      await userEvent.click(screen.getByRole('button', { name: 'Annuler le rendez-vous' }));
+      expect(confirmer).not.toHaveBeenCalled();
+      expect(p.onAnnuler).toHaveBeenCalledWith(OCC);
+    });
   });
 });

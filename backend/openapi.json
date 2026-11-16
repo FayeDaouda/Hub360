@@ -10059,6 +10059,22 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "portee",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "occurrence",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -18726,6 +18742,40 @@
           "consentement"
         ]
       },
+      "SerieAgendaDto": {
+        "type": "object",
+        "properties": {
+          "debut": {
+            "type": "string"
+          },
+          "fin": {
+            "type": "string"
+          },
+          "titre": {
+            "type": "string"
+          },
+          "lieu": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "lienVisio": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "debut",
+          "fin",
+          "titre",
+          "lieu",
+          "description",
+          "lienVisio"
+        ]
+      },
       "ParticipantDto": {
         "type": "object",
         "properties": {
@@ -18816,6 +18866,34 @@
               "type": "string"
             }
           },
+          "serieId": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurrence": {
+            "type": "string",
+            "nullable": true
+          },
+          "regle": {
+            "type": "string",
+            "nullable": true
+          },
+          "regleTexte": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurrenceModifiee": {
+            "type": "boolean"
+          },
+          "serie": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SerieAgendaDto"
+              }
+            ]
+          },
           "lienVisio": {
             "type": "string",
             "nullable": true
@@ -18886,6 +18964,12 @@
           "jeSuisOrganisateur",
           "description",
           "inviteIds",
+          "serieId",
+          "occurrence",
+          "regle",
+          "regleTexte",
+          "occurrenceModifiee",
+          "serie",
           "lienVisio",
           "rappelMinutes",
           "maReponse",
@@ -19019,6 +19103,11 @@
               60,
               1440
             ]
+          },
+          "regle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
           }
         },
         "required": [
@@ -19102,6 +19191,11 @@
               1440
             ]
           },
+          "regle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
           "inviteIds": {
             "maxItems": 50,
             "type": "array",
@@ -19109,6 +19203,17 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "portee": {
+            "type": "string",
+            "enum": [
+              "occurrence",
+              "suivantes",
+              "toutes"
+            ]
+          },
+          "occurrence": {
+            "type": "string"
           }
         },
         "required": [
