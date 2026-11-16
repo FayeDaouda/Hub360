@@ -45,6 +45,7 @@ const monter = () => {
     tacheProjet: { findMany: jest.fn().mockResolvedValue([]) },
     candidature: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) },
     demandeAbsence: { findMany: jest.fn().mockResolvedValue([]) },
+    evenementExterne: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((f: (tx: typeof prisma) => unknown) => f(prisma));

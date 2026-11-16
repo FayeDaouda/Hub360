@@ -52,8 +52,19 @@ export class InvitationsAgendaService {
       where: { id: { in: [r.organisateurId, ...pour] } },
       select: { id: true, email: true, prenom: true, nom: true, actif: true },
     });
+    // Qui a connecté son agenda (Google, Apple) reçoit la réunion directement
+    // dans son agenda, sans e-mail (décision du 16/11/2026).
+    const connectes = new Set(
+      (
+        await this.prisma.connexionAgenda.findMany({
+          where: { societeId: r.societeId, utilisateurId: { in: pour }, agendas: { some: { cible: true } } },
+          select: { utilisateurId: true },
+        })
+      ).map((c) => c.utilisateurId),
+    );
     const organisateur = comptes.find((c) => c.id === r.organisateurId);
     const invites = comptes.filter((c) => c.id !== r.organisateurId && c.actif);
+    const parEmail = invites.filter((c) => !connectes.has(c.id));
     if (!organisateur || !invites.length) return 0;
 
     // Un entretien sort sans le nom du candidat (décision du 12/11/2026).
@@ -118,8 +129,9 @@ export class InvitationsAgendaService {
               }))),
       ],
     });
+    if (!parEmail.length) return 0;
     const envois = await Promise.all(
-      invites.map((i) =>
+      parEmail.map((i) =>
         this.email.envoyerInvitationAgenda({
           email: i.email,
           prenom: i.prenom,

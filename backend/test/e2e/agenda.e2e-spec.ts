@@ -264,4 +264,20 @@ describe('Agenda', () => {
     await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
     await api(app, dirgc).delete(`/agenda/${nouvelle}`).expect(200);
   });
+
+  // Agendas connectés (16/11/2026) : sans clé ni application Google, la
+  // connexion n'est pas proposée ; un retour de Google inconnu renvoie à
+  // l'accueil sans rien créer.
+  it('connexions : état sans secret, connexion refusée sans configuration, retour inconnu', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    const etat = (await api(app, cfo).get('/agenda/connexions').expect(200)).body as {
+      disponibles: { google: boolean };
+      connexions: unknown[];
+    };
+    expect(etat).toEqual({ disponibles: { google: false, apple: false }, connexions: [] });
+    await api(app, cfo).post('/agenda/connexions/google').expect(400);
+    const retour = await request(app.getHttpServer()).get('/api/agenda/google/retour?state=inconnu&code=x').expect(302);
+    expect(retour.headers.location).toMatch(/\?connexion=echec$/);
+    await request(app.getHttpServer()).get('/api/societes/grey-concrete/agenda/connexions').expect(401);
+  });
 });

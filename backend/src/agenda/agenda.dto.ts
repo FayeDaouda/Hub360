@@ -84,7 +84,8 @@ export class ParticipantDto {
 // Un élément de l'agenda : rendez-vous, échéance d'une tâche ou congé validé.
 export class ElementAgendaDto {
   id: string;
-  type: 'rendez_vous' | 'echeance' | 'conge' | 'demande';
+  // externe : rendez-vous personnel importé de Google ou d'Apple (16/11/2026).
+  type: 'rendez_vous' | 'echeance' | 'conge' | 'demande' | 'externe';
   titre: string;
   jour: string; // AAAA-MM-JJ
   debut: string | null; // ISO (rendez-vous seulement)

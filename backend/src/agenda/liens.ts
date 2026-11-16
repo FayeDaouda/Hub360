@@ -14,12 +14,12 @@ export const uidEvenement = (genre: 'rdv' | 'echeance' | 'absence', id: string) 
 
 export const nomDe = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`.trim();
 
-const urlFront = () => process.env.FRONT_URL || 'http://localhost:3000';
-const urlApi = () =>
+export const urlFront = () => process.env.FRONT_URL || 'http://localhost:3000';
+export const urlApiPublique = () =>
   process.env.API_PUBLIC_URL || (process.env.FRONT_URL ? `${process.env.FRONT_URL}/api` : 'http://localhost:3001/api');
 
 export const lienAgendaHub = (slug: string) => `${urlFront()}/admin/${slug}/agenda`;
-export const urlFlux = (clair: string) => `${urlApi()}/agenda-abonnement/${clair}.ics`;
+export const urlFlux = (clair: string) => `${urlApiPublique()}/agenda-abonnement/${clair}.ics`;
 
 // Un entretien vu hors du HUB (Google, Outlook, e-mails) : jamais le nom du
 // candidat (décision du 12/11/2026), qui reste dans le HUB.

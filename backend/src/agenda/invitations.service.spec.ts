@@ -25,6 +25,7 @@ const monter = (rdv: unknown = RDV) => {
   const prisma = {
     rendezVous: { findUnique: jest.fn().mockResolvedValue(rdv) },
     candidature: { count: jest.fn().mockResolvedValue(0) },
+    connexionAgenda: { findMany: jest.fn().mockResolvedValue([]) },
     utilisateur: { findMany: jest.fn().mockResolvedValue(COMPTES) },
   };
   const email = { envoyerInvitationAgenda: jest.fn().mockResolvedValue({ envoye: true }) };
@@ -220,5 +221,14 @@ describe('InvitationsAgendaService', () => {
     const ics: string = email.envoyerInvitationAgenda.mock.calls[0][0].ics;
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
     expect(ics).not.toContain('RECURRENCE-ID');
+  });
+
+  it('qui a connecté son agenda (Google, Apple) ne reçoit pas l’e-mail : la réunion arrive dans son agenda', async () => {
+    const { s, email, prisma } = monter();
+    (prisma as unknown as { connexionAgenda: { findMany: jest.Mock } }).connexionAgenda.findMany.mockResolvedValue([
+      { utilisateurId: 'U2' },
+    ]);
+    expect(await s.envoyer('R1', 'REQUEST')).toBe(0);
+    expect(email.envoyerInvitationAgenda).not.toHaveBeenCalled();
   });
 });
