@@ -42,7 +42,9 @@ class VariablesEnvironnement {
   // chiffrement des accès (32 octets en base64) ; absente, la synchronisation
   // est désactivée. Identifiants de l'application Google (console Cloud).
   @IsOptional()
-  @Matches(/^[A-Za-z0-9+/]{43}=$/, { message: 'AGENDA_CLE_CHIFFREMENT : 32 octets en base64 (openssl rand -base64 32).' })
+  @Matches(/^[A-Za-z0-9+/]{43}=$/, {
+    message: 'AGENDA_CLE_CHIFFREMENT : 32 octets en base64 (openssl rand -base64 32).',
+  })
   AGENDA_CLE_CHIFFREMENT?: string;
   @IsOptional() @IsString() GOOGLE_CLIENT_ID?: string;
   @IsOptional() @IsString() GOOGLE_CLIENT_SECRET?: string;
