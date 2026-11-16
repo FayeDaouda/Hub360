@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { calendrierIcal } from './ical';
+import { surcharge } from './series';
 import { lienAgendaHub, nomDe, TITRE_ENTRETIEN, uidEvenement } from './liens';
 
 // Invitations par e-mail aux réunions de l'Agenda (12/11/2026) : chaque invité
@@ -42,7 +43,7 @@ export class InvitationsAgendaService {
   ): Promise<number> {
     const r = await this.prisma.rendezVous.findUnique({
       where: { id: rendezVousId },
-      include: { invites: true, societe: { select: { nom: true, slug: true } } },
+      include: { invites: true, exceptions: true, societe: { select: { nom: true, slug: true } } },
     });
     if (!r) return 0;
     const pour = destinataires ?? r.invites.map((i) => i.utilisateurId);
@@ -59,30 +60,62 @@ export class InvitationsAgendaService {
     const entretien = (await this.prisma.candidature.count({ where: { rendezVousId: r.id } })) > 0;
     const titre = entretien ? TITRE_ENTRETIEN : r.titre;
     const lien = lienAgendaHub(r.societe.slug);
+    // Un événement : la réunion (ou la série, avec sa règle et ses dates
+    // annulées), puis chaque occurrence modifiée seule (même UID).
+    const base = {
+      uid: uidEvenement('rdv', r.id),
+      url: lien,
+      sequence: r.sequence,
+      rappelMinutes: r.rappelMinutes,
+      organisateur: { nom: nomDe(organisateur), email: organisateur.email },
+      invites: invites.map((i) => ({ nom: nomDe(i), email: i.email })),
+    };
+    const contenu = (c: {
+      titre: string;
+      lieu: string | null;
+      description: string | null;
+      lienVisio: string | null;
+    }) => ({
+      titre: entretien ? titre : c.titre,
+      // Sans lieu, la visio en tient lieu (Google et Outlook en font un lien).
+      lieu: c.lieu ?? c.lienVisio,
+      description: [
+        c.lienVisio ? `Visio : ${c.lienVisio}` : null,
+        entretien ? null : c.description,
+        `Dans le HUB : ${lien}`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    });
+    const exceptions = r.regle ? r.exceptions : [];
     const ics = calendrierIcal({
       nom: `HUB · ${r.societe.nom}`,
       methode,
       evenements: [
         {
-          uid: uidEvenement('rdv', r.id),
-          titre,
+          ...base,
+          ...contenu(r),
           debut: r.debut,
           fin: r.fin,
-          // Sans lieu, la visio en tient lieu (Google et Outlook en font un lien).
-          lieu: r.lieu ?? r.lienVisio,
-          description: [
-            r.lienVisio ? `Visio : ${r.lienVisio}` : null,
-            entretien ? null : r.description,
-            `Dans le HUB : ${lien}`,
-          ]
-            .filter(Boolean)
-            .join('\n'),
-          rappelMinutes: r.rappelMinutes,
-          url: lien,
-          sequence: r.sequence,
-          organisateur: { nom: nomDe(organisateur), email: organisateur.email },
-          invites: invites.map((i) => ({ nom: nomDe(i), email: i.email })),
+          regle: r.regle,
+          exdates: exceptions.filter((e) => e.annulee).map((e) => e.occurrence),
         },
+        ...(methode === 'CANCEL'
+          ? []
+          : exceptions
+              .filter((e) => !e.annulee)
+              .map((e) => ({
+                ...base,
+                ...contenu({
+                  titre: e.titre || r.titre,
+                  lieu: surcharge(e.lieu, r.lieu),
+                  description: surcharge(e.description, r.description),
+                  lienVisio: surcharge(e.lienVisio, r.lienVisio),
+                }),
+                debut: e.debut ?? e.occurrence,
+                fin: e.fin ?? new Date(+e.occurrence + (+r.fin - +r.debut)),
+                recurrenceId: e.occurrence,
+              }))),
       ],
     });
     const envois = await Promise.all(

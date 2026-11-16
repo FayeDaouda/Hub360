@@ -26,6 +26,8 @@ import {
   EtatAbonnementAgendaDto,
   LienAbonnementAgendaDto,
   ModifierRendezVousDto,
+  PORTEES,
+  type Portee,
   RepondreInvitationDto,
   SemaineAgendaDto,
 } from './agenda.dto';
@@ -135,7 +137,15 @@ export class AgendaController {
 
   @Delete(':id')
   @RequiertPermission(ETAPE.agenda, 'suppression')
-  annuler(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
-    return this.agenda.annuler(req.user, id);
+  annuler(
+    @Req() req: R,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('portee') portee?: string,
+    @Query('occurrence') occurrence?: string,
+  ) {
+    // Sur une série : cette occurrence, celle-ci et les suivantes, ou toutes.
+    if (portee && !(PORTEES as readonly string[]).includes(portee)) throw new BadRequestException('Portée invalide.');
+    if (occurrence && Number.isNaN(Date.parse(occurrence))) throw new BadRequestException('Occurrence invalide.');
+    return this.agenda.annuler(req.user, id, (portee as Portee) || undefined, occurrence || undefined);
   }
 }

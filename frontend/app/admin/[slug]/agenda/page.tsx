@@ -5,10 +5,14 @@ import { CalendarPlus, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus } from
 import {
   addDays,
   addMonths,
+  daysBetween,
   formatDayLongMonth,
   formatMonthYear,
+  formatRRule,
   formatTime,
   formatWeekdayDayMonth,
+  parseRRule,
+  shiftRecurrence,
   todayIso,
 } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
@@ -16,7 +20,9 @@ import {
   annulerRendezVous,
   getAgenda,
   getPersonnesAgenda,
+  cibleDe,
   modifierRendezVous,
+  type PorteeSerie,
   repondreInvitation,
   type ElementAgenda,
   type ReponseInvitation,
@@ -28,6 +34,7 @@ import { DecisionN1Modal } from '@/components/absences/decision-n1-modal';
 import { AbonnementAgendaModal } from '@/components/agenda/abonnement-agenda-modal';
 import { CALQUES_MAX, ColonneAgenda, COULEURS_CALQUES } from '@/components/agenda/colonne-agenda';
 import { FicheElement, LIBELLES } from '@/components/agenda/fiche-element';
+import { useChoixPortee } from '@/components/agenda/choix-portee';
 import { useConfirmer } from '@/components/confirmation';
 import { GrilleHoraire, styleCalque, titreAffiche, TONS } from '@/components/agenda/grille-horaire';
 import { RendezVousFormulaire, valeursVides, type ValeursRendezVous } from '@/components/agenda/rendez-vous-formulaire';
@@ -39,7 +46,12 @@ import { Pill } from '@/components/ui/pill';
 type Props = { params: Promise<{ slug: string }> };
 type Vue = 'jour' | 'semaine' | 'mois' | 'annee' | 'planning';
 // Formulaire ouvert : création (pré-remplie d'un créneau) ou modification.
-type Formulaire = { rendezVousId?: string; initial: ValeursRendezVous };
+type Formulaire = {
+  rendezVousId?: string;
+  occurrence?: string;
+  portee?: PorteeSerie;
+  initial: ValeursRendezVous;
+};
 type ADecider = NonNullable<ElementAgenda['demande']> & { nom: string };
 
 // Lundi de la semaine d'un jour AAAA-MM-JJ.
@@ -118,6 +130,8 @@ export default function AgendaPage(props: Props) {
   const [abonnement, setAbonnement] = useState(false);
   const [aDecider, setADecider] = useState<ADecider | null>(null);
   const confirmer = useConfirmer();
+  // Sur une série : cet événement, les suivants ou tous (16/11/2026).
+  const portee = useChoixPortee();
   const { du, au } = periode(vue, ancre);
 
   // Seule la dernière demande compte : une réponse lente (la semaine, avant
@@ -204,8 +218,11 @@ export default function AgendaPage(props: Props) {
 
   async function annuler(e: ElementAgenda) {
     setFiche(null);
+    // Une occurrence d'une série : laquelle annuler ?
+    const choix = e.serieId ? await portee.demander('Annuler un événement récurrent', 'Confirmer') : undefined;
+    if (choix === null) return;
     try {
-      await annulerRendezVous(slug, e.id);
+      await annulerRendezVous(slug, cibleDe(e), choix, e.occurrence ?? undefined);
       charger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : 'Annulation impossible.');
@@ -240,20 +257,29 @@ export default function AgendaPage(props: Props) {
     );
   const creer = (jour: string, debut?: string, fin?: string) =>
     setFormulaire({ initial: valeursVides(jour, debut, fin) });
-  function modifier(e: ElementAgenda) {
+  // Une occurrence d'une série : la portée d'abord (comme Google Agenda),
+  // puis le formulaire rempli avec ce qu'elle vise — cette date, ou toute la
+  // série (ses propres valeurs, jamais celles de l'occurrence).
+  async function modifier(e: ElementAgenda) {
     setFiche(null);
+    const choix = e.serieId ? await portee.demander('Modifier un événement récurrent', 'Continuer') : undefined;
+    if (choix === null) return;
+    const source = choix === 'toutes' && e.serie ? e.serie : { ...e, debut: e.debut!, fin: e.fin! };
     setFormulaire({
-      rendezVousId: e.id,
+      rendezVousId: cibleDe(e),
+      occurrence: e.occurrence ?? undefined,
+      portee: choix,
       initial: {
-        titre: e.titre,
-        jour: e.jour,
-        debut: formatTime(e.debut!),
-        fin: formatTime(e.fin!),
-        lieu: e.lieu ?? '',
-        description: e.description ?? '',
+        titre: source.titre,
+        jour: source.debut.slice(0, 10),
+        debut: formatTime(source.debut),
+        fin: formatTime(source.fin),
+        lieu: source.lieu ?? '',
+        description: source.description ?? '',
         inviteIds: e.inviteIds,
-        lienVisio: e.lienVisio ?? '',
+        lienVisio: source.lienVisio ?? '',
         rappelMinutes: e.rappelMinutes,
+        regle: e.regle,
       },
     });
   }
@@ -261,7 +287,12 @@ export default function AgendaPage(props: Props) {
   // enregistré (invités prévenus comme pour une modification) ; en cas
   // d'échec, l'agenda est relu tel qu'il est.
   async function deplacerRendezVous(e: ElementAgenda, debut: string, fin: string) {
+    // Une occurrence d'une série : cet événement, les suivants ou tous (la
+    // question tient lieu de confirmation) ; sinon, confirmer si invités.
+    const choix = e.serieId ? await portee.demander('Déplacer un événement récurrent', 'Déplacer') : undefined;
+    if (choix === null) return;
     if (
+      !choix &&
       e.invites.length &&
       !(await confirmer({
         titre: 'Déplacer la réunion ?',
@@ -278,16 +309,46 @@ export default function AgendaPage(props: Props) {
           elements: a.elements.map((x) => (x.id === e.id ? { ...x, jour: debut.slice(0, 10), debut, fin } : x)),
         },
     );
+    // Toute la série : elle se décale du même écart que cette occurrence,
+    // avec ses propres valeurs.
+    // Ses jours de la semaine se décalent d'autant (« lundi et mercredi »
+    // glissés d'un jour : « mardi et jeudi ») ; sa durée ne change que si
+    // le bloc a été étiré.
+    const ecart = Date.parse(debut) - Date.parse(e.debut!);
+    const etire = Date.parse(fin) - Date.parse(debut) !== Date.parse(e.fin!) - Date.parse(e.debut!);
+    let regle = e.regle;
+    const serie = e.serie;
+    if (choix === 'toutes' && !serie) {
+      setErreur('Série introuvable : rouvrez l’agenda puis réessayez.');
+      charger();
+      return;
+    }
+    if (choix === 'toutes' && regle) {
+      regle = formatRRule(shiftRecurrence(parseRRule(regle), daysBetween(e.debut!.slice(0, 10), debut.slice(0, 10))));
+    }
+    const source =
+      choix === 'toutes' && serie
+        ? {
+            ...serie,
+            debut: new Date(Date.parse(serie.debut) + ecart).toISOString(),
+            fin: new Date(
+              Date.parse(serie.debut) +
+                ecart +
+                (etire ? Date.parse(fin) - Date.parse(debut) : Date.parse(serie.fin) - Date.parse(serie.debut)),
+            ).toISOString(),
+          }
+        : { titre: e.titre, debut, fin, lieu: e.lieu, description: e.description, lienVisio: e.lienVisio };
     try {
-      await modifierRendezVous(slug, e.id, {
-        titre: e.titre,
-        debut,
-        fin,
-        lieu: e.lieu ?? undefined,
-        description: e.description ?? undefined,
+      await modifierRendezVous(slug, cibleDe(e), {
+        titre: source.titre,
+        debut: source.debut,
+        fin: source.fin,
+        lieu: source.lieu ?? undefined,
+        description: source.description ?? undefined,
         inviteIds: e.inviteIds,
-        lienVisio: e.lienVisio,
+        lienVisio: source.lienVisio,
         rappelMinutes: e.rappelMinutes,
+        ...(choix && e.occurrence && { portee: choix, occurrence: e.occurrence, regle }),
       });
       setErreur(null);
     } catch (err) {
@@ -298,7 +359,7 @@ export default function AgendaPage(props: Props) {
   // Répondre à une invitation depuis sa fiche (12/11/2026) : la fiche suit.
   async function repondre(e: ElementAgenda, reponse: ReponseInvitation) {
     try {
-      await repondreInvitation(slug, e.id, reponse);
+      await repondreInvitation(slug, cibleDe(e), reponse);
       // Sa réponse et sa ligne dans la liste des participants.
       const moi = agenda?.personne.nom;
       setFiche((f) =>
@@ -501,6 +562,8 @@ export default function AgendaPage(props: Props) {
         <RendezVousFormulaire
           slug={slug}
           rendezVousId={formulaire.rendezVousId}
+          occurrence={formulaire.occurrence}
+          portee={formulaire.portee}
           initial={formulaire.initial}
           personnes={invitables(formulaire)}
           avecDisponibilites={!!agenda.peutInviter}
@@ -522,6 +585,8 @@ export default function AgendaPage(props: Props) {
           onRepondre={repondre}
         />
       )}
+
+      {portee.fenetre}
 
       {abonnement && <AbonnementAgendaModal slug={slug} onClose={() => setAbonnement(false)} />}
 
@@ -563,6 +628,8 @@ function Element({ e, onAnnuler, onDecider, onModifier }: { e: ElementAgenda } &
   // Comme depuis la fiche : on confirme avant d'annuler.
   const confirmer = useConfirmer();
   async function annulerApresConfirmation(x: ElementAgenda) {
+    // Une série : la page demande la portée (elle tient lieu de confirmation).
+    if (x.serieId) return onAnnuler(x);
     const ok = await confirmer({
       titre: 'Annuler ce rendez-vous ?',
       message: x.invites.length

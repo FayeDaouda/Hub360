@@ -7,3 +7,4 @@ export * from './text';
 export * from './notifications';
 export * from './offres';
 export * from './agenda';
+export * from './recurrence';

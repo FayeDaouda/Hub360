@@ -29,6 +29,22 @@ export type ElementAgenda = {
   modifiable: boolean;
   entretien: boolean;
   jeSuisOrganisateur: boolean; // la personne dont c'est l'agenda l'organise
+  // Récurrence (16/11/2026) : pour une occurrence d'une série, la série (cible
+  // des actions), son début d'origine, la règle et sa description.
+  serieId: string | null;
+  occurrence: string | null;
+  regle: string | null;
+  regleTexte: string | null;
+  occurrenceModifiee: boolean;
+  // « Tous les événements » : les valeurs de la série (son premier rendez-vous).
+  serie: {
+    debut: string;
+    fin: string;
+    titre: string;
+    lieu: string | null;
+    description: string | null;
+    lienVisio: string | null;
+  } | null;
   // B3 (12/11/2026) : visio, rappel, sa réponse (invité), celles des invités.
   lienVisio: string | null;
   rappelMinutes: number | null;
@@ -66,7 +82,11 @@ export type NouveauRendezVous = {
   inviteIds?: string[];
   lienVisio?: string | null;
   rappelMinutes?: number | null;
+  regle?: string | null; // RRULE (@hub/domain) ; null : unique
 };
+export type PorteeSerie = 'occurrence' | 'suivantes' | 'toutes';
+// La série d'une occurrence, sinon le rendez-vous lui-même : la cible des actions.
+export const cibleDe = (e: Pick<ElementAgenda, 'id' | 'serieId'>) => e.serieId ?? e.id;
 
 export const getAgenda = (slug: string, du: string, au: string, personne?: string) =>
   apiSociete<SemaineAgenda>(slug, `/agenda?du=${du}&au=${au}${personne ? `&personne=${personne}` : ''}`);
@@ -75,10 +95,18 @@ export const getPersonnesAgenda = (slug: string) =>
 export const creerRendezVous = (slug: string, r: NouveauRendezVous) =>
   apiSociete<{ id: string }>(slug, '/agenda', { method: 'POST', body: r });
 // Modifier : la fiche entière, invités compris (une liste absente les retirerait).
-export const modifierRendezVous = (slug: string, id: string, r: NouveauRendezVous & { inviteIds: string[] }) =>
-  apiSociete<{ ok: true }>(slug, `/agenda/${id}`, { method: 'PATCH', body: r });
-export const annulerRendezVous = (slug: string, id: string) =>
-  apiSociete<{ ok: true }>(slug, `/agenda/${id}`, { method: 'DELETE' });
+export const modifierRendezVous = (
+  slug: string,
+  id: string,
+  r: NouveauRendezVous & { inviteIds: string[]; portee?: PorteeSerie; occurrence?: string },
+) => apiSociete<{ ok: true }>(slug, `/agenda/${id}`, { method: 'PATCH', body: r });
+// Sur une série : la portée et le début d'origine de l'occurrence visée.
+export const annulerRendezVous = (slug: string, id: string, portee?: PorteeSerie, occurrence?: string) =>
+  apiSociete<{ ok: true }>(
+    slug,
+    `/agenda/${id}${portee && occurrence ? `?portee=${portee}&occurrence=${encodeURIComponent(occurrence)}` : ''}`,
+    { method: 'DELETE' },
+  );
 
 // Abonnement depuis Google Agenda, Apple Calendrier ou Outlook (12/11/2026) :
 // le lien clair n'est rendu qu'à la création (seule son empreinte est gardée).

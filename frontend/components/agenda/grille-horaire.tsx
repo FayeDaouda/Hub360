@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
+import { Repeat } from 'lucide-react';
 import {
   addDays,
   formatTime,
@@ -279,9 +280,12 @@ export function GrilleHoraire({
                 }}
                 onClick={() => ouvrir(p.e)}
                 onPointerDown={(ev) => commencer(p.e, ev)}
-                aria-label={`${p.e.calque ? `${p.e.calque.nom} : ` : ''}${p.e.titre}${p.e.maReponse === 'non' && !p.e.calque ? ' (déclinée)' : ''}, ${formatWeekdayDayMonth(j)}, ${formatTime(p.e.debut!)} – ${formatTime(p.e.fin!)}`}
+                aria-label={`${p.e.calque ? `${p.e.calque.nom} : ` : ''}${p.e.titre}${p.e.maReponse === 'non' && !p.e.calque ? ' (déclinée)' : ''}${p.e.serieId ? ' (répétée)' : ''}, ${formatWeekdayDayMonth(j)}, ${formatTime(p.e.debut!)} – ${formatTime(p.e.fin!)}`}
               >
-                <strong>{p.e.titre}</strong>
+                <strong>
+                  {p.e.serieId && <Repeat size={11} aria-hidden className="agenda-bloc-repete" />}
+                  {p.e.titre}
+                </strong>
                 <span>
                   {formatTime(p.e.debut!)} – {formatTime(p.e.fin!)}
                   {p.e.lieu ? ` · ${p.e.lieu}` : ''}

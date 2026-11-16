@@ -1063,6 +1063,73 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* Récurrence (16/11/2026) : répétition, règle sur mesure, choix de portée. */
+.agenda-bloc-repete {
+  display: inline;
+  margin-right: 3px;
+  vertical-align: -1px;
+}
+.agenda-repetition,
+.agenda-sur-mesure {
+  display: grid;
+  gap: var(--e-8);
+}
+.agenda-sur-mesure {
+  padding: var(--e-12);
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+}
+.agenda-sur-mesure-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+}
+.agenda-nombre {
+  width: 5.5em;
+}
+.agenda-sur-mesure-jours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-4);
+}
+.agenda-jour-choix {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-13);
+  cursor: pointer;
+}
+.agenda-jour-choix.is-actif {
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--action-texte);
+}
+.agenda-sur-mesure-fin {
+  display: grid;
+  gap: var(--e-8);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.agenda-sur-mesure-fin .agenda-invite {
+  flex-wrap: wrap;
+}
+.agenda-portee-corps,
+.agenda-portee-choix {
+  display: grid;
+  gap: var(--e-12);
+}
+.agenda-portee-choix {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
 /* Fiche d'un élément. */
 .agenda-fiche {
   display: grid;

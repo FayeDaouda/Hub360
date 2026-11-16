@@ -3034,12 +3034,22 @@ model RendezVous {
   // l'organisateur et les invités qui n'ont pas décliné ; envoyé une fois.
   rappelMinutes  Int?      @map("rappel_minutes")
   rappelEnvoyeLe DateTime? @map("rappel_envoye_le")
+  // Récurrence (16/11/2026) : règle RRULE (sous-ensemble de @hub/domain,
+  // recurrence.ts) ; null : un rendez-vous unique. `debut`/`fin` sont alors
+  // ceux de la première occurrence.
+  regle          String?
+  // Fin de la dernière occurrence (null : série sans fin) : seuls les
+  // rendez-vous qui touchent encore une période sont relus.
+  finSerie       DateTime? @map("fin_serie")
   createdAt      DateTime  @default(now()) @map("created_at")
 
-  societe Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  invites InviteRendezVous[]
+  societe            Societe               @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  invites            InviteRendezVous[]
+  exceptions         ExceptionRendezVous[]
+  rappelsOccurrences RappelOccurrence[]
 
   @@index([societeId, debut])
+  @@index([societeId, finSerie])
   @@map("rendez_vous")
 }
 
@@ -3061,6 +3071,41 @@ model InviteRendezVous {
   @@id([rendezVousId, utilisateurId])
   @@index([utilisateurId])
   @@map("invites_rendez_vous")
+}
+
+// Une occurrence d'une série modifiée ou annulée seule (16/11/2026) :
+// `occurrence` = son début d'origine (ce que dit la règle) ; les champs
+// renseignés remplacent ceux de la série pour cette seule date.
+model ExceptionRendezVous {
+  id           String    @id @default(uuid())
+  rendezVousId String    @map("rendez_vous_id")
+  occurrence   DateTime
+  annulee      Boolean   @default(false)
+  titre        String?
+  debut        DateTime?
+  fin          DateTime?
+  lieu         String?
+  description  String?
+  lienVisio    String?   @map("lien_visio")
+  creeLe       DateTime  @default(now()) @map("cree_le")
+
+  rendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+
+  @@unique([rendezVousId, occurrence])
+  @@map("exceptions_rendez_vous")
+}
+
+// Rappel envoyé pour une occurrence d'une série (une ligne = une prise :
+// la clé unique empêche deux tournées d'envoyer le même rappel).
+model RappelOccurrence {
+  rendezVousId String   @map("rendez_vous_id")
+  occurrence   DateTime
+  envoyeLe     DateTime @default(now()) @map("envoye_le")
+
+  rendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+
+  @@id([rendezVousId, occurrence])
+  @@map("rappels_occurrences")
 }
 
 // Abonnement à son agenda depuis Google Agenda, Apple Calendrier ou Outlook

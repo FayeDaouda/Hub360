@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, CalendarClock, MapPin, Users, Video } from 'lucide-react';
+import { Bell, CalendarClock, MapPin, Repeat, Users, Video } from 'lucide-react';
 import { formatTime, formatWeekdayDayMonth } from '@hub/domain';
 import { LIBELLES_REPONSE, RAPPELS, type ElementAgenda, type ReponseInvitation } from '@/lib/agenda';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
@@ -61,6 +61,8 @@ export function FicheElement({
   const rappel = RAPPELS.find((r) => r.minutes === e.rappelMinutes);
 
   async function annuler() {
+    // Une série : la page demande la portée (elle tient lieu de confirmation).
+    if (e.serieId) return onAnnuler(e);
     const ok = await confirmer({
       titre: 'Annuler ce rendez-vous ?',
       message: avec
@@ -112,6 +114,15 @@ export function FicheElement({
               Rejoindre la visio
             </a>
             <span className="agenda-detail">{visio.site}</span>
+          </p>
+        )}
+        {e.regleTexte && (
+          <p className="agenda-fiche-ligne">
+            <Repeat size={16} aria-hidden />
+            <span>
+              {e.regleTexte}
+              {e.occurrenceModifiee ? ' · cette date modifiée' : ''}
+            </span>
           </p>
         )}
         {rappel && (

@@ -187,4 +187,81 @@ describe('Agenda', () => {
 
     await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
   });
+
+  // Récurrence (16/11/2026) : une série hebdomadaire, une date annulée seule,
+  // puis « celle-ci et les suivantes » modifiées.
+  it('série : occurrences, une date annulée, les suivantes modifiées', async () => {
+    const dirgc = await connecter(app, COMPTES.dirgc);
+    const cfo = await connecter(app, COMPTES.cfo);
+    const jour = addDays(todayIso(), 7);
+    const cfoId = ((await api(app, cfo).get(`/agenda?du=${jour}`).expect(200)).body as Semaine).personne.id;
+    const { id } = (
+      await api(app, dirgc)
+        .post('/agenda', {
+          titre: 'Point hebdo',
+          debut: `${jour}T07:00:00.000Z`,
+          fin: `${jour}T07:30:00.000Z`,
+          inviteIds: [cfoId],
+          regle: 'FREQ=WEEKLY;COUNT=4',
+        })
+        .expect(201)
+    ).body as { id: string };
+
+    type Occ = {
+      id: string;
+      serieId: string | null;
+      occurrence: string | null;
+      titre: string;
+      regleTexte: string | null;
+    };
+    const semaineDe = async (jeton: string, j: string) =>
+      (
+        (
+          await api(app, jeton)
+            .get(`/agenda?du=${j}&au=${addDays(j, 6)}`)
+            .expect(200)
+        ).body as { elements: Occ[] }
+      ).elements.filter((e) => e.serieId === id);
+    const j2 = addDays(jour, 7);
+    const j3 = addDays(jour, 14);
+    expect(await semaineDe(cfo, j2)).toEqual([
+      expect.objectContaining({ occurrence: `${j2}T07:00:00.000Z`, regleTexte: expect.stringContaining('4 fois') }),
+    ]);
+
+    // Annuler la 2e date seule.
+    await api(app, dirgc).delete(`/agenda/${id}?portee=occurrence&occurrence=${j2}T07:00:00.000Z`).expect(200);
+    expect(await semaineDe(cfo, j2)).toEqual([]);
+    expect(await semaineDe(cfo, j3)).toHaveLength(1);
+
+    // Celle-ci et les suivantes (à partir de la 3e) : nouvelle série à 08:00.
+    const { id: nouvelle } = (
+      await api(app, dirgc)
+        .patch(`/agenda/${id}`, {
+          titre: 'Point hebdo (8 h)',
+          debut: `${j3}T08:00:00.000Z`,
+          fin: `${j3}T08:30:00.000Z`,
+          inviteIds: [cfoId],
+          regle: 'FREQ=WEEKLY;COUNT=4',
+          portee: 'suivantes',
+          occurrence: `${j3}T07:00:00.000Z`,
+        })
+        .expect(200)
+    ).body as { id: string };
+    expect(await semaineDe(cfo, j3)).toEqual([]);
+    const apres = (
+      (
+        await api(app, cfo)
+          .get(`/agenda?du=${j3}&au=${addDays(j3, 6)}`)
+          .expect(200)
+      ).body as { elements: Occ[] }
+    ).elements.filter((e) => e.serieId === nouvelle);
+    expect(apres).toEqual([expect.objectContaining({ titre: 'Point hebdo (8 h)', occurrence: `${j3}T08:00:00.000Z` })]);
+
+    // Une date que la règle ne donne pas : refusée.
+    await api(app, dirgc)
+      .delete(`/agenda/${nouvelle}?portee=occurrence&occurrence=${addDays(j3, 1)}T08:00:00.000Z`)
+      .expect(400);
+    await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
+    await api(app, dirgc).delete(`/agenda/${nouvelle}`).expect(200);
+  });
 });
