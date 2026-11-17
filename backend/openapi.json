@@ -10177,6 +10177,46 @@
         ]
       }
     },
+    "/api/societes/{slug}/agenda/connexions/google/confirmer": {
+      "post": {
+        "operationId": "ConnexionsAgendaController_confirmerGoogle",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmerConnexionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
     "/api/societes/{slug}/agenda/connexions/{id}": {
       "put": {
         "operationId": "ConnexionsAgendaController_choisir",
@@ -19478,6 +19518,9 @@
           },
           "cible": {
             "type": "boolean"
+          },
+          "proprietaire": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -19485,7 +19528,8 @@
           "nom",
           "couleur",
           "importe",
-          "cible"
+          "cible",
+          "proprietaire"
         ]
       },
       "ConnexionAgendaDto": {
@@ -19557,11 +19601,25 @@
           "url"
         ]
       },
+      "ConfirmerConnexionDto": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "ticket"
+        ]
+      },
       "ChoisirAgendasDto": {
         "type": "object",
         "properties": {
           "importes": {
-            "maxItems": 50,
+            "maxItems": 10,
             "type": "array",
             "items": {
               "type": "string",

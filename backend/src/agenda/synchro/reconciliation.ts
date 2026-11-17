@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import type { ElementAgendaDto } from '../agenda.dto';
+import { TITRE_ENTRETIEN } from '../liens';
 import type { EcritureGoogle, EvenementGoogle } from './google.client';
 
 // Réconciliation entre le HUB et l'agenda externe d'une personne
@@ -9,6 +10,9 @@ import type { EcritureGoogle, EvenementGoogle } from './google.client';
 // La clé d'une réunion du HUB chez Google : l'identifiant de l'élément de
 // l'Agenda (« rendez-vous », ou « série:début d'origine » pour une occurrence).
 export const CLE_HUB = 'hubCle';
+// Une date d'une série qu'un invité a effacée de son agenda : on ne la
+// réécrit plus (la réponse vaut pour toute la série, on ne la décline pas).
+export const MASQUE = 'masque';
 
 // Ce qui compte pour voir qu'un événement a changé, d'un côté ou de l'autre :
 // titre, lieu, début, fin (pas la description, que le HUB complète d'un lien).
@@ -44,6 +48,8 @@ export function voulus(elements: ElementAgendaDto[], lienHub: string): Map<strin
   for (const e of elements) {
     if (e.type !== 'rendez_vous' || !e.debut || !e.fin || e.maReponse === 'non') continue;
     const lieu = e.lieu ?? e.lienVisio;
+    // Un entretien sort sans le nom du candidat (décision du 12/11/2026).
+    const titre = e.entretien ? TITRE_ENTRETIEN : e.titre;
     const description = [
       e.lienVisio ? `Visio : ${e.lienVisio}` : null,
       e.entretien ? null : e.detail,
@@ -55,14 +61,14 @@ export function voulus(elements: ElementAgendaDto[], lienHub: string): Map<strin
       cle: e.id,
       element: e,
       ecriture: {
-        summary: e.titre,
+        summary: titre,
         location: lieu,
         description,
         start: { dateTime: e.debut },
         end: { dateTime: e.fin },
         extendedProperties: { private: { [CLE_HUB]: e.id } },
       },
-      empreinte: empreinte({ titre: e.titre, lieu, debut: e.debut, fin: e.fin }),
+      empreinte: empreinte({ titre, lieu, debut: e.debut, fin: e.fin }),
     });
   }
   return m;
@@ -72,6 +78,9 @@ export type Lien = { cle: string; idExterne: string; empreinte: string };
 
 export type Action =
   | { type: 'creer'; voulu: Voulu }
+  | { type: 'adopter'; voulu: Voulu; google: EvenementGoogle } // déjà chez Google sans lien (tournée interrompue)
+  | { type: 'recreer'; lien: Lien; voulu: Voulu } // supprimée chez Google sans droit de l'annuler : elle revient
+  | { type: 'masquer'; lien: Lien } // une date d'une série effacée par un invité
   | { type: 'mettre_a_jour'; lien: Lien; voulu: Voulu } // le HUB a changé : Google suit
   | { type: 'reprendre'; lien: Lien; voulu: Voulu; google: EvenementGoogle } // l'organisateur a changé dans Google : le HUB suit
   | { type: 'retablir'; lien: Lien; voulu: Voulu } // un invité a changé dans Google : on remet la version du HUB
@@ -101,28 +110,46 @@ export function decider(
       // a seulement quitté la période suivie), on la laisse et on l'oublie.
       const debutGoogle = g?.start?.dateTime ?? g?.start?.date;
       const gAVenir = !!debutGoogle && Date.parse(debutGoogle) > +maintenant;
-      actions.push(
-        g && g.status !== 'cancelled' && gAVenir ? { type: 'supprimer_google', lien } : { type: 'oublier', lien },
-      );
+      const present = g && g.status !== 'cancelled' && lien.empreinte !== MASQUE;
+      actions.push(present && gAVenir ? { type: 'supprimer_google', lien } : { type: 'oublier', lien });
       continue;
     }
+    if (lien.empreinte === MASQUE) continue; // effacée par l'invité : on la laisse
     const aVenir = Date.parse(v.element.debut!) > +maintenant;
     if (!g || g.status === 'cancelled') {
       if (!aVenir) actions.push({ type: 'oublier', lien });
-      else actions.push({ type: v.element.jeSuisOrganisateur ? 'annuler_hub' : 'decliner_hub', lien, voulu: v });
+      else if (v.element.jeSuisOrganisateur) {
+        // L'organisateur l'a supprimée : annulée s'il en a le droit, sinon
+        // (entretien, droit de suppression absent) elle revient chez Google.
+        actions.push(
+          v.element.annulable ? { type: 'annuler_hub', lien, voulu: v } : { type: 'recreer', lien, voulu: v },
+        );
+      } else if (v.element.serieId) actions.push({ type: 'masquer', lien });
+      else actions.push({ type: 'decliner_hub', lien, voulu: v });
       continue;
     }
     const cote = empreinteGoogle(g);
+    const cotHub = v.empreinte !== lien.empreinte;
     if (cote && cote !== lien.empreinte) {
-      // Changé dans Google : par l'organisateur (et qu'il peut modifier) → le
-      // HUB suit ; sinon la version du HUB revient.
-      if (aVenir && v.element.jeSuisOrganisateur && v.element.modifiable) {
+      // Changé dans Google : par l'organisateur (qui peut la modifier, sur une
+      // réunion à venir, en horaire, et sans changement du HUB entre-temps)
+      // → le HUB suit ; sinon la version du HUB revient.
+      const journee = !g.start?.dateTime;
+      if (aVenir && !journee && !cotHub && v.element.jeSuisOrganisateur && v.element.modifiable) {
         actions.push({ type: 'reprendre', lien, voulu: v, google: g });
       } else actions.push({ type: 'retablir', lien, voulu: v });
       continue;
     }
-    if (v.empreinte !== lien.empreinte) actions.push({ type: 'mettre_a_jour', lien, voulu: v });
+    if (cotHub) actions.push({ type: 'mettre_a_jour', lien, voulu: v });
   }
-  for (const [cle, v] of voulusHub) if (!vus.has(cle)) actions.push({ type: 'creer', voulu: v });
+  for (const [cle, v] of voulusHub) {
+    if (vus.has(cle)) continue;
+    const orphelin = actuels.get(cle);
+    actions.push(
+      orphelin && orphelin.status !== 'cancelled'
+        ? { type: 'adopter', voulu: v, google: orphelin }
+        : { type: 'creer', voulu: v },
+    );
+  }
   return actions;
 }

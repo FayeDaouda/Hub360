@@ -53,14 +53,25 @@ export class InvitationsAgendaService {
       select: { id: true, email: true, prenom: true, nom: true, actif: true },
     });
     // Qui a connecté son agenda (Google, Apple) reçoit la réunion directement
-    // dans son agenda, sans e-mail (décision du 16/11/2026).
+    // dans son agenda, sans e-mail (décision du 16/11/2026) — tant que la
+    // synchronisation marche : déjà passée, sans erreur, et autorisée après
+    // la dernière coupure des sessions (« déconnecter partout » : la tournée
+    // suivante la supprimera). Sinon, l'e-mail part.
     const connectes = new Set(
       (
         await this.prisma.connexionAgenda.findMany({
-          where: { societeId: r.societeId, utilisateurId: { in: pour }, agendas: { some: { cible: true } } },
-          select: { utilisateurId: true },
+          where: {
+            societeId: r.societeId,
+            utilisateurId: { in: pour },
+            erreur: null,
+            derniereSynchroLe: { not: null },
+            agendas: { some: { cible: true } },
+          },
+          select: { utilisateurId: true, autoriseLe: true, utilisateur: { select: { sessionsValidesDepuis: true } } },
         })
-      ).map((c) => c.utilisateurId),
+      )
+        .filter((c) => !c.utilisateur.sessionsValidesDepuis || c.utilisateur.sessionsValidesDepuis <= c.autoriseLe)
+        .map((c) => c.utilisateurId),
     );
     const organisateur = comptes.find((c) => c.id === r.organisateurId);
     const invites = comptes.filter((c) => c.id !== r.organisateurId && c.actif);

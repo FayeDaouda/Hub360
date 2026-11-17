@@ -130,15 +130,19 @@ export default function AgendaPage(props: Props) {
   const [fiche, setFiche] = useState<ElementAgenda | null>(null);
   const [abonnement, setAbonnement] = useState(false);
   // Agendas connectés (Google) : ouverte d'un bouton, ou au retour de Google
-  // avec son résultat (« ?connexion=… », retiré de l'adresse aussitôt).
-  const [connectes, setConnectes] = useState<{ resultat: string | null } | null>(null);
+  // avec son résultat (« ?connexion=…[#ticket=…] », retiré de l'adresse
+  // aussitôt ; le ticket est confirmé par la session, à usage unique).
+  const [connectes, setConnectes] = useState<{ resultat: string | null; ticket?: string } | null>(null);
   useEffect(() => {
     const resultat = new URLSearchParams(window.location.search).get('connexion');
     if (!resultat) return;
+    // Le ticket arrive dans le fragment (#ticket=…) : il ne quitte jamais le navigateur.
+    const ticket = new URLSearchParams(window.location.hash.slice(1)).get('ticket') ?? undefined;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setConnectes({ resultat });
+    setConnectes({ resultat, ticket });
     const url = new URL(window.location.href);
     url.searchParams.delete('connexion');
+    url.hash = '';
     window.history.replaceState(null, '', url.toString());
   }, []);
   const [aDecider, setADecider] = useState<ADecider | null>(null);
@@ -610,6 +614,7 @@ export default function AgendaPage(props: Props) {
         <AgendasConnectes
           slug={slug}
           resultat={connectes.resultat}
+          ticket={connectes.ticket}
           onClose={() => setConnectes(null)}
           onChange={charger}
         />

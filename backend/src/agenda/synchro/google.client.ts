@@ -9,6 +9,14 @@ const AUTORISATION = 'https://accounts.google.com/o/oauth2/v2/auth';
 const JETON = 'https://oauth2.googleapis.com/token';
 const REVOCATION = 'https://oauth2.googleapis.com/revoke';
 const API = 'https://www.googleapis.com/calendar/v3';
+// Délai maximal d'un appel (Google qui ne répond plus ne bloque pas la tournée).
+const DELAI_MS = 20_000;
+// Volume lu par agenda et par tournée : au-delà, la lecture est refusée
+// plutôt que tronquée en silence (une liste tronquée ferait croire à des
+// suppressions). Borné en éléments (Google rend parfois des pages courtes)
+// et, par sûreté, en pages.
+const ELEMENTS_MAX = 5_000;
+const PAGES_MAX = 50;
 
 // Ce que le HUB demande : l'adresse du compte, la liste de ses agendas, et
 // lire / écrire leurs événements (rien d'autre : ni e-mails, ni contacts).
@@ -31,10 +39,18 @@ export class ErreurGoogle extends Error {
   }
 }
 
-export type AgendaGoogle = { id: string; nom: string; couleur: string | null; principal: boolean; ecriture: boolean };
+export type AgendaGoogle = {
+  id: string;
+  nom: string;
+  couleur: string | null;
+  principal: boolean;
+  ecriture: boolean;
+  proprietaire: boolean; // seul possible comme cible (jamais un agenda partagé)
+};
 
 export type EvenementGoogle = {
   id: string;
+  iCalUID?: string;
   status?: string; // « cancelled » : supprimé
   summary?: string;
   location?: string;
@@ -48,8 +64,9 @@ export type EcritureGoogle = {
   summary: string;
   location?: string | null;
   description?: string | null;
-  start: { dateTime: string };
-  end: { dateTime: string };
+  // `date: null` : repasse une journée entière en horaire (modification).
+  start: { dateTime: string; date?: null };
+  end: { dateTime: string; date?: null };
   extendedProperties?: { private: Record<string, string> };
 };
 
@@ -116,8 +133,14 @@ export class ClientGoogle {
   }
 
   async revoquer(jeton: string): Promise<void> {
-    // Sans effet si déjà révoqué : on n'en fait pas une erreur.
-    await this.fetchFn(`${REVOCATION}?token=${encodeURIComponent(jeton)}`, { method: 'POST' }).catch(() => undefined);
+    // Le jeton dans le corps, jamais dans l'adresse ; sans effet si déjà
+    // révoqué : on n'en fait pas une erreur.
+    await this.fetchFn(REVOCATION, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token: jeton }).toString(),
+      signal: AbortSignal.timeout(DELAI_MS),
+    }).catch(() => undefined);
   }
 
   async agendas(acces: string): Promise<AgendaGoogle[]> {
@@ -128,13 +151,14 @@ export class ClientGoogle {
       backgroundColor?: string;
       primary?: boolean;
       accessRole?: string;
-    }>(acces, `${API}/users/me/calendarList?minAccessRole=reader`);
+    }>(acces, `${API}/users/me/calendarList?minAccessRole=reader`, 'Trop d’agendas dans ce compte Google.');
     return items.map((c) => ({
       id: c.id,
       nom: c.summaryOverride || c.summary || c.id,
       couleur: c.backgroundColor ?? null,
       principal: !!c.primary,
       ecriture: c.accessRole === 'owner' || c.accessRole === 'writer',
+      proprietaire: c.accessRole === 'owner',
     }));
   }
 
@@ -152,6 +176,20 @@ export class ClientGoogle {
     );
   }
 
+  // Un événement précis (hors période lue) ; null s'il n'existe plus.
+  async lire(acces: string, agendaId: string, id: string): Promise<EvenementGoogle | null> {
+    try {
+      return await this.json<EvenementGoogle>(
+        acces,
+        `${API}/calendars/${encodeURIComponent(agendaId)}/events/${encodeURIComponent(id)}`,
+        'GET',
+      );
+    } catch (e) {
+      if (e instanceof ErreurGoogle && (e.statut === 404 || e.statut === 410)) return null;
+      throw e;
+    }
+  }
+
   async creer(acces: string, agendaId: string, e: EcritureGoogle): Promise<EvenementGoogle> {
     return this.json(acces, `${API}/calendars/${encodeURIComponent(agendaId)}/events?sendUpdates=none`, 'POST', e);
   }
@@ -161,7 +199,7 @@ export class ClientGoogle {
       acces,
       `${API}/calendars/${encodeURIComponent(agendaId)}/events/${encodeURIComponent(id)}?sendUpdates=none`,
       'PATCH',
-      e,
+      { ...e, start: { ...e.start, date: null }, end: { ...e.end, date: null } },
     );
   }
 
@@ -179,10 +217,15 @@ export class ClientGoogle {
     }
   }
 
-  private async pages<T>(acces: string, url: string): Promise<T[]> {
+  private async pages<T>(
+    acces: string,
+    url: string,
+    trop = 'Trop d’événements dans cet agenda pour la synchronisation.',
+  ): Promise<T[]> {
     const items: T[] = [];
     let page: string | undefined;
-    for (let tour = 0; tour < 20; tour++) {
+    for (let tour = 0; ; tour++) {
+      if (tour >= PAGES_MAX || items.length > ELEMENTS_MAX) throw new ErreurGoogle(413, trop);
       const r = await this.json<{ items?: T[]; nextPageToken?: string }>(
         acces,
         page ? `${url}${url.includes('?') ? '&' : '?'}pageToken=${encodeURIComponent(page)}` : url,
@@ -200,6 +243,7 @@ export class ClientGoogle {
       method: methode,
       headers: { Authorization: `Bearer ${acces}`, ...(corps ? { 'Content-Type': 'application/json' } : {}) },
       ...(corps ? { body: JSON.stringify(corps) } : {}),
+      signal: AbortSignal.timeout(DELAI_MS),
     });
     if (r.status === 204) return undefined as T;
     const texte = await r.text();
@@ -213,6 +257,7 @@ export class ClientGoogle {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(champs).toString(),
+      signal: AbortSignal.timeout(DELAI_MS),
     });
     const texte = await r.text();
     if (!r.ok) {

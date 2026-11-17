@@ -80,7 +80,35 @@ describe('ClientGoogle', () => {
     expect(f.mock.calls[0][1].headers.Authorization).toBe('Bearer A');
   });
 
-  it('les agendas : nom, principal, droit d’écrire', async () => {
+  it('trop d’événements : refusé plutôt que tronqué (une liste tronquée ferait croire à des suppressions)', async () => {
+    let n = 0;
+    const f = jest.fn().mockImplementation(() =>
+      Promise.resolve(
+        reponse(200, {
+          items: Array.from({ length: 2500 }, () => ({ id: `E${n++}` })),
+          nextPageToken: 'SUITE',
+        }),
+      ),
+    );
+    const g = new ClientGoogle(f, ENV);
+    await expect(g.evenements('A', 'p', new Date(), new Date())).rejects.toMatchObject({ statut: 413 });
+    expect(f.mock.calls.length).toBeLessThanOrEqual(3);
+    // Des pages courtes ne bloquent pas : seul le nombre d'éléments compte.
+    let page = 0;
+    const courtes = new ClientGoogle(
+      jest
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(
+            reponse(200, { items: [{ id: `C${page}` }], ...(++page < 5 ? { nextPageToken: `P${page}` } : {}) }),
+          ),
+        ),
+      ENV,
+    );
+    expect(await courtes.evenements('A', 'p', new Date(), new Date())).toHaveLength(5);
+  });
+
+  it('les agendas : nom, principal, droit d’écrire, propriétaire', async () => {
     const g = new ClientGoogle(
       jest.fn().mockResolvedValue(
         reponse(200, {
@@ -93,8 +121,8 @@ describe('ClientGoogle', () => {
       ENV,
     );
     expect(await g.agendas('A')).toEqual([
-      { id: 'p', nom: 'Awa', couleur: '#123456', principal: true, ecriture: true },
-      { id: 'f', nom: 'Fériés', couleur: null, principal: false, ecriture: false },
+      { id: 'p', nom: 'Awa', couleur: '#123456', principal: true, ecriture: true, proprietaire: true },
+      { id: 'f', nom: 'Fériés', couleur: null, principal: false, ecriture: false, proprietaire: false },
     ]);
   });
 

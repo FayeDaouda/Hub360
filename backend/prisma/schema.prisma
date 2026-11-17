@@ -322,6 +322,7 @@ enum NotificationType {
   rdv_modifie // Agenda : une réunion où vous êtes invité change (12/11/2026)
   rdv_reponse // Agenda : un invité répond (Oui, Non, Peut-être) à votre réunion
   rdv_rappel // Agenda : votre rendez-vous commence bientôt
+  agenda_deconnecte // synchronisation Google arrêtée par le HUB (16/11/2026)
   annonce_importante // Annonces (01/11/2026) : une annonce importante à lire
   annonce_a_valider // Annonces : une annonce attend sa validation avant publication
   poste_a_approuver // Recrutement (01/11/2026) : ouverture d'un poste à approuver
@@ -3133,6 +3134,11 @@ model ConnexionAgenda {
   derniereSynchroLe DateTime?         @map("derniere_synchro_le")
   erreur            String? // dernière erreur, en clair, pour la personne
   creeLe            DateTime          @default(now()) @map("cree_le")
+  // Dernière autorisation donnée par la personne : une coupure de ses
+  // sessions postérieure (« déconnecter partout », mot de passe) l'annule.
+  autoriseLe        DateTime          @default(now()) @map("autorise_le")
+  // Synchronisation en cours depuis (verrou par connexion : jamais deux à la fois).
+  synchroDepuis     DateTime?         @map("synchro_depuis")
 
   societe     Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
   utilisateur Utilisateur        @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
@@ -3146,15 +3152,18 @@ model ConnexionAgenda {
 // Les agendas d'un compte externe : ceux que la personne importe dans le HUB,
 // et celui où le HUB écrit ses réunions (un seul).
 model AgendaExterne {
-  id          String   @id @default(uuid())
-  societeId   String   @map("societe_id")
-  connexionId String   @map("connexion_id")
-  idExterne   String   @map("id_externe") // identifiant Google, adresse CalDAV
-  nom         String
-  couleur     String?
-  importe     Boolean  @default(false)
-  cible       Boolean  @default(false) // le HUB y écrit ses réunions
-  majLe       DateTime @default(now()) @updatedAt @map("maj_le")
+  id           String   @id @default(uuid())
+  societeId    String   @map("societe_id")
+  connexionId  String   @map("connexion_id")
+  idExterne    String   @map("id_externe") // identifiant Google, adresse CalDAV
+  nom          String
+  couleur      String?
+  importe      Boolean  @default(false)
+  cible        Boolean  @default(false) // le HUB y écrit ses réunions
+  // Agenda dont la personne est propriétaire : seul possible comme cible
+  // (jamais un agenda partagé avec des tiers).
+  proprietaire Boolean  @default(false)
+  majLe        DateTime @default(now()) @updatedAt @map("maj_le")
 
   societe    Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
   connexion  ConnexionAgenda    @relation(fields: [connexionId], references: [id], onDelete: Cascade)
@@ -3219,6 +3228,10 @@ model EtatConnexionAgenda {
   etatHash      String   @unique @map("etat_hash")
   verificateur  String
   expireLe      DateTime @map("expire_le")
+  // Au retour de Google : le code reçu (chiffré) et un ticket que la session
+  // HUB de la personne doit confirmer — la connexion n'est créée qu'alors.
+  codeChiffre   String?  @map("code_chiffre")
+  ticketHash    String?  @unique @map("ticket_hash")
 
   societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
 

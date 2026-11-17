@@ -19,7 +19,7 @@ import { MembreSocieteGuard } from '../../commun/membre-societe.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { PermissionGuard } from '../../commun/permission.guard';
 import { ConnexionsAgendaService } from './connexions.service';
-import { ChoisirAgendasDto, DebutConnexionDto, EtatConnexionsDto } from './synchro.dto';
+import { ChoisirAgendasDto, ConfirmerConnexionDto, DebutConnexionDto, EtatConnexionsDto } from './synchro.dto';
 
 type R = { user: { userId: string; societeId: string; role: string; permissions: Record<string, string> } };
 
@@ -42,6 +42,15 @@ export class ConnexionsAgendaController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   debutGoogle(@Req() req: R): Promise<DebutConnexionDto> {
     return this.connexions.debutGoogle(req.user);
+  }
+
+  // Au retour de Google, la session de la personne confirme : seule celle
+  // qui a lancé l'autorisation peut relier ce compte Google au sien.
+  @Post('google/confirmer')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  confirmerGoogle(@Req() req: R, @Body() dto: ConfirmerConnexionDto): Promise<EtatConnexionsDto> {
+    return this.connexions.confirmerGoogle(req.user, dto.ticket);
   }
 
   @Put(':id')
@@ -67,8 +76,9 @@ export class ConnexionsAgendaController {
 }
 
 // Retour de Google après l'autorisation (16/11/2026) — SANS session : le
-// navigateur revient de Google ; c'est l'état (256 bits d'aléa, à usage
-// unique, dix minutes) qui désigne la personne. Renvoie à l'Agenda.
+// navigateur revient de Google ; l'état (256 bits d'aléa, usage unique, dix
+// minutes) retrouve la demande. Rien n'est relié ici : l'Agenda reçoit un
+// ticket que la session de la personne doit confirmer.
 @Controller('agenda/google')
 @UseGuards(ThrottlerGuard)
 @Throttle({ default: { limit: 20, ttl: 60_000 } })

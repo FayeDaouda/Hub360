@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsOptional, IsUUID, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, Length, Matches, ValidateIf } from 'class-validator';
 
 // Agendas connectés (Google, Apple), 16/11/2026.
 
@@ -8,6 +8,7 @@ export class AgendaExterneDto {
   couleur: string | null;
   importe: boolean; // ses rendez-vous apparaissent dans le HUB
   cible: boolean; // le HUB y écrit ses réunions
+  proprietaire: boolean; // seul un agenda à soi peut être la cible
 }
 
 export class ConnexionAgendaDto {
@@ -34,6 +35,11 @@ export class DebutConnexionDto {
 }
 
 export class ChoisirAgendasDto {
-  @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) importes!: string[];
+  @IsArray() @ArrayMaxSize(10) @IsUUID('all', { each: true }) importes!: string[];
   @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() cible!: string | null;
+}
+
+// Le ticket remis au navigateur au retour de Google (base64url, 256 bits).
+export class ConfirmerConnexionDto {
+  @IsString() @Length(20, 100) @Matches(/^[A-Za-z0-9_-]+$/) ticket!: string;
 }

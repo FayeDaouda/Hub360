@@ -67,8 +67,11 @@ export type AvisSecurite = {
     | 'mot_de_passe_reinitialise'
     | 'double_facteur_active'
     | 'double_facteur_reinitialise'
-    | 'compte_verrouille';
+    | 'compte_verrouille'
+    | 'agenda_connecte';
   le: Date;
+  // Ce qui a changé, nommé dans l'avis (ex. le compte Google relié).
+  detail?: string;
   // Compte verrouillé (lot C) : fin du verrouillage.
   jusquau?: Date;
 };

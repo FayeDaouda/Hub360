@@ -279,5 +279,14 @@ describe('Agenda', () => {
     const retour = await request(app.getHttpServer()).get('/api/agenda/google/retour?state=inconnu&code=x').expect(302);
     expect(retour.headers.location).toMatch(/\?connexion=echec$/);
     await request(app.getHttpServer()).get('/api/societes/grey-concrete/agenda/connexions').expect(401);
+    // Confirmation : ticket mal formé refusé par la validation, ticket inconnu introuvable, sans session 401.
+    await api(app, cfo).post('/agenda/connexions/google/confirmer', { ticket: 'x' }).expect(400);
+    await api(app, cfo)
+      .post('/agenda/connexions/google/confirmer', { ticket: 'A'.repeat(43) })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post('/api/societes/grey-concrete/agenda/connexions/google/confirmer')
+      .send({ ticket: 'A'.repeat(43) })
+      .expect(401);
   });
 });

@@ -1,6 +1,9 @@
 -- Synchronisation de l'Agenda avec Google et Apple (16/11/2026) : connexions
 -- (accès chiffrés), agendas externes, événements importés, réunions écrites
--- chez Google ou Apple, connexions Google en cours.
+-- chez Google ou Apple, connexions Google en cours (confirmées par la session).
+
+-- AlterEnum
+ALTER TYPE "NotificationType" ADD VALUE 'agenda_deconnecte';
 
 -- CreateEnum
 CREATE TYPE "FournisseurAgenda" AS ENUM ('google', 'apple');
@@ -16,6 +19,8 @@ CREATE TABLE "connexions_agenda" (
     "derniere_synchro_le" TIMESTAMP(3),
     "erreur" TEXT,
     "cree_le" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "autorise_le" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "synchro_depuis" TIMESTAMP(3),
 
     CONSTRAINT "connexions_agenda_pkey" PRIMARY KEY ("id")
 );
@@ -30,6 +35,7 @@ CREATE TABLE "agendas_externes" (
     "couleur" TEXT,
     "importe" BOOLEAN NOT NULL DEFAULT false,
     "cible" BOOLEAN NOT NULL DEFAULT false,
+    "proprietaire" BOOLEAN NOT NULL DEFAULT false,
     "maj_le" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "agendas_externes_pkey" PRIMARY KEY ("id")
@@ -74,6 +80,8 @@ CREATE TABLE "etats_connexion_agenda" (
     "etat_hash" TEXT NOT NULL,
     "verificateur" TEXT NOT NULL,
     "expire_le" TIMESTAMP(3) NOT NULL,
+    "code_chiffre" TEXT,
+    "ticket_hash" TEXT,
 
     CONSTRAINT "etats_connexion_agenda_pkey" PRIMARY KEY ("id")
 );
@@ -92,6 +100,9 @@ CREATE UNIQUE INDEX "evenements_externes_agenda_id_id_externe_key" ON "evenement
 
 -- CreateIndex
 CREATE UNIQUE INDEX "etats_connexion_agenda_etat_hash_key" ON "etats_connexion_agenda"("etat_hash");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "etats_connexion_agenda_ticket_hash_key" ON "etats_connexion_agenda"("ticket_hash");
 
 -- AddForeignKey
 ALTER TABLE "connexions_agenda" ADD CONSTRAINT "connexions_agenda_societe_id_fkey" FOREIGN KEY ("societe_id") REFERENCES "societes"("id") ON DELETE CASCADE ON UPDATE CASCADE;

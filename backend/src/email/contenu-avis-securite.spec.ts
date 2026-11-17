@@ -39,6 +39,24 @@ describe('contenuAvisSecurite', () => {
     expect(texte).toContain('demandez au CIO de le débloquer');
   });
 
+  it('agenda connecté : nomme le compte Google relié (échappé dans le HTML) et dit comment le déconnecter', () => {
+    const { sujet, texte, html } = contenuAvisSecurite({
+      email: 'a@b.sn',
+      prenom: 'A',
+      evenement: 'agenda_connecte',
+      le,
+      detail: 'pirate<x>@gmail.com',
+    });
+    expect(sujet).toBe('Google Agenda connecté à votre compte · hub360°');
+    expect(texte).toContain('Un compte Google Agenda (pirate<x>@gmail.com) a été connecté à votre Agenda hub360°');
+    expect(texte).toContain('« Agendas connectés »');
+    expect(html).toContain('pirate&lt;x&gt;@gmail.com');
+    // Sans détail : la phrase reste correcte.
+    expect(contenuAvisSecurite({ email: 'a@b.sn', prenom: 'A', evenement: 'agenda_connecte', le }).texte).toContain(
+      'Un compte Google Agenda a été connecté',
+    );
+  });
+
   it('échappe le prénom dans le HTML', () => {
     const { html } = contenuAvisSecurite({
       email: 'a@b.sn',

@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CalendarSync, RefreshCw } from 'lucide-react';
 import { formatDateTime } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
 import {
+  AGENDAS_IMPORTES_MAX,
   choisirAgendas,
+  confirmerGoogle,
   connecterGoogle,
   deconnecterAgenda,
   getConnexions,
@@ -19,6 +21,7 @@ import { FieldError } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/feedback';
 
 const RESULTATS: Record<string, string> = {
+  confirmer: 'Connexion de Google Agenda en cours…',
   google: 'Google Agenda est connecté. Choisissez les agendas à afficher et celui où le HUB écrit ses réunions.',
   annulee: 'La connexion à Google Agenda a été annulée.',
   echec: 'La connexion à Google Agenda n’a pas abouti : réessayez.',
@@ -30,12 +33,14 @@ const RESULTATS: Record<string, string> = {
 // choisit les agendas à afficher et celui où le HUB écrit.
 export function AgendasConnectes({
   slug,
-  resultat,
+  resultat: resultatInitial,
+  ticket,
   onClose,
   onChange,
 }: {
   slug: string;
   resultat?: string | null; // retour de Google (?connexion=…)
+  ticket?: string; // à confirmer par la session (?connexion=confirmer&ticket=…)
   onClose: () => void;
   onChange: () => void; // l'Agenda se relit
 }) {
@@ -43,11 +48,37 @@ export function AgendasConnectes({
   const [etat, setEtat] = useState<EtatConnexions | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  // « confirmer » sans ticket (adresse abîmée) : rien à confirmer, échec.
+  const [resultat, setResultat] = useState(
+    resultatInitial === 'confirmer' && !ticket ? 'echec' : (resultatInitial ?? null),
+  );
 
+  // Au retour de Google, la session confirme le ticket (une seule fois, même
+  // si l'effet est rejoué) ; sinon, simple lecture de l'état.
+  const confirme = useRef(false);
   useEffect(() => {
+    if (resultatInitial === 'confirmer' && ticket) {
+      if (confirme.current) return;
+      confirme.current = true;
+      confirmerGoogle(slug, ticket)
+        .then((e) => {
+          setEtat(e);
+          setResultat('google');
+          onChange();
+        })
+        .catch((e) => {
+          setResultat(null);
+          setErreur(e instanceof ApiError ? e.message : 'La connexion à Google Agenda n’a pas abouti : réessayez.');
+          getConnexions(slug)
+            .then(setEtat)
+            .catch(() => undefined);
+        });
+      return;
+    }
     getConnexions(slug)
       .then(setEtat)
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Agendas connectés indisponibles.'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une fois à l'ouverture
   }, [slug]);
 
   async function agir(action: () => Promise<EtatConnexions>, apres?: () => void) {
@@ -102,6 +133,8 @@ export function AgendasConnectes({
           <p>La connexion à Google Agenda sera proposée dès qu’elle aura été activée sur ce HUB.</p>
         ) : google ? (
           <Connexion
+            // Nouvel état du serveur (enregistré, resynchronisé) : les choix repartent de lui.
+            key={google.agendas.map((a) => `${a.id}:${+a.importe}${+a.cible}`).join(',')}
             connexion={google}
             envoi={envoi}
             onChoisir={(importes, cible) => agir(() => choisirAgendas(slug, google.id, importes, cible))}
@@ -192,6 +225,7 @@ function Connexion({
                   type="checkbox"
                   aria-label={`Afficher ${a.nom} dans le HUB`}
                   checked={importes.includes(a.id)}
+                  disabled={!importes.includes(a.id) && importes.length >= AGENDAS_IMPORTES_MAX}
                   onChange={() => setImportes((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : [...l, a.id]))}
                 />
               </td>
@@ -199,8 +233,14 @@ function Connexion({
                 <input
                   type="radio"
                   name="agenda-cible"
-                  aria-label={`Le HUB écrit ses réunions dans ${a.nom}`}
+                  aria-label={
+                    a.proprietaire
+                      ? `Le HUB écrit ses réunions dans ${a.nom}`
+                      : `${a.nom} : agenda partagé, le HUB n’y écrit pas`
+                  }
+                  title={a.proprietaire ? undefined : 'Agenda partagé avec vous : le HUB n’écrit que dans vos agendas.'}
                   checked={cible === a.id}
+                  disabled={!a.proprietaire}
                   onChange={() => setCible(a.id)}
                 />
               </td>
@@ -221,6 +261,9 @@ function Connexion({
           </tr>
         </tbody>
       </table>
+      {importes.length >= AGENDAS_IMPORTES_MAX && (
+        <p className="agenda-detail">{AGENDAS_IMPORTES_MAX} agendas affichés au plus.</p>
+      )}
       <div className="modal-actions agenda-connexion-actions">
         <button type="button" className="btn-ghost" onClick={onDeconnecter} disabled={envoi}>
           Déconnecter

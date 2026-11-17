@@ -4116,6 +4116,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/agenda/connexions/google/confirmer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConnexionsAgendaController_confirmerGoogle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/agenda/connexions/{id}": {
         parameters: {
             query?: never;
@@ -6588,6 +6604,7 @@ export interface components {
             couleur: string | null;
             importe: boolean;
             cible: boolean;
+            proprietaire: boolean;
         };
         ConnexionAgendaDto: {
             id: string;
@@ -6604,6 +6621,9 @@ export interface components {
         };
         DebutConnexionDto: {
             url: string;
+        };
+        ConfirmerConnexionDto: {
+            ticket: string;
         };
         ChoisirAgendasDto: {
             importes: string[];
@@ -13259,6 +13279,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DebutConnexionDto"];
+                };
+            };
+        };
+    };
+    ConnexionsAgendaController_confirmerGoogle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmerConnexionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatConnexionsDto"];
                 };
             };
         };

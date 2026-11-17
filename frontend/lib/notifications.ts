@@ -160,7 +160,15 @@ export function lienNotificationAdmin(
   if (n.type === 'delegation_ceo') return base;
   // Agenda, Annonces, Recrutement (01/11/2026).
   if (
-    ['rdv_invitation', 'rdv_modifie', 'rdv_annule', 'rdv_reponse', 'rdv_rappel', 'entretien_planifie'].includes(n.type)
+    [
+      'rdv_invitation',
+      'rdv_modifie',
+      'rdv_annule',
+      'rdv_reponse',
+      'rdv_rappel',
+      'agenda_deconnecte',
+      'entretien_planifie',
+    ].includes(n.type)
   )
     return `${base}/agenda`;
   if (n.type === 'annonce_importante' || n.type === 'annonce_a_valider') return `${base}/annonces`;

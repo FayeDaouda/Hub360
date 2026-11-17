@@ -18,6 +18,8 @@ const el = (x: Partial<ElementAgendaDto> = {}): ElementAgendaDto =>
     maReponse: null,
     jeSuisOrganisateur: true,
     modifiable: true,
+    annulable: true,
+    serieId: null,
     entretien: false,
     ...x,
   }) as ElementAgendaDto;
@@ -113,6 +115,27 @@ describe('decider', () => {
     // Passée : on ne touche plus à rien.
     const passee = el({ debut: '2026-11-10T09:00:00.000Z', fin: '2026-11-10T10:00:00.000Z' });
     expect(decide([passee], [lienDe(voulus([passee], LIEN_HUB).get('R1')!)], [])).toEqual(['oublier']);
+  });
+
+  it('supprimée dans Google sans droit de l’annuler (entretien) : elle revient ; une date de série effacée par un invité : masquée', () => {
+    expect(decide([el({ annulable: false, entretien: true })], [lienDe()], [])).toEqual(['recreer']);
+    const occ = el({ id: 'S1:2026-11-20T09:00:00.000Z', serieId: 'S1', jeSuisOrganisateur: false });
+    const lienOcc = { ...lienDe(voulus([occ], LIEN_HUB).get(occ.id)!), cle: occ.id };
+    expect(decide([occ], [lienOcc], [])).toEqual(['masquer']);
+    // Masquée : on ne la réécrit plus.
+    expect(decide([occ], [{ ...lienOcc, empreinte: 'masque' }], [])).toEqual([]);
+  });
+
+  it('changée dans Google ET dans le HUB : la version du HUB l’emporte ; journée entière : jamais reprise', () => {
+    const deplacee = google({ start: { dateTime: '2026-11-20T14:00:00Z' }, end: { dateTime: '2026-11-20T15:00:00Z' } });
+    expect(decide([el({ titre: 'Nouveau titre' })], [lienDe()], [deplacee])).toEqual(['retablir']);
+    const journee = google({ start: { date: '2026-11-21' }, end: { date: '2026-11-22' } });
+    expect(decide([el()], [lienDe()], [journee])).toEqual(['retablir']);
+  });
+
+  it('déjà chez Google sans lien (tournée interrompue) : adoptée, pas recréée', () => {
+    expect(decide([el()], [], [google()])).toEqual(['adopter']);
+    expect(decide([el()], [], [])).toEqual(['creer']);
   });
 
   it('plus dans le HUB : retirée de Google si à venir ; passée ou déjà absente : oubliée', () => {

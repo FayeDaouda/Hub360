@@ -1,3 +1,4 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { ROLE_HUB_ADMIN } from '@hub/domain';
 import { chiffrer } from './chiffrement';
@@ -23,13 +24,20 @@ const REUNION = {
   maReponse: null,
   jeSuisOrganisateur: true,
   modifiable: true,
+  annulable: true,
   entretien: false,
   inviteIds: ['U2'],
   serieId: null,
   occurrence: null,
 };
 
-const monter = (x: { liens?: unknown[]; elements?: unknown[]; google?: unknown[] } = {}) => {
+const AGENDAS = [
+  { id: 'A1', idExterne: 'awa@gc.sn', nom: 'Awa', importe: true, cible: true, proprietaire: true },
+  { id: 'A2', idExterne: 'feries', nom: 'Jours fériés', importe: false, cible: false, proprietaire: false },
+];
+
+const monter = (x: { liens?: unknown[]; elements?: unknown[]; google?: unknown[]; agendas?: unknown[] } = {}) => {
+  const agendas = x.agendas ?? AGENDAS;
   const prisma = {
     connexionAgenda: {
       findUnique: jest.fn().mockResolvedValue({
@@ -38,19 +46,29 @@ const monter = (x: { liens?: unknown[]; elements?: unknown[]; google?: unknown[]
         utilisateurId: 'U1',
         fournisseur: 'google',
         accesChiffre: chiffrer('R', CLE),
-        agendas: [
-          { id: 'A1', idExterne: 'awa@gc.sn', importe: true, cible: true },
-          { id: 'A2', idExterne: 'feries', importe: false, cible: false },
-        ],
+        autoriseLe: new Date('2026-11-01T00:00:00Z'),
+        agendas,
         liens: x.liens ?? [],
       }),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      delete: jest.fn(),
+    },
+    agendaExterne: {
+      upsert: jest.fn(),
+      findMany: jest.fn().mockResolvedValue(agendas),
+      deleteMany: jest.fn(),
     },
     // acteurAgenda
     utilisateur: { findUnique: jest.fn().mockResolvedValue({ actif: true, sessionsValidesDepuis: null }) },
     societe: { findUnique: jest.fn().mockResolvedValue({ nom: 'Grey Concrete', slug: 'gc', actif: true }) },
     utilisateurSocieteRole: { findMany: jest.fn().mockResolvedValue([{ societeId: 'S1', role: { nom: 'Salarié' } }]) },
-    evenementExterne: { deleteMany: jest.fn().mockReturnValue('del'), upsert: jest.fn().mockReturnValue('up') },
+    evenementExterne: {
+      findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn().mockReturnValue('del'),
+      upsert: jest.fn().mockReturnValue('up'),
+    },
+    etatConnexionAgenda: { deleteMany: jest.fn() },
     lienExportAgenda: { create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     $transaction: jest.fn(),
   };
@@ -63,6 +81,18 @@ const monter = (x: { liens?: unknown[]; elements?: unknown[]; google?: unknown[]
   };
   const google = {
     acces: jest.fn().mockResolvedValue('ACCES'),
+    agendas: jest.fn().mockResolvedValue(
+      agendas.map((a) => ({
+        id: (a as { idExterne: string }).idExterne,
+        nom: (a as { nom: string }).nom,
+        couleur: null,
+        principal: false,
+        ecriture: true,
+        proprietaire: (a as { proprietaire: boolean }).proprietaire,
+      })),
+    ),
+    lire: jest.fn().mockResolvedValue(null),
+    revoquer: jest.fn(),
     evenements: jest
       .fn()
       .mockImplementation((_a: string, agendaId: string) =>
@@ -72,8 +102,17 @@ const monter = (x: { liens?: unknown[]; elements?: unknown[]; google?: unknown[]
     modifier: jest.fn(),
     supprimer: jest.fn(),
   };
-  const s = new SynchroAgendaService(prisma as never, rights as never, agenda as never, google as never);
-  return { s, prisma, agenda, google };
+  const switches = { refuseDuringMaintenance: jest.fn().mockResolvedValue(undefined) };
+  const notifications = { envoyer: jest.fn().mockResolvedValue(1) };
+  const s = new SynchroAgendaService(
+    prisma as never,
+    rights as never,
+    agenda as never,
+    google as never,
+    switches as never,
+    notifications as never,
+  );
+  return { s, prisma, agenda, google, switches, notifications };
 };
 const lien = (
   empreinteEcrite = empreinte({ titre: 'Point chantier', lieu: 'Plateau', debut: REUNION.debut, fin: REUNION.fin }),
@@ -194,13 +233,137 @@ describe('SynchroAgendaService', () => {
     expect(prisma.lienExportAgenda.create.mock.calls[0][0].data.cle).toBe('R2');
   });
 
-  it('plus d’accès à la société : synchronisation arrêtée, la personne le sait', async () => {
-    const { s, prisma, google } = monter();
+  it('plus d’accès à la société : réunions retirées de Google, accès révoqué, connexion supprimée', async () => {
+    const { s, prisma, google, agenda, notifications } = monter({ liens: [lien()] });
     prisma.utilisateurSocieteRole.findMany.mockResolvedValue([]);
     await s.synchroniser('C1', MAINTENANT);
-    expect(google.acces).not.toHaveBeenCalled();
-    expect(prisma.connexionAgenda.update.mock.calls[0][0].data.erreur).toContain('plus accès');
+    expect(google.supprimer).toHaveBeenCalledWith('ACCES', 'awa@gc.sn', 'G1');
+    expect(google.revoquer).toHaveBeenCalledWith('R');
+    expect(prisma.connexionAgenda.delete).toHaveBeenCalledWith({ where: { id: 'C1' } });
+    expect(agenda.semaine).not.toHaveBeenCalled();
+    // Plus dans la société : pas de notification là.
+    expect(notifications.envoyer).not.toHaveBeenCalled();
     expect(ROLE_HUB_ADMIN).toBeTruthy();
+  });
+
+  it('sessions coupées depuis l’autorisation (« déconnecter partout ») : nettoyée chez Google, supprimée, la personne prévenue', async () => {
+    const { s, prisma, google, notifications } = monter({ liens: [lien()] });
+    prisma.utilisateur.findUnique.mockResolvedValue({
+      actif: true,
+      sessionsValidesDepuis: new Date('2026-11-10T00:00:00Z'),
+    });
+    google.revoquer.mockRejectedValue(new Error('réseau'));
+    await s.synchroniser('C1', MAINTENANT);
+    expect(google.supprimer).toHaveBeenCalledWith('ACCES', 'awa@gc.sn', 'G1');
+    expect(prisma.connexionAgenda.delete).toHaveBeenCalledWith({ where: { id: 'C1' } });
+    expect(notifications.envoyer).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'agenda_deconnecte', destinataireIds: ['U1'], societeId: 'S1' }),
+    );
+  });
+
+  it('sessions coupées mais Google injoignable : rien n’est abandonné, nouvel essai à la tournée suivante', async () => {
+    const { s, prisma, google } = monter({ liens: [lien()] });
+    prisma.utilisateur.findUnique.mockResolvedValue({
+      actif: true,
+      sessionsValidesDepuis: new Date('2026-11-10T00:00:00Z'),
+    });
+    google.acces.mockRejectedValue(new ErreurGoogle(503, 'indisponible'));
+    await s.synchroniser('C1', MAINTENANT);
+    expect(prisma.connexionAgenda.delete).not.toHaveBeenCalled();
+    expect(prisma.connexionAgenda.update.mock.calls[0][0].data.erreur).toContain('ne répond pas');
+  });
+
+  it('verrou : une synchronisation déjà en cours n’est pas doublée ; le verrou est rendu à la fin', async () => {
+    const a = monter();
+    a.prisma.connexionAgenda.updateMany.mockResolvedValueOnce({ count: 0 });
+    await a.s.synchroniser('C1', MAINTENANT);
+    expect(a.prisma.connexionAgenda.findUnique).not.toHaveBeenCalled();
+    const b = monter();
+    expect(await b.s.synchroniser('C1', MAINTENANT)).toBe(true);
+    // Rendu seulement s'il est encore le sien (pas repris entre-temps après abandon).
+    expect(b.prisma.connexionAgenda.updateMany).toHaveBeenLastCalledWith({
+      where: { id: 'C1', synchroDepuis: MAINTENANT },
+      data: { synchroDepuis: null },
+    });
+  });
+
+  it('autre erreur que la maintenance : remontée (journalisée par la tournée), verrou rendu', async () => {
+    const { s, switches, prisma } = monter();
+    switches.refuseDuringMaintenance.mockRejectedValue(new Error('base indisponible'));
+    await expect(s.synchroniser('C1', MAINTENANT)).rejects.toThrow('base indisponible');
+    expect(prisma.connexionAgenda.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: { synchroDepuis: null } }),
+    );
+  });
+
+  it('liens hors période : relus un à un (réunions du HUB d’abord) ; au-delà de 50, aucune décision cette tournée', async () => {
+    // 60 réunions du HUB suivies, toutes absentes de la période lue chez Google.
+    const elements = Array.from({ length: 60 }, (_, i) => ({ ...REUNION, id: `R${i}` }));
+    const liens = elements.map((e, i) => ({ ...lien(), cle: e.id, idExterne: `G${i}` }));
+    const { s, google, agenda, prisma } = monter({ elements, liens, google: [] });
+    google.lire.mockImplementation((_a: string, _ag: string, id: string) =>
+      Promise.resolve(googleHub({ id, extendedProperties: { private: { hubCle: id.replace('G', 'R') } } })),
+    );
+    await s.synchroniser('C1', MAINTENANT);
+    expect(google.lire).toHaveBeenCalledTimes(50);
+    // Relus : toujours là, rien à faire. Non relus : ni annulés, ni recréés.
+    expect(agenda.annuler).not.toHaveBeenCalled();
+    expect(google.creer).not.toHaveBeenCalled();
+    expect(prisma.lienExportAgenda.create).not.toHaveBeenCalled();
+  });
+
+  it('maintenance : la tournée est sautée, rien n’est lu chez Google', async () => {
+    const { s, switches, google, prisma } = monter();
+    switches.refuseDuringMaintenance.mockRejectedValue(new ServiceUnavailableException('maintenance'));
+    await s.synchroniser('C1', MAINTENANT);
+    expect(google.acces).not.toHaveBeenCalled();
+    expect(prisma.connexionAgenda.update).not.toHaveBeenCalled();
+  });
+
+  it('plus d’agenda cible : les réunions écrites par le HUB sont retirées de Google', async () => {
+    const sansCible = AGENDAS.map((a) => ({ ...a, cible: false }));
+    const { s, google, prisma, agenda } = monter({ agendas: sansCible, liens: [lien()] });
+    await s.synchroniser('C1', MAINTENANT);
+    expect(google.supprimer).toHaveBeenCalledWith('ACCES', 'awa@gc.sn', 'G1');
+    expect(prisma.lienExportAgenda.delete).toHaveBeenCalledWith({
+      where: { connexionId_cle: { connexionId: 'C1', cle: 'R1' } },
+    });
+    expect(agenda.semaine).not.toHaveBeenCalled();
+  });
+
+  it('agenda devenu partagé (plus propriétaire) : il cesse d’être la cible', async () => {
+    const { s, google, prisma } = monter();
+    google.agendas.mockResolvedValue([
+      { id: 'awa@gc.sn', nom: 'Awa', couleur: null, principal: true, ecriture: true, proprietaire: false },
+    ]);
+    await s.synchroniser('C1', MAINTENANT);
+    expect(prisma.agendaExterne.upsert.mock.calls[0][0].update).toMatchObject({ proprietaire: false, cible: false });
+    // « feries » a disparu chez Google : retiré.
+    expect(prisma.agendaExterne.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['A2'] } } });
+  });
+
+  it('import : ni les invitations envoyées par le HUB (UID @hub360.space) ni les événements annulés', async () => {
+    const { s, prisma } = monter({
+      elements: [],
+      google: [
+        {
+          id: 'I1',
+          iCalUID: 'rdv-R9@hub360.space',
+          summary: 'Invitation',
+          start: { dateTime: '2026-11-18T08:00:00Z' },
+          end: { dateTime: '2026-11-18T09:00:00Z' },
+        },
+        {
+          id: 'X1',
+          status: 'cancelled',
+          summary: 'Annulé',
+          start: { dateTime: '2026-11-18T08:00:00Z' },
+          end: { dateTime: '2026-11-18T09:00:00Z' },
+        },
+      ],
+    });
+    await s.synchroniser('C1', MAINTENANT);
+    expect(prisma.evenementExterne.upsert).not.toHaveBeenCalled();
   });
 });
 

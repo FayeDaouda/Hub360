@@ -597,6 +597,11 @@ export class AgendaService {
     };
     const avant = r.exceptions.find((e) => +e.occurrence === +occ);
     const debutAvant = avant?.debut ?? occ;
+    // Rien de changé (enregistré à l'identique, ou reprise depuis Google qui
+    // revient au même) : ni écriture, ni notification, ni e-mail.
+    const norme = (v: string | Date | null | undefined) => (v instanceof Date ? v.toISOString() : (v ?? null));
+    const cles = ['titre', 'debut', 'fin', 'lieu', 'description', 'lienVisio'] as const;
+    if (!avant?.annulee && cles.every((k) => norme(champs[k]) === norme(avant?.[k]))) return { ok: true };
     await this.prisma.$transaction(async (tx) => {
       const maj = await tx.rendezVous.updateMany({
         where: { id: r.id, annuleLe: null },

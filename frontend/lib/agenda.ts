@@ -138,10 +138,20 @@ export const getDisponibilites = (slug: string, debut: string, fin: string, ids:
 // Agendas connectés (Google, Apple), 16/11/2026 — API NestJS :
 //   GET    …/agenda/connexions                  état (jamais l'accès chiffré)
 //   POST   …/agenda/connexions/google           adresse où autoriser chez Google
+//   POST   …/agenda/connexions/google/confirmer { ticket } au retour : relier le compte
 //   PUT    …/agenda/connexions/:id              { importes, cible } agendas choisis
 //   POST   …/agenda/connexions/:id/synchroniser synchroniser maintenant
 //   DELETE …/agenda/connexions/:id              déconnecter
-export type AgendaExterne = { id: string; nom: string; couleur: string | null; importe: boolean; cible: boolean };
+export type AgendaExterne = {
+  id: string;
+  nom: string;
+  couleur: string | null;
+  importe: boolean;
+  cible: boolean;
+  proprietaire: boolean; // seul un agenda à soi peut recevoir les réunions du HUB
+};
+// Agendas affichés au plus par connexion (même borne que l'API).
+export const AGENDAS_IMPORTES_MAX = 10;
 export type ConnexionAgenda = {
   id: string;
   fournisseur: 'google' | 'apple';
@@ -155,6 +165,8 @@ export type EtatConnexions = { disponibles: { google: boolean; apple: boolean };
 export const getConnexions = (slug: string) => apiSociete<EtatConnexions>(slug, '/agenda/connexions');
 export const connecterGoogle = (slug: string) =>
   apiSociete<{ url: string }>(slug, '/agenda/connexions/google', { method: 'POST' });
+export const confirmerGoogle = (slug: string, ticket: string) =>
+  apiSociete<EtatConnexions>(slug, '/agenda/connexions/google/confirmer', { method: 'POST', body: { ticket } });
 export const choisirAgendas = (slug: string, id: string, importes: string[], cible: string | null) =>
   apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}`, { method: 'PUT', body: { importes, cible } });
 export const synchroniserConnexion = (slug: string, id: string) =>
