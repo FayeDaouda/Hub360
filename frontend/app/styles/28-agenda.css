@@ -1422,3 +1422,518 @@
     justify-content: center;
   }
 }
+
+/* Glisser-déposer dans la grille (12/11/2026 ; rétabli le 18/11/2026). */
+.agenda-bloc.is-glissable {
+  cursor: grab;
+  user-select: none;
+}
+.agenda-bloc.is-glisse {
+  z-index: 40 !important;
+  cursor: grabbing;
+  box-shadow:
+    0 0 0 1px var(--surface),
+    var(--ombre-3);
+  opacity: 0.95;
+}
+.agenda-bloc-poignee {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 7px;
+  cursor: ns-resize;
+}
+/* Le créneau tracé, ou celui de la création rapide : un bloc fantôme. */
+.agenda-bloc--fantome {
+  --ton: var(--action);
+  z-index: 25;
+  left: 1px;
+  right: 3px;
+  background: color-mix(in oklch, var(--action) 20%, var(--surface));
+  box-shadow:
+    0 0 0 1px var(--surface),
+    var(--ombre-2);
+  pointer-events: none;
+}
+:root[data-theme='dark'] .agenda-bloc--fantome {
+  background: color-mix(in oklch, var(--action) 55%, var(--surface));
+}
+.agenda-barre .agenda-titre-seul {
+  margin: 0 0 0 var(--e-4);
+}
+
+/* Fenêtre ancrée (18/11/2026) : fiche et création rapide. Ordinateur : une
+   carte à côté du rendez-vous, sans voile ; téléphone : une feuille ; sinon
+   centrée. */
+.agenda-ancre-fond {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+}
+.agenda-ancre-fond--feuille,
+.agenda-ancre-fond--centre {
+  display: flex;
+  justify-content: center;
+  background: rgba(8, 10, 24, 0.42);
+  animation: agenda-fondu 180ms ease;
+}
+.agenda-ancre-fond--feuille {
+  align-items: flex-end;
+}
+.agenda-ancre-fond--centre {
+  align-items: center;
+  padding: var(--e-16);
+}
+.agenda-ancre {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--ombre-3);
+  color: var(--text);
+  outline: none;
+}
+.agenda-ancre--carte {
+  position: fixed;
+  width: min(420px, calc(100vw - 24px));
+  border-radius: var(--r-20);
+  visibility: hidden;
+}
+.agenda-ancre--carte.is-placee {
+  visibility: visible;
+  animation: agenda-carte 170ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.agenda-ancre--centre {
+  width: min(460px, 100%);
+  border-radius: var(--r-20);
+}
+.agenda-ancre--feuille {
+  width: 100%;
+  max-height: 88dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-bottom: none;
+  border-radius: var(--r-20) var(--r-20) 0 0;
+  animation: agenda-feuille 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.agenda-ancre-poignee {
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: var(--e-8) auto 0;
+  border-radius: 999px;
+  background: var(--border-hover);
+}
+@keyframes agenda-carte {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes agenda-feuille {
+  from {
+    transform: translateY(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agenda-ancre--carte.is-placee,
+  .agenda-ancre--feuille,
+  .agenda-ancre-fond--feuille,
+  .agenda-ancre-fond--centre {
+    animation: none;
+  }
+}
+
+/* Fiche : les actions en icônes, puis la couleur, le titre, le moment, et
+   le détail ligne par ligne (une icône, un texte). */
+.agenda-fiche-outils {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: var(--e-8) var(--e-8) 0;
+}
+.agenda-ancre .agenda-fiche {
+  display: grid;
+  gap: var(--e-16);
+  padding: 0 var(--e-24) var(--e-24);
+}
+.agenda-fiche-entete {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: var(--e-16);
+  align-items: start;
+}
+.agenda-fiche-couleur {
+  width: 16px;
+  height: 16px;
+  margin-top: 6px;
+  border-radius: 5px;
+  background: var(--ton);
+}
+.agenda-ancre .agenda-fiche-titre {
+  display: block;
+  margin: 0;
+  font-size: var(--t-20);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.agenda-fiche-quand {
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: var(--t-14);
+}
+.agenda-fiche-type {
+  display: inline-block;
+  margin-top: var(--e-8);
+  padding: 2px var(--e-8);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  font-weight: 600;
+}
+.agenda-ancre .agenda-fiche-ligne {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: var(--e-16);
+  align-items: start;
+  margin: 0;
+  font-size: var(--t-14);
+}
+.agenda-ancre .agenda-fiche-ligne > svg {
+  margin-top: 1px;
+  color: var(--text-muted);
+}
+.agenda-fiche-visio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8) var(--e-12);
+}
+.agenda-participants-resume {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-8);
+  font-weight: 600;
+}
+.agenda-ancre .agenda-participants ul {
+  gap: var(--e-8);
+  margin-top: var(--e-4);
+}
+.agenda-ancre .agenda-participants li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-8);
+}
+.agenda-participant-nom {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agenda-fiche-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--e-8);
+}
+/* Sa réponse, en bas de la fiche : un sélecteur Oui · Peut-être · Non. */
+.agenda-ancre .agenda-ma-reponse {
+  justify-content: space-between;
+  margin: 0;
+  padding: var(--e-12) var(--e-24);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: color-mix(in oklch, var(--surface-2) 50%, var(--surface));
+  font-size: var(--t-14);
+  font-weight: 600;
+}
+.agenda-ma-reponse-choix {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.agenda-reponse-bouton {
+  min-height: 34px;
+  padding: 0 var(--e-16);
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-13);
+  font-weight: 500;
+  cursor: pointer;
+}
+.agenda-reponse-bouton:hover {
+  background: var(--surface-2);
+}
+.agenda-reponse-bouton.is-active {
+  background: var(--action);
+  color: var(--action-texte);
+  font-weight: 600;
+}
+/* Création rapide : un grand titre souligné, Entrée enregistre. */
+.agenda-creation-titre {
+  width: 100%;
+  padding: var(--e-8) 0;
+  border: none;
+  border-bottom: 2px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-20);
+  font-weight: 500;
+  outline: none;
+  transition: border-color 160ms ease;
+}
+.agenda-creation-titre:focus {
+  border-bottom-color: var(--action);
+}
+
+/* Téléphone, « Mois et jour » (18/11/2026, maquette du user) : le mois en
+   grille, un point par élément sous chaque jour ; la journée choisie en
+   liste : heure, barre de couleur, titre et lieu. */
+.agenda-moisjour {
+  display: grid;
+  gap: var(--e-16);
+  margin-inline: calc(-1 * var(--e-8));
+}
+.agenda-moisjour-grille {
+  display: grid;
+  padding: var(--e-8) var(--e-4) var(--e-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-20);
+  background: var(--surface);
+}
+.agenda-moisjour-entete,
+.agenda-moisjour-semaine {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.agenda-moisjour-entete span {
+  padding-bottom: var(--e-8);
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  font-weight: 600;
+  text-align: center;
+}
+.agenda-moisjour-entete span.is-weekend {
+  color: var(--text-subtle);
+}
+.agenda-moisjour-semaine + .agenda-moisjour-semaine,
+.agenda-moisjour-entete + .agenda-moisjour-semaine {
+  border-top: 1px solid var(--border);
+}
+.agenda-moisjour-jour {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 3px;
+  min-height: 52px;
+  padding: var(--e-4) 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.agenda-moisjour-numero {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  font-size: var(--t-16);
+  font-variant-numeric: tabular-nums;
+  transition: background-color 160ms ease;
+}
+.agenda-moisjour-jour.is-weekend {
+  color: var(--text-muted);
+}
+.agenda-moisjour-jour.is-hors-mois {
+  color: var(--text-subtle);
+  opacity: 0.55;
+}
+.agenda-moisjour-jour.is-aujourdhui .agenda-moisjour-numero {
+  color: var(--action);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklch, var(--action) 55%, transparent);
+}
+:root[data-theme='dark'] .agenda-moisjour-jour.is-aujourdhui .agenda-moisjour-numero {
+  color: color-mix(in oklch, var(--action) 50%, white);
+}
+.agenda-moisjour-jour.is-choisi .agenda-moisjour-numero,
+:root[data-theme='dark'] .agenda-moisjour-jour.is-choisi .agenda-moisjour-numero {
+  background: var(--action);
+  color: var(--action-texte);
+  font-weight: 700;
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--action) 40%, transparent);
+}
+.agenda-moisjour-jour:focus-visible {
+  outline: none;
+}
+.agenda-moisjour-jour:focus-visible .agenda-moisjour-numero {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+.agenda-moisjour-points {
+  display: flex;
+  gap: 3px;
+  height: 5px;
+}
+.agenda-moisjour-points > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--ton);
+}
+.agenda-moisjour-liste {
+  display: grid;
+  gap: var(--e-4);
+  padding-inline: var(--e-4);
+}
+.agenda-moisjour-jour-titre {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+  margin: 0 0 var(--e-4);
+  color: var(--text);
+  font-size: var(--t-16);
+  font-weight: 600;
+}
+.agenda-moisjour-badge {
+  padding: 2px var(--e-8);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--action) 16%, transparent);
+  color: var(--action);
+  font-size: var(--t-12);
+  font-weight: 600;
+}
+:root[data-theme='dark'] .agenda-moisjour-badge {
+  color: color-mix(in oklch, var(--action) 50%, white);
+}
+.agenda-moisjour-liste ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agenda-moisjour-liste li + li {
+  border-top: 1px solid var(--border);
+}
+.agenda-moisjour-ligne {
+  display: grid;
+  grid-template-columns: 52px 3px minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--e-12);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--e-12) var(--e-4);
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 140ms ease;
+}
+.agenda-moisjour-ligne:active {
+  background: var(--surface-2);
+}
+.agenda-moisjour-ligne:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: -2px;
+  border-radius: var(--r-10);
+}
+.agenda-moisjour-heures {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.agenda-moisjour-heures strong {
+  font-size: var(--t-14);
+  font-weight: 600;
+}
+.agenda-moisjour-heures span {
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+}
+.agenda-moisjour-barre {
+  border-radius: 999px;
+  background: var(--ton);
+}
+.agenda-moisjour-texte {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+}
+.agenda-moisjour-texte strong {
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--t-16);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agenda-moisjour-texte strong svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.agenda-moisjour-texte > span {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agenda-moisjour-ligne.is-decline {
+  opacity: 0.55;
+}
+.agenda-moisjour-ligne.is-decline strong {
+  text-decoration: line-through;
+}
+.agenda-moisjour-vide {
+  display: grid;
+  justify-items: center;
+  gap: var(--e-8);
+  padding: var(--e-24) var(--e-16);
+  color: var(--text-muted);
+  text-align: center;
+}
+.agenda-moisjour-vide p {
+  margin: 0;
+}
+/* Téléphone : le formulaire complet en plein écran, ses boutons toujours
+   visibles en bas. */
+@media (max-width: 640px) {
+  .agenda-formulaire-fenetre .modal-actions {
+    position: sticky;
+    bottom: calc(-1 * 1.4rem);
+    margin: 0 -1.4rem -1.4rem;
+    padding: var(--e-12) 1.4rem calc(var(--e-12) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .agenda-icone-bouton {
+    width: 44px;
+    height: 44px;
+  }
+}

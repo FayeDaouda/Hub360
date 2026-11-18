@@ -127,40 +127,50 @@ describe('Page Agenda', () => {
       await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
     });
 
-    it('sur téléphone : 3 jours par défaut, barre compacte, tiroir des vues, bouton Créer flottant', async () => {
+    it('sur téléphone : « Mois et jour » par défaut, barre compacte, tiroir des vues, Créer flottant', async () => {
       window.matchMedia = vi.fn().mockImplementation((q: string) => ({
         matches: q === '(max-width: 640px)',
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
       }));
       await monter();
-      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-11-14'));
-      expect(await screen.findByRole('button', { name: /Point chantier/ })).toBeInTheDocument();
-      // Le mois en titre, pas de flèches ; Créer flotte au pouce.
-      expect(screen.getByRole('button', { name: /Novembre 2026/ })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /suivants/ })).not.toBeInTheDocument();
+      // La grille du mois entier ; la journée choisie (aujourd'hui) en liste.
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-10-26', '2026-12-06'));
+      const liste = await screen.findByRole('region', { name: /Jeudi 12 novembre/ });
+      expect(within(liste).getByText('Point chantier')).toBeInTheDocument();
+      expect(within(liste).getByText('Plateau')).toBeInTheDocument();
+      // Le 12 est choisi et porte un point ; toucher le 13 le choisit.
+      const mois = screen.getByRole('group', { name: 'Choisir un jour' });
+      const douze = within(mois).getByRole('button', { name: /jeudi 12 novembre · 1 élément/ });
+      expect(douze).toHaveAttribute('aria-pressed', 'true');
+      await userEvent.click(within(mois).getByRole('button', { name: /^vendredi 13 novembre$/ }));
+      expect(await screen.findByText('Rien de prévu ce jour-là.')).toBeInTheDocument();
+      // Le mois en titre (sans menu déroulant), pas de flèches ; Créer flotte au pouce.
+      expect(screen.getByRole('heading', { name: 'Novembre 2026' })).toBeInTheDocument();
+      expect(document.querySelector('.agenda-barre .agenda-fleches')).toBeNull();
       expect(screen.getByRole('button', { name: 'Nouveau rendez-vous' })).toBeInTheDocument();
       // Les vues, dans le tiroir : Planning charge les 30 jours.
       await userEvent.click(screen.getByRole('button', { name: 'Vues et agendas' }));
       const tiroir = await screen.findByRole('dialog', { name: 'Vues et agendas' });
-      expect(within(tiroir).getByRole('button', { name: '3 jours' })).toHaveAttribute('aria-current', 'true');
+      expect(within(tiroir).getByRole('button', { name: 'Mois et jour' })).toHaveAttribute('aria-current', 'true');
       await userEvent.click(within(tiroir).getByRole('button', { name: 'Planning' }));
-      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11'));
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-13', '2026-12-12'));
       expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
     });
 
-    it('sur téléphone, glisser le doigt vers la gauche avance de trois jours', async () => {
+    it('sur téléphone, glisser le doigt vers la gauche avance d’un mois', async () => {
       window.matchMedia = vi.fn().mockImplementation((q: string) => ({
         matches: q === '(max-width: 640px)',
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
       }));
       await monter();
-      const bloc = await screen.findByRole('button', { name: /Point chantier/ });
-      const zone = bloc.closest('.agenda-principal')!;
+      const ligne = await screen.findByRole('button', { name: /Point chantier/ });
+      const zone = ligne.closest('.agenda-principal')!;
       fireEvent.touchStart(zone, { touches: [{ clientX: 300, clientY: 400 }] });
       fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 120, clientY: 410 }] });
-      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-15', '2026-11-17'));
+      // Décembre : la grille du lundi 30 novembre au 10 janvier.
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-30', '2027-01-10'));
       // Un geste surtout vertical (défilement) ne change pas de période.
       const appels = api.getAgenda.mock.calls.length;
       fireEvent.touchStart(zone, { touches: [{ clientX: 200, clientY: 100 }] });

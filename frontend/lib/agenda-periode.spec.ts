@@ -16,6 +16,8 @@ describe('agenda-periode', () => {
     // Mois : 6 semaines, du lundi précédant le 1er.
     expect(periode('mois', '2026-11-18')).toEqual({ du: '2026-10-26', au: '2026-12-06' });
     expect(periode('annee', '2026-11-18')).toEqual({ du: '2026-01-01', au: '2026-12-31' });
+    // Mois et jour (téléphone) : la grille du mois entier.
+    expect(periode('moisjour', '2026-11-18')).toEqual({ du: '2026-10-26', au: '2026-12-06' });
     expect(periode('planning', '2026-11-18')).toEqual({ du: '2026-11-18', au: '2026-12-17' });
   });
 
@@ -25,19 +27,15 @@ describe('agenda-periode', () => {
     expect(decaler('3jours', '2026-11-18', -1)).toBe('2026-11-15');
     expect(decaler('semaine', '2026-11-18', -1)).toBe('2026-11-11');
     expect(decaler('mois', '2026-11-18', 1)).toBe('2026-12-18');
+    expect(decaler('moisjour', '2026-11-18', -1)).toBe('2026-10-18');
     expect(decaler('annee', '2026-11-18', 1)).toBe('2027-11-18');
     expect(decaler('planning', '2026-11-18', 1)).toBe('2026-12-18');
   });
 
   it('grille horaire : jour, 3 jours, semaine', () => {
-    expect(['jour', '3jours', 'semaine', 'mois', 'annee', 'planning'].map((v) => enGrille(v as never))).toEqual([
-      true,
-      true,
-      true,
-      false,
-      false,
-      false,
-    ]);
+    expect(
+      ['jour', '3jours', 'semaine', 'mois', 'annee', 'planning', 'moisjour'].map((v) => enGrille(v as never)),
+    ).toEqual([true, true, true, false, false, false, false]);
   });
 
   it('intervalle façon Google : même mois, deux mois, deux années', () => {
@@ -53,6 +51,7 @@ describe('agenda-periode', () => {
     expect(titrePeriode('mois', '2026-11-18')).toBe('Novembre 2026');
     expect(titrePeriode('annee', '2026-11-18')).toBe('2026');
     expect(titrePeriode('3jours', '2026-11-18', true)).toBe('Novembre 2026');
+    expect(titrePeriode('moisjour', '2026-11-18', true)).toBe('Novembre 2026');
     // Semaine à cheval : le mois de son jeudi.
     expect(titrePeriode('semaine', '2026-12-01', true)).toBe('Décembre 2026');
     expect(titrePeriode('semaine', '2026-11-30', true)).toBe('Décembre 2026');

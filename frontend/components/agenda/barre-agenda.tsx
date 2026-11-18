@@ -6,11 +6,11 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Menu as IconeMenu,
   MoreHorizontal,
+  PanelLeft,
   Plus,
 } from 'lucide-react';
-import { LIBELLES_FLECHES, titrePeriode, VUES, type Vue } from '@/lib/agenda-periode';
+import { LIBELLES_FLECHES, titrePeriode, VUES, VUES_TELEPHONE, type Vue } from '@/lib/agenda-periode';
 import { Menu, type ElementMenu } from '@/components/ui/menu';
 
 // Barre de l'Agenda (18/11/2026), façon Google Agenda.
@@ -81,20 +81,27 @@ export function BarreAgenda({
           aria-expanded={colonneOuverte}
           onClick={onColonne}
         >
-          <IconeMenu size={20} aria-hidden />
+          <PanelLeft size={20} aria-hidden />
         </button>
-        <button
-          type="button"
-          className="agenda-titre-bouton"
-          aria-expanded={miniOuvert}
-          aria-controls="agenda-mini-deroulant"
-          onClick={onMini}
-        >
-          <span className="agenda-titre" aria-live="polite">
+        {/* « Mois et jour » montre déjà le mois : le titre n'ouvre rien. */}
+        {vue === 'moisjour' ? (
+          <h2 className="agenda-titre agenda-titre-seul" aria-live="polite">
             {titrePeriode(vue, ancre, true)}
-          </span>
-          <ChevronDown size={16} aria-hidden className="agenda-titre-chevron" />
-        </button>
+          </h2>
+        ) : (
+          <button
+            type="button"
+            className="agenda-titre-bouton"
+            aria-expanded={miniOuvert}
+            aria-controls="agenda-mini-deroulant"
+            onClick={onMini}
+          >
+            <span className="agenda-titre" aria-live="polite">
+              {titrePeriode(vue, ancre, true)}
+            </span>
+            <ChevronDown size={16} aria-hidden className="agenda-titre-chevron" />
+          </button>
+        )}
         <span className="agenda-barre-espace" />
         <button
           type="button"
@@ -120,7 +127,7 @@ export function BarreAgenda({
           aria-expanded={colonneOuverte}
           onClick={onColonne}
         >
-          <IconeMenu size={18} aria-hidden />
+          <PanelLeft size={18} aria-hidden />
         </button>
         <button type="button" className="btn-ghost agenda-aujourdhui" onClick={onAujourdhui}>
           Aujourd’hui
@@ -151,14 +158,13 @@ export function BarreAgenda({
       </div>
       <div className="agenda-barre-droite">
         <div className="vue-toggle agenda-vues" role="radiogroup" aria-label="Vue">
-          {VUES.filter((v) => v.cle !== '3jours').map((v) => (
+          {VUES.filter((v) => !VUES_TELEPHONE.includes(v.cle)).map((v) => (
             <button
               key={v.cle}
               type="button"
               role="radio"
               aria-checked={vue === v.cle}
               className={vue === v.cle ? 'is-active' : ''}
-              title={`${v.libelle} (${v.raccourci})`}
               onClick={() => onVue(v.cle)}
             >
               {v.libelle}

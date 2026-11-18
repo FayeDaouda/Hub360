@@ -63,15 +63,47 @@ describe('GrilleHoraire', () => {
     expect(bloc).not.toHaveTextContent('Plateau');
     expect(container.querySelector('.agenda-grille-journee')).toHaveTextContent('Plans RDC');
     fireEvent.click(bloc);
-    expect(onOuvrir).toHaveBeenCalledWith(ELEMENTS[0]);
+    // Avec l'ancre où poser la fiche (le bloc à l'écran).
+    expect(onOuvrir).toHaveBeenCalledWith(ELEMENTS[0], expect.objectContaining({ top: expect.any(Number) }));
     fireEvent.click(screen.getByRole('button', { name: 'Plans RDC' }));
-    expect(onOuvrir).toHaveBeenLastCalledWith(ELEMENTS[1]);
+    expect(onOuvrir).toHaveBeenLastCalledWith(ELEMENTS[1], expect.any(Object));
   });
 
   it('un créneau vide cliqué propose la demi-heure, pour une heure', () => {
     const { onCreneau, container } = monter();
     fireEvent.click(container.querySelector('.agenda-grille-colonne')!, { clientY: 14.75 * 48 });
-    expect(onCreneau).toHaveBeenCalledWith(J, '14:30', '15:30');
+    expect(onCreneau).toHaveBeenCalledWith(J, '14:30', '15:30', expect.objectContaining({ top: 14.5 * 48 }));
+  });
+
+  it('tracer un créneau à la souris : du quart d’heure pressé à celui relâché, sans second clic', () => {
+    const { onCreneau, container } = monter();
+    const colonne = container.querySelector('.agenda-grille-colonne')!;
+    const corps = container.querySelector('.agenda-grille-corps')!;
+    fireEvent.pointerDown(colonne, { button: 0, pointerType: 'mouse', clientY: 10 * 48, pointerId: 1 });
+    fireEvent.pointerMove(corps, { buttons: 1, clientY: 11.6 * 48, pointerId: 1 });
+    // Le bloc fantôme suit le tracé.
+    expect(container.querySelector('.agenda-bloc--fantome')).toHaveTextContent('10:00 – 11:45');
+    fireEvent.pointerUp(corps, { clientY: 11.6 * 48, pointerId: 1 });
+    fireEvent.click(colonne, { clientY: 11.6 * 48 });
+    expect(onCreneau).toHaveBeenCalledOnce();
+    expect(onCreneau).toHaveBeenCalledWith(J, '10:00', '11:45', expect.any(Object));
+  });
+
+  it('création rapide en cours : son créneau en fantôme dans la grille', () => {
+    const { container } = render(
+      <GrilleHoraire
+        jours={[J]}
+        aujourdhui="2026-11-20"
+        elements={[]}
+        peutCreer
+        brouillon={{ jour: J, debut: '14:00', fin: '15:30' }}
+        onCreneau={vi.fn()}
+        onOuvrir={vi.fn()}
+      />,
+    );
+    const fantome = container.querySelector('.agenda-bloc--fantome')!;
+    expect(fantome).toHaveTextContent('(Sans titre)14:00 – 15:30');
+    expect(fantome).toHaveStyle({ top: `${14 * 48 + 1}px` });
   });
 
   it('sans le droit de créer, cliquer un créneau ne fait rien', () => {

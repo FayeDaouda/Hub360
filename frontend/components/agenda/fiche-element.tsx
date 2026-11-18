@@ -1,13 +1,15 @@
 'use client';
 
-import { Bell, CalendarClock, MapPin, Repeat, Users, Video } from 'lucide-react';
+import { Bell, CalendarClock, MapPin, Pencil, Repeat, Trash2, Users, Video } from 'lucide-react';
 import { formatTime, formatWeekdayDayMonth } from '@hub/domain';
 import { LIBELLES_REPONSE, RAPPELS, type ElementAgenda, type ReponseInvitation } from '@/lib/agenda';
+import type { Rect } from '@/lib/agenda-placement';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { useConfirmer } from '@/components/confirmation';
-import { CloseButton, Modal } from '@/components/ui/dialog';
-import { Pill } from '@/components/ui/pill';
-import { TONS } from './grille-horaire';
+import { CloseButton } from '@/components/ui/dialog';
+import { PersonAvatar } from '@/components/ui/avatar';
+import { FenetreAncree } from './fenetre-ancree';
+import { styleCalque, TONS } from './grille-horaire';
 
 // Lien visio affichable : https seulement, avec son site (en punycode).
 export function siteVisio(lien: string | null): { href: string; site: string } | null {
@@ -28,11 +30,17 @@ export const LIBELLES: Record<ElementAgenda['type'], string> = {
   externe: 'Google / Apple',
 };
 
-// Fiche d'un élément de l'Agenda (12/11/2026), ouverte d'un clic dans la
-// grille ou le planning : le détail, et ce qu'on peut en faire — modifier ou
-// annuler son rendez-vous, décider une demande d'absence.
+const capitale = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// Fiche d'un élément de l'Agenda (12/11/2026 ; façon Google Agenda le
+// 18/11/2026) : posée à côté de ce qu'on a cliqué sur ordinateur, en feuille
+// sur téléphone. En tête, les actions en icônes (modifier, annuler, fermer) ;
+// puis la couleur, le titre, le moment, et le détail ligne par ligne ; on
+// répond à son invitation en bas.
 export function FicheElement({
   e,
+  ancre = null,
+  etroit = false,
   onClose,
   onModifier,
   onAnnuler,
@@ -40,6 +48,8 @@ export function FicheElement({
   onRepondre,
 }: {
   e: ElementAgenda;
+  ancre?: Rect | null;
+  etroit?: boolean;
   onClose: () => void;
   onModifier: (e: ElementAgenda) => void;
   onAnnuler: (e: ElementAgenda) => void;
@@ -60,6 +70,8 @@ export function FicheElement({
   // à côté du bouton (un lien trompeur se voit).
   const visio = siteVisio(e.lienVisio);
   const rappel = RAPPELS.find((r) => r.minutes === e.rappelMinutes);
+  const oui = e.participants.filter((p) => p.reponse === 'oui').length;
+  const attente = e.participants.filter((p) => !p.reponse).length;
 
   async function annuler() {
     // Une série : la page demande la portée (elle tient lieu de confirmation).
@@ -77,69 +89,96 @@ export function FicheElement({
   }
 
   return (
-    <Modal onClose={onClose} portal labelledBy="fiche-agenda-titre">
-      <header className="modal-header">
-        <h2 id="fiche-agenda-titre" className="agenda-fiche-titre">
-          <Pill tone={TONS[e.type]}>{LIBELLES[e.type]}</Pill>
-          <span>{e.titre}</span>
-        </h2>
+    <FenetreAncree ancre={ancre} etroit={etroit} onClose={onClose} labelledBy="fiche-agenda-titre">
+      <div className="agenda-fiche-outils">
+        {e.modifiable && (
+          <button
+            type="button"
+            className="agenda-icone-bouton"
+            aria-label="Modifier"
+            title="Modifier"
+            onClick={() => onModifier(e)}
+          >
+            <Pencil size={17} aria-hidden />
+          </button>
+        )}
+        {e.annulable && (
+          <button
+            type="button"
+            className="agenda-icone-bouton"
+            aria-label="Annuler le rendez-vous"
+            title="Annuler le rendez-vous"
+            onClick={annuler}
+          >
+            <Trash2 size={17} aria-hidden />
+          </button>
+        )}
         <CloseButton onClick={onClose} />
-      </header>
-      <div className="modal-body agenda-fiche">
+      </div>
+
+      <div className="agenda-fiche">
+        <div className="agenda-fiche-entete">
+          <span
+            className={`agenda-fiche-couleur agenda-puce--${TONS[e.type]}${e.calque ? ' is-calque' : ''}`}
+            style={styleCalque(e)}
+            aria-hidden
+          />
+          <div className="agenda-fiche-entete-texte">
+            <h2 id="fiche-agenda-titre" className="agenda-fiche-titre">
+              {e.titre}
+            </h2>
+            <p className="agenda-fiche-quand">
+              {capitale(formatWeekdayDayMonth(e.jour))}
+              {e.debut && e.fin ? ` · ${formatTime(e.debut)} – ${formatTime(e.fin)}` : ' · toute la journée'}
+            </p>
+            {e.regleTexte && (
+              <p className="agenda-fiche-quand">
+                <Repeat size={13} aria-hidden /> {e.regleTexte}
+                {e.occurrenceModifiee ? ' · cette date modifiée' : ''}
+              </p>
+            )}
+            {e.type !== 'rendez_vous' && <span className="agenda-fiche-type">{LIBELLES[e.type]}</span>}
+          </div>
+        </div>
+
         {e.calque && (
           <p className="agenda-fiche-ligne">
-            <span
-              className="agenda-cote-pastille"
-              style={{ ['--ton' as string]: `var(--${e.calque.couleur})` }}
-              aria-hidden
-            />
+            <CalendarClock size={18} aria-hidden />
             <span>Agenda de {e.calque.nom}</span>
           </p>
         )}
-        <p className="agenda-fiche-ligne">
-          <CalendarClock size={16} aria-hidden />
-          <span>
-            {formatWeekdayDayMonth(e.jour)}
-            {e.debut && e.fin ? ` · ${formatTime(e.debut)} – ${formatTime(e.fin)}` : ' · toute la journée'}
-          </span>
-        </p>
+        {visio && (
+          <div className="agenda-fiche-ligne">
+            <Video size={18} aria-hidden />
+            <div className="agenda-fiche-visio">
+              <a className="btn-primary" href={visio.href} target="_blank" rel="noopener noreferrer">
+                Rejoindre la visio
+              </a>
+              <span className="agenda-detail">{visio.site}</span>
+            </div>
+          </div>
+        )}
         {e.lieu && (
           <p className="agenda-fiche-ligne">
-            <MapPin size={16} aria-hidden /> <span>{e.lieu}</span>
-          </p>
-        )}
-        {visio && (
-          <p className="agenda-fiche-ligne">
-            <Video size={16} aria-hidden />
-            <a className="btn-primary btn-primary--sm" href={visio.href} target="_blank" rel="noopener noreferrer">
-              Rejoindre la visio
-            </a>
-            <span className="agenda-detail">{visio.site}</span>
-          </p>
-        )}
-        {e.regleTexte && (
-          <p className="agenda-fiche-ligne">
-            <Repeat size={16} aria-hidden />
-            <span>
-              {e.regleTexte}
-              {e.occurrenceModifiee ? ' · cette date modifiée' : ''}
-            </span>
-          </p>
-        )}
-        {rappel && (
-          <p className="agenda-fiche-ligne">
-            <Bell size={16} aria-hidden /> <span>Rappel {rappel.libelle.toLowerCase()}</span>
+            <MapPin size={18} aria-hidden /> <span>{e.lieu}</span>
           </p>
         )}
         {avec && (
           <div className="agenda-fiche-ligne">
-            <Users size={16} aria-hidden />
+            <Users size={18} aria-hidden />
             <div className="agenda-participants">
-              {e.organisateur && <span>Organisé par {e.organisateur}</span>}
+              <span className="agenda-participants-resume">
+                {e.participants.length} participant{e.participants.length > 1 ? 's' : ''}
+                <span className="agenda-detail">
+                  {oui} oui{attente ? ` · ${attente} en attente` : ''}
+                </span>
+              </span>
+              {e.organisateur && <span className="agenda-detail">Organisé par {e.organisateur}</span>}
               <ul>
                 {e.participants.map((p, i) => (
                   <li key={`${p.nom}-${i}`}>
-                    <span>{p.nom}</span>
+                    <PersonAvatar name={p.nom} size="xs" />
+                    <span className="agenda-participant-nom">{p.nom}</span>
                     <span className={`agenda-reponse is-${p.reponse ?? 'attente'}`}>
                       {p.reponse ? LIBELLES_REPONSE[p.reponse] : 'Sans réponse'}
                     </span>
@@ -149,26 +188,18 @@ export function FicheElement({
             </div>
           </div>
         )}
-        {invite && (
-          <div className="agenda-ma-reponse" role="group" aria-label="Votre réponse">
-            <span>Vous venez ?</span>
-            {(['oui', 'peut_etre', 'non'] as const).map((r) => (
-              <button
-                key={r}
-                type="button"
-                className={`btn-ghost btn-ghost--sm${e.maReponse === r ? ' is-active' : ''}`}
-                aria-pressed={e.maReponse === r}
-                onClick={() => onRepondre?.(e, r)}
-              >
-                {LIBELLES_REPONSE[r]}
-              </button>
-            ))}
-          </div>
+        {rappel && (
+          <p className="agenda-fiche-ligne">
+            <Bell size={18} aria-hidden /> <span>Rappel {rappel.libelle.toLowerCase()}</span>
+          </p>
         )}
         {e.demande && (
           <p className="agenda-fiche-ligne">
-            {LIBELLE_TYPE_ABSENCE[e.demande.type]} · {e.demande.jours} j
-            {e.demande.validationFinale ? ' · validation finale' : ''}
+            <CalendarClock size={18} aria-hidden />
+            <span>
+              {LIBELLE_TYPE_ABSENCE[e.demande.type]} · {e.demande.jours} j
+              {e.demande.validationFinale ? ' · validation finale' : ''}
+            </span>
           </p>
         )}
         {e.detail && <p className="agenda-fiche-note">{e.detail}</p>}
@@ -177,29 +208,33 @@ export function FicheElement({
             Un entretien se replanifie ou s’annule depuis le recrutement, sur sa candidature.
           </p>
         )}
-        <div className="modal-actions">
-          {e.annulable && (
-            <button type="button" className="btn-ghost" onClick={annuler}>
-              Annuler le rendez-vous
-            </button>
-          )}
-          {e.modifiable && (
-            <button type="button" className="btn-primary" onClick={() => onModifier(e)}>
-              Modifier
-            </button>
-          )}
-          {e.demande && (
+        {e.demande && (
+          <div className="agenda-fiche-actions">
             <button type="button" className="btn-primary" onClick={() => onDecider(e)}>
               Décider
             </button>
-          )}
-          {!e.annulable && !e.modifiable && !e.demande && (
-            <button type="button" className="btn-ghost" onClick={onClose}>
-              Fermer
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-    </Modal>
+
+      {invite && (
+        <div className="agenda-ma-reponse" role="group" aria-label="Votre réponse">
+          <span>Vous venez ?</span>
+          <span className="agenda-ma-reponse-choix">
+            {(['oui', 'peut_etre', 'non'] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`agenda-reponse-bouton${e.maReponse === r ? ' is-active' : ''}`}
+                aria-pressed={e.maReponse === r}
+                onClick={() => onRepondre?.(e, r)}
+              >
+                {LIBELLES_REPONSE[r]}
+              </button>
+            ))}
+          </span>
+        </div>
+      )}
+    </FenetreAncree>
   );
 }

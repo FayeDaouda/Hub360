@@ -28,7 +28,8 @@ import {
   type ReponseInvitation,
   type SemaineAgenda,
 } from '@/lib/agenda';
-import { decaler as decalerAncre, enGrille, periode, type Vue } from '@/lib/agenda-periode';
+import { decaler as decalerAncre, enGrille, periode, VUES_TELEPHONE, type Vue } from '@/lib/agenda-periode';
+import type { Rect } from '@/lib/agenda-placement';
 import { LIBELLE_TYPE_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
 import { useTitrePage } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
@@ -37,7 +38,9 @@ import { AbonnementAgendaModal } from '@/components/agenda/abonnement-agenda-mod
 import { AgendasConnectes } from '@/components/agenda/agendas-connectes';
 import { BarreAgenda, BoutonCreerFlottant } from '@/components/agenda/barre-agenda';
 import { CALQUES_MAX, ColonneAgenda, COULEURS_CALQUES, MiniCalendrier } from '@/components/agenda/colonne-agenda';
+import { CreationRapide, type Creneau } from '@/components/agenda/creation-rapide';
 import { FicheElement, LIBELLES } from '@/components/agenda/fiche-element';
+import { VueMoisJour } from '@/components/agenda/vue-mois-jour';
 import { useChoixPortee } from '@/components/agenda/choix-portee';
 import { useConfirmer } from '@/components/confirmation';
 import { GrilleHoraire, styleCalque, titreAffiche, TONS } from '@/components/agenda/grille-horaire';
@@ -103,6 +106,10 @@ export default function AgendaPage(props: Props) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
   const [fiche, setFiche] = useState<ElementAgenda | null>(null);
+  // Où poser la fiche (le bloc ou la ligne cliqués) ; sans ancre : centrée.
+  const [ficheAncre, setFicheAncre] = useState<Rect | null>(null);
+  // Création rapide (18/11/2026) : un créneau cliqué ou tracé dans la grille.
+  const [rapide, setRapide] = useState<{ creneau: Creneau; ancre: Rect | null } | null>(null);
   const [abonnement, setAbonnement] = useState(false);
   // Agendas connectés (Google) : ouverte d'un bouton, ou au retour de Google
   // avec son résultat (« ?connexion=…[#ticket=…] », retiré de l'adresse
@@ -143,13 +150,19 @@ export default function AgendaPage(props: Props) {
   }, [slug, du, au]);
 
   useEffect(charger, [charger]);
-  // Téléphone : 3 jours (comme Google Agenda) ; revenu sur un grand écran,
-  // la semaine (la vue « 3 jours » n'y est pas proposée). Lu après le premier
-  // rendu : le rendu serveur ne connaît pas la largeur de l'écran.
+  // Téléphone : « Mois et jour » (le mois, la journée en liste dessous) ;
+  // revenu sur un grand écran, la semaine (les vues du téléphone n'y sont pas
+  // proposées). Un choix fait par la personne est respecté (une rotation de
+  // l'écran ne le défait pas). Lu après le premier rendu : le rendu serveur
+  // ne connaît pas la largeur de l'écran.
+  const vueChoisie = useRef(false);
+  const choisirVue = (v: Vue) => {
+    vueChoisie.current = true;
+    setVue(v);
+  };
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (etroit) setVue((v) => (v === 'semaine' ? '3jours' : v));
-    else setVue((v) => (v === '3jours' ? 'semaine' : v));
+    if (etroit) setVue((v) => (vueChoisie.current ? v : v === 'semaine' ? 'moisjour' : v));
+    else setVue((v) => (VUES_TELEPHONE.includes(v) ? 'semaine' : v));
   }, [etroit]);
   // Préférences de la colonne : propres à ce navigateur et à ce compte
   // (commodité ; un navigateur partagé ne mêle pas deux personnes).
@@ -259,8 +272,16 @@ export default function AgendaPage(props: Props) {
         ajouter({ ...e, calque: { id, nom: nomDe.get(id) ?? '—', couleur: COULEURS_CALQUES[rang] } }),
       ),
     );
-  const creer = (jour: string, debut?: string, fin?: string) =>
-    setFormulaire({ initial: valeursVides(jour, debut, fin) });
+  // Un créneau de la grille, sur ordinateur : la création rapide à côté ;
+  // sinon (bouton Créer, téléphone) le formulaire complet.
+  const creer = (jour: string, debut?: string, fin?: string, ancre?: Rect) => {
+    if (!etroit && debut && fin && ancre) setRapide({ creneau: { jour, debut, fin }, ancre });
+    else setFormulaire({ initial: valeursVides(jour, debut, fin) });
+  };
+  const ouvrirFiche = (e: ElementAgenda, ancre?: Rect) => {
+    setFicheAncre(ancre ?? null);
+    setFiche(e);
+  };
   // « Créer » : aujourd'hui s'il est affiché, sinon le premier jour affiché.
   const creerMaintenant = () => creer(du <= aujourdhui && aujourdhui <= au ? aujourdhui : du);
   // Une occurrence d'une série : la portée d'abord (comme Google Agenda),
@@ -396,7 +417,7 @@ export default function AgendaPage(props: Props) {
     return personnes.filter((p) => deja.has(p.id));
   }
   function ouvrir(v: Vue, jour: string) {
-    setVue(v);
+    choisirVue(v);
     setAncre(jour);
   }
 
@@ -420,7 +441,7 @@ export default function AgendaPage(props: Props) {
         peutCreer={peutCreer}
         colonneOuverte={colonneOuverte}
         miniOuvert={miniOuvert}
-        onVue={setVue}
+        onVue={choisirVue}
         onAujourdhui={() => setAncre(aujourdhui)}
         onDecaler={decaler}
         onColonne={() => setColonneOuverte((o) => !o)}
@@ -431,7 +452,7 @@ export default function AgendaPage(props: Props) {
       />
 
       {/* Téléphone : le mini-calendrier sous le mois (comme Google Agenda). */}
-      {etroit && miniOuvert && (
+      {etroit && miniOuvert && vue !== 'moisjour' && (
         <div id="agenda-mini-deroulant" className="agenda-mini-deroulant">
           <MiniCalendrier
             key={ancre.slice(0, 7)}
@@ -499,10 +520,23 @@ export default function AgendaPage(props: Props) {
               aujourdhui={aujourdhui}
               elements={elements}
               peutCreer={peutCreer}
+              brouillon={rapide?.creneau ?? null}
               onCreneau={creer}
-              onOuvrir={setFiche}
+              onOuvrir={ouvrirFiche}
               onJour={vue === 'jour' ? undefined : (j) => ouvrir('jour', j)}
               onDeplacer={deplacerRendezVous}
+            />
+          ) : vue === 'moisjour' ? (
+            <VueMoisJour
+              du={du}
+              mois={ancre.slice(0, 7)}
+              jour={ancre}
+              aujourdhui={aujourdhui}
+              elements={elements}
+              peutCreer={peutCreer}
+              onJour={setAncre}
+              onOuvrir={ouvrirFiche}
+              onCreer={(j) => creer(j)}
             />
           ) : vue === 'planning' ? (
             <VuePlanning du={du} aujourdhui={aujourdhui} elements={elements} actions={actions} />
@@ -558,7 +592,7 @@ export default function AgendaPage(props: Props) {
             {...(etroit && {
               vue,
               onVue: (v: Vue) => {
-                setVue(v);
+                choisirVue(v);
                 setColonneOuverte(false);
               },
             })}
@@ -591,11 +625,31 @@ export default function AgendaPage(props: Props) {
       {fiche && (
         <FicheElement
           e={fiche}
+          ancre={ficheAncre}
+          etroit={etroit}
           onClose={() => setFiche(null)}
           onModifier={modifier}
           onAnnuler={annuler}
           onDecider={deciderDepuisFiche}
           onRepondre={repondre}
+        />
+      )}
+
+      {rapide && (
+        <CreationRapide
+          slug={slug}
+          creneau={rapide.creneau}
+          ancre={rapide.ancre}
+          onClose={() => setRapide(null)}
+          onCree={() => {
+            setRapide(null);
+            charger();
+          }}
+          onPlusOptions={(titre) => {
+            const { jour, debut, fin } = rapide.creneau;
+            setRapide(null);
+            setFormulaire({ initial: { ...valeursVides(jour, debut, fin), titre } });
+          }}
         />
       )}
 
