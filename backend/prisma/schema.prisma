@@ -3129,7 +3129,9 @@ model ConnexionAgenda {
   societeId         String            @map("societe_id")
   utilisateurId     String            @map("utilisateur_id")
   fournisseur       FournisseurAgenda
-  compte            String // adresse du compte externe
+  compte            String // adresse du compte externe (affichée ; elle peut changer)
+  // Identifiant stable du compte chez le fournisseur (Google : « sub »).
+  idCompte          String            @map("id_compte")
   accesChiffre      String            @map("acces_chiffre")
   derniereSynchroLe DateTime?         @map("derniere_synchro_le")
   erreur            String? // dernière erreur, en clair, pour la personne
@@ -3148,8 +3150,9 @@ model ConnexionAgenda {
   agendas     AgendaExterne[]
   liens       LienExportAgenda[]
 
-  // Plusieurs comptes par personne (18/11/2026) : un par adresse.
-  @@unique([societeId, utilisateurId, fournisseur, compte])
+  // Plusieurs comptes par personne (18/11/2026) : un par compte (pas par
+  // adresse, qui peut être renommée).
+  @@unique([societeId, utilisateurId, fournisseur, idCompte])
   @@map("connexions_agenda")
 }
 

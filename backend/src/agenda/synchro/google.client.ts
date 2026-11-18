@@ -107,7 +107,7 @@ export class ClientGoogle {
     code: string,
     verificateur: string,
     redirection: string,
-  ): Promise<{ rafraichissement: string; compte: string }> {
+  ): Promise<{ rafraichissement: string; compte: string; sujet: string }> {
     const r = await this.formulaire(JETON, {
       code,
       code_verifier: verificateur,
@@ -118,7 +118,10 @@ export class ClientGoogle {
     });
     if (!r.refresh_token)
       throw new ErreurGoogle(400, 'Google n’a pas donné d’accès hors ligne : reconnectez le compte.');
-    return { rafraichissement: String(r.refresh_token), compte: adresseDuJeton(String(r.id_token ?? '')) };
+    // L'identité stable du compte (« sub ») : l'adresse peut changer.
+    const { compte, sujet } = identiteDuJeton(String(r.id_token ?? ''));
+    if (!sujet) throw new ErreurGoogle(400, 'Google n’a pas donné l’identité du compte : reconnectez-le.');
+    return { rafraichissement: String(r.refresh_token), compte, sujet };
   }
 
   // Jeton d'accès (une heure) à partir du jeton de rafraîchissement.
@@ -271,16 +274,21 @@ export class ClientGoogle {
 
 // L'adresse du compte, lue dans le jeton d'identité reçu directement de
 // Google (canal TLS, pas de signature à revérifier ici).
-export function adresseDuJeton(idToken: string): string {
+// L'adresse (affichée) et l'identifiant stable (« sub ») du compte, lus dans
+// le jeton d'identité rendu par Google à l'échange du code (canal direct,
+// authentifié par le secret client : pas de vérification de signature utile).
+export function identiteDuJeton(idToken: string): { compte: string; sujet: string } {
   try {
     const charge = JSON.parse(Buffer.from(idToken.split('.')[1] ?? '', 'base64url').toString('utf8')) as {
       email?: string;
+      sub?: string;
     };
-    return charge.email ?? '';
+    return { compte: charge.email ?? '', sujet: typeof charge.sub === 'string' ? charge.sub : '' };
   } catch {
-    return '';
+    return { compte: '', sujet: '' };
   }
 }
+export const adresseDuJeton = (idToken: string) => identiteDuJeton(idToken).compte;
 
 function messageGoogle(texte: string): string {
   try {

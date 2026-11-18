@@ -9,7 +9,8 @@ const reponse = (statut: number, corps: unknown) =>
     status: statut,
     text: () => Promise.resolve(corps === undefined ? '' : JSON.stringify(corps)),
   }) as Response;
-const jetonIdentite = (email: string) => `x.${Buffer.from(JSON.stringify({ email })).toString('base64url')}.y`;
+const jetonIdentite = (email: string, sub: string | null = 'SUB-1') =>
+  `x.${Buffer.from(JSON.stringify({ email, sub })).toString('base64url')}.y`;
 
 describe('ClientGoogle', () => {
   it('l’adresse d’autorisation : PKCE S256, accès hors ligne, seulement l’agenda', () => {
@@ -42,6 +43,7 @@ describe('ClientGoogle', () => {
     expect(await g.echangerCode('CODE', 'VERIF', 'https://hub/retour')).toEqual({
       rafraichissement: 'R1',
       compte: 'awa@gc.sn',
+      sujet: 'SUB-1', // l'identifiant stable du compte (l'adresse peut changer)
     });
     const corps = new URLSearchParams(f.mock.calls[0][1].body);
     expect(Object.fromEntries(corps)).toMatchObject({
@@ -51,6 +53,9 @@ describe('ClientGoogle', () => {
     });
     f.mockResolvedValue(reponse(200, { access_token: 'A' }));
     await expect(g.echangerCode('CODE', 'VERIF', 'x')).rejects.toThrow('accès hors ligne');
+    // Sans identité du compte : refusé (rien ne permettrait de le reconnaître).
+    f.mockResolvedValue(reponse(200, { refresh_token: 'R1', id_token: jetonIdentite('awa@gc.sn', null) }));
+    await expect(g.echangerCode('CODE', 'VERIF', 'x')).rejects.toThrow('identité du compte');
   });
 
   it('jeton révoqué chez Google (invalid_grant) : erreur « accès révoqué »', async () => {

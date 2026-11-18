@@ -284,6 +284,13 @@ describe('Agenda', () => {
     await api(app, cfo)
       .post('/agenda/connexions/google/confirmer', { ticket: 'A'.repeat(43) })
       .expect(404);
+    // Où le HUB écrit : « nulle part » passe (verrou de transaction réel) ; un
+    // agenda inconnu ou d'un autre est introuvable.
+    await api(app, cfo).put('/agenda/connexions/cible', { agendaId: null }).expect(200);
+    await api(app, cfo)
+      .put('/agenda/connexions/cible', { agendaId: '00000000-0000-4000-8000-000000000000' })
+      .expect(404);
+    await api(app, cfo).put('/agenda/connexions/cible', { agendaId: 'pas-un-uuid' }).expect(400);
     await request(app.getHttpServer())
       .post('/api/societes/grey-concrete/agenda/connexions/google/confirmer')
       .send({ ticket: 'A'.repeat(43) })

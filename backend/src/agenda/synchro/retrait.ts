@@ -30,13 +30,18 @@ export async function retirerDeGoogle(
     if (e instanceof ErreurGoogle && e.accesRevoque) return 'fait'; // déjà retiré chez Google
     return 'injoignable';
   }
+  // Tout est tenté ; un échec (quota, panne — « déjà supprimé » n'en est pas
+  // un, le client l'ignore) rend « injoignable » : rien n'est abandonné.
+  let echecs = 0;
   for (const l of c.liens) {
     try {
       await google.supprimer(acces, l.agendaId, l.idExterne);
-    } catch {
-      // Un événement déjà parti chez Google : on continue.
+    } catch (e) {
+      echecs++;
+      log.warn(`retrait ${c.id} : ${e instanceof Error ? e.message : e}`);
     }
   }
+  if (echecs) return 'injoignable';
   if (options.revoquer === false) return 'fait';
   try {
     await google.revoquer(rafraichissement);

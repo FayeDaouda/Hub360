@@ -70,7 +70,9 @@ export class SynchroAgendaService {
         this.prisma.etatConnexionAgenda.deleteMany({ where: { expireLe: { lt: new Date() } } }),
       );
       const connexions = await runAsSystem('agenda : connexions à synchroniser', () =>
-        this.prisma.connexionAgenda.findMany({ where: { active: true }, select: { id: true, societeId: true } }),
+        // Toutes, même en pause : un compte en pause reste contrôlé (départ de
+        // la personne, sessions coupées → accès révoqué), sans synchroniser.
+        this.prisma.connexionAgenda.findMany({ select: { id: true, societeId: true } }),
       );
       let faites = 0;
       for (const c of connexions) {
@@ -118,8 +120,7 @@ export class SynchroAgendaService {
       where: { id: connexionId },
       include: { agendas: true, liens: true },
     });
-    // En pause : rien ne bouge (la reprise relit tout).
-    if (!c || c.fournisseur !== 'google' || !c.active) return;
+    if (!c || c.fournisseur !== 'google') return;
     const noter = (erreur: string | null) =>
       this.prisma.connexionAgenda.update({
         where: { id: c.id },
@@ -130,7 +131,7 @@ export class SynchroAgendaService {
     try {
       rafraichissement = dechiffrer(c.accesChiffre, cle);
     } catch {
-      await noter('L’accès enregistré ne peut plus être lu : reconnectez votre compte Google.');
+      if (c.active) await noter('L’accès enregistré ne peut plus être lu : reconnectez votre compte Google.');
       return;
     }
     // Compte désactivé, plus d'accès à la société, ou sessions coupées depuis
@@ -155,6 +156,8 @@ export class SynchroAgendaService {
       }
       return;
     }
+    // En pause : contrôlé ci-dessus, mais rien ne se synchronise (la reprise relit tout).
+    if (!c.active) return;
     if (!hasRight(lu.acteur.permissions, ETAPE.agenda, 'lecture')) {
       await noter('Votre rôle n’a plus accès à « Mon agenda » : la synchronisation est arrêtée.');
       return;

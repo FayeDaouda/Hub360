@@ -7,6 +7,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { genererJeton, hacherJeton } from '../../auth/jetons';
 import { EmailService } from '../../email/email.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -157,7 +158,7 @@ export class ConnexionsAgendaService {
     if (enCours.expireLe < new Date())
       throw new BadRequestException('Autorisation expirée : recommencez la connexion.');
 
-    let jeton: { rafraichissement: string; compte: string };
+    let jeton: { rafraichissement: string; compte: string; sujet: string };
     try {
       jeton = await this.google.echangerCode(
         dechiffrer(enCours.codeChiffre, cle),
@@ -168,14 +169,15 @@ export class ConnexionsAgendaService {
       this.log.error(`échange du code Google : ${e instanceof Error ? e.message : e}`);
       throw new BadRequestException('Google n’a pas confirmé l’autorisation : recommencez la connexion.');
     }
-    // Plusieurs comptes par personne (18/11/2026) : celui-ci est relié de
-    // nouveau (accès renouvelé, choix gardés, réactivé), ou ajouté.
+    // Plusieurs comptes par personne (18/11/2026), reconnus par leur
+    // identifiant stable (une adresse renommée reste le même compte) : celui-ci
+    // est relié de nouveau (accès renouvelé, choix gardés, réactivé), ou ajouté.
     const ou = {
-      societeId_utilisateurId_fournisseur_compte: {
+      societeId_utilisateurId_fournisseur_idCompte: {
         societeId: a.societeId,
         utilisateurId: a.userId,
         fournisseur: 'google' as const,
-        compte: jeton.compte,
+        idCompte: jeton.sujet,
       },
     };
     const existe = await this.prisma.connexionAgenda.findUnique({ where: ou, select: { id: true } });
@@ -183,16 +185,12 @@ export class ConnexionsAgendaService {
       const comptes = await this.prisma.connexionAgenda.count({
         where: { societeId: a.societeId, utilisateurId: a.userId },
       });
+      // Refusé, sans révoquer : la révocation couperait toute l'autorisation
+      // Google, y compris ce même compte relié dans une autre société.
       if (comptes >= COMPTES_MAX) {
-        // Le nouvel accès est rendu à Google : rien n'est relié.
-        await this.google.revoquer(jeton.rafraichissement).catch(() => undefined);
         throw new BadRequestException(`${COMPTES_MAX} comptes reliés au plus : déconnectez-en un d’abord.`);
       }
     }
-    // Le HUB écrit déjà ailleurs (un autre compte) : ce compte n'y touche pas.
-    const ecritDeja = await this.prisma.agendaExterne.count({
-      where: { cible: true, connexion: { societeId: a.societeId, utilisateurId: a.userId } },
-    });
     const maintenant = new Date();
     const accesChiffre = chiffrer(jeton.rafraichissement, cle);
     const connexion = await this.prisma.connexionAgenda.upsert({
@@ -202,19 +200,29 @@ export class ConnexionsAgendaService {
         utilisateurId: a.userId,
         fournisseur: 'google',
         compte: jeton.compte,
+        idCompte: jeton.sujet,
         accesChiffre,
         autoriseLe: maintenant,
       },
       // Pas encore synchronisée avec ce nouvel accès : les invitations
-      // repartent par e-mail jusqu'à la première tournée réussie.
-      update: { accesChiffre, erreur: null, autoriseLe: maintenant, derniereSynchroLe: null, active: true },
+      // repartent par e-mail jusqu'à la première tournée réussie. L'adresse
+      // suit celle du compte (renommage).
+      update: {
+        compte: jeton.compte,
+        accesChiffre,
+        erreur: null,
+        autoriseLe: maintenant,
+        derniereSynchroLe: null,
+        active: true,
+      },
     });
     // Ses agendas, à la première connexion : le principal importé, et le HUB
-    // y écrit s'il lui appartient (modifiable ensuite). Une reconnexion garde
-    // les choix déjà faits.
+    // y écrit s'il lui appartient et si rien d'autre n'est choisi (modifiable
+    // ensuite). Une reconnexion garde les choix déjà faits.
     const dejaChoisis = await this.prisma.agendaExterne.count({ where: { connexionId: connexion.id } });
     try {
-      for (const g of await this.google.agendas(await this.google.acces(jeton.rafraichissement))) {
+      const agendas = await this.google.agendas(await this.google.acces(jeton.rafraichissement));
+      for (const g of agendas) {
         await this.prisma.agendaExterne.upsert({
           where: { connexionId_idExterne: { connexionId: connexion.id, idExterne: g.id } },
           create: {
@@ -225,11 +233,12 @@ export class ConnexionsAgendaService {
             couleur: g.couleur,
             proprietaire: g.proprietaire,
             importe: !dejaChoisis && g.principal,
-            cible: !dejaChoisis && !ecritDeja && g.principal && g.proprietaire,
           },
           update: { nom: g.nom, couleur: g.couleur, proprietaire: g.proprietaire },
         });
       }
+      const principal = agendas.find((g) => g.principal && g.proprietaire);
+      if (!dejaChoisis && principal) await this.cibleSiAucune(a, connexion.id, principal.id);
     } catch (e) {
       // Relié quand même : la prochaine tournée relira la liste.
       this.log.warn(`liste des agendas Google : ${e instanceof Error ? e.message : e}`);
@@ -274,10 +283,22 @@ export class ConnexionsAgendaService {
       }
       if (!agenda.connexion.active) throw new BadRequestException('Ce compte est en pause : réactivez-le d’abord.');
     }
-    await this.prisma.$transaction([
-      this.prisma.agendaExterne.updateMany({ where: { cible: true, connexion: miens }, data: { cible: false } }),
-      ...(agendaId ? [this.prisma.agendaExterne.update({ where: { id: agendaId }, data: { cible: true } })] : []),
-    ]);
+    // Atomique (transaction sérialisable) : deux choix simultanés ne laissent
+    // jamais deux agendas où le HUB écrit — le second échoue et se refait.
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          await tx.agendaExterne.updateMany({ where: { cible: true, connexion: miens }, data: { cible: false } });
+          if (agendaId) await tx.agendaExterne.update({ where: { id: agendaId }, data: { cible: true } });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034') {
+        throw new ConflictException('Un autre changement est en cours : réessayez.');
+      }
+      throw e;
+    }
     const actives = await this.prisma.connexionAgenda.findMany({
       where: { ...miens, active: true },
       select: { id: true },
@@ -302,27 +323,36 @@ export class ConnexionsAgendaService {
       this.synchroniserPlusTard(c.id);
       return this.etat(a);
     }
-    if (!(await this.prendreVerrou(c.id))) {
-      throw new ConflictException('Synchronisation en cours : réessayez dans un instant.');
-    }
+    // Sans la clé, rien ne peut être retiré chez Google : pas de pause (les
+    // réunions y resteraient figées, sans plus de trace pour les retirer).
     const cle = cleChiffrement();
-    if (
-      cle &&
-      c.fournisseur === 'google' &&
-      (await retirerDeGoogle(this.google, c, cle, this.log, { revoquer: false })) === 'injoignable'
-    ) {
-      await this.prisma.connexionAgenda.updateMany({ where: { id: c.id }, data: { synchroDepuis: null } });
-      throw new ServiceUnavailableException('Google Agenda ne répond pas : réessayez dans un instant.');
-    }
+    if (!cle) throw new ServiceUnavailableException('La synchronisation est indisponible sur ce HUB pour l’instant.');
+    await this.retirerSousVerrou(c, cle, false);
     await this.prisma.$transaction([
       this.prisma.lienExportAgenda.deleteMany({ where: { connexionId: c.id } }),
       this.prisma.evenementExterne.deleteMany({ where: { agendaId: { in: c.agendas.map((x) => x.id) } } }),
-      this.prisma.connexionAgenda.update({
-        where: { id: c.id },
-        data: { active: false, erreur: null, synchroDepuis: null },
-      }),
+      this.prisma.connexionAgenda.update({ where: { id: c.id }, data: { erreur: null, synchroDepuis: null } }),
     ]);
     return this.etat(a);
+  }
+
+  // Le HUB écrit dans l'agenda principal d'un compte qu'on vient de relier,
+  // seulement si aucun autre n'est déjà choisi (tous comptes confondus) :
+  // atomique, deux connexions simultanées ne font jamais deux cibles.
+  private async cibleSiAucune(a: Acteur, connexionId: string, idExterne: string) {
+    const miens = { societeId: a.societeId, utilisateurId: a.userId };
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          if (await tx.agendaExterne.count({ where: { cible: true, connexion: miens } })) return;
+          await tx.agendaExterne.updateMany({ where: { connexionId, idExterne }, data: { cible: true } });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (e) {
+      // Une autre connexion l'a fait au même moment : c'est elle qui l'emporte.
+      if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034')) throw e;
+    }
   }
 
   // Une synchronisation lancée sans faire attendre l'écran.
@@ -347,18 +377,38 @@ export class ConnexionsAgendaService {
   // de réunions orphelines chez Google, on demande de réessayer.
   async deconnecter(a: Acteur, connexionId: string) {
     const c = await this.connexion(a, connexionId);
-    // Pas pendant une synchronisation (elle écrirait encore chez Google
-    // après le nettoyage) : le verrou est pris, puis la connexion supprimée.
+    const cle = cleChiffrement();
+    if (cle && c.fournisseur === 'google') await this.retirerSousVerrou(c, cle, true);
+    await this.prisma.connexionAgenda.delete({ where: { id: c.id } });
+    return this.etat(a);
+  }
+
+  // Retirer de Google ce que le HUB y a écrit (pause, déconnexion), dans
+  // l'ordre qui ne peut rien casser : le verrou ; le compte en pause (plus
+  // aucune synchronisation ne prendra ces réunions pour « supprimées chez
+  // Google » et ne les annulerait dans le HUB) ; la liste relue sous verrou ;
+  // le retrait. Google injoignable : tout revient comme avant, on réessaiera.
+  private async retirerSousVerrou(
+    c: { id: string; active: boolean; accesChiffre: string },
+    cle: Buffer,
+    revoquer: boolean,
+  ) {
     if (!(await this.prendreVerrou(c.id))) {
       throw new ConflictException('Synchronisation en cours : réessayez dans un instant.');
     }
-    const cle = cleChiffrement();
-    if (cle && c.fournisseur === 'google' && (await retirerDeGoogle(this.google, c, cle, this.log)) === 'injoignable') {
-      await this.prisma.connexionAgenda.updateMany({ where: { id: c.id }, data: { synchroDepuis: null } });
+    await this.prisma.connexionAgenda.update({ where: { id: c.id }, data: { active: false } });
+    const liens = await this.prisma.lienExportAgenda.findMany({
+      where: { connexionId: c.id },
+      select: { agendaId: true, idExterne: true },
+    });
+    const resultat = await retirerDeGoogle(this.google, { ...c, liens }, cle, this.log, { revoquer });
+    if (resultat === 'injoignable') {
+      await this.prisma.connexionAgenda.update({
+        where: { id: c.id },
+        data: { active: c.active, synchroDepuis: null },
+      });
       throw new ServiceUnavailableException('Google Agenda ne répond pas : réessayez dans un instant.');
     }
-    await this.prisma.connexionAgenda.delete({ where: { id: c.id } });
-    return this.etat(a);
   }
 
   // Le verrou de synchronisation d'une connexion, s'il est libre (ou abandonné).

@@ -62,6 +62,8 @@ export class ConnexionsAgendaController {
 
   // L'agenda où le HUB écrit, tous comptes confondus (ou aucun).
   @Put('cible')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   cible(@Req() req: R, @Body() dto: CibleAgendaDto): Promise<EtatConnexionsDto> {
     return this.connexions.choisirCible(req.user, dto.agendaId ?? null);
   }
@@ -80,6 +82,8 @@ export class ConnexionsAgendaController {
 
   // Un agenda affiché ou masqué dans le HUB.
   @Put(':id/agendas/:agendaId')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   afficher(
     @Req() req: R,
     @Param('id', ParseUUIDPipe) id: string,

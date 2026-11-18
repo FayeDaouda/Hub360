@@ -15,6 +15,7 @@ CREATE TABLE "connexions_agenda" (
     "utilisateur_id" TEXT NOT NULL,
     "fournisseur" "FournisseurAgenda" NOT NULL,
     "compte" TEXT NOT NULL,
+    "id_compte" TEXT NOT NULL,
     "acces_chiffre" TEXT NOT NULL,
     "derniere_synchro_le" TIMESTAMP(3),
     "erreur" TEXT,
@@ -88,7 +89,7 @@ CREATE TABLE "etats_connexion_agenda" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "connexions_agenda_societe_id_utilisateur_id_fournisseur_com_key" ON "connexions_agenda"("societe_id", "utilisateur_id", "fournisseur", "compte");
+CREATE UNIQUE INDEX "connexions_agenda_societe_id_utilisateur_id_fournisseur_id__key" ON "connexions_agenda"("societe_id", "utilisateur_id", "fournisseur", "id_compte");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "agendas_externes_connexion_id_id_externe_key" ON "agendas_externes"("connexion_id", "id_externe");

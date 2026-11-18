@@ -285,6 +285,21 @@ describe('SynchroAgendaService', () => {
     expect(prisma.connexionAgenda.update).not.toHaveBeenCalled();
   });
 
+  it('compte en pause, puis sessions coupées (ou départ) : contrôlé quand même, accès révoqué, connexion supprimée', async () => {
+    const { s, prisma, google } = monter();
+    prisma.connexionAgenda.findUnique.mockResolvedValue({
+      ...(await prisma.connexionAgenda.findUnique()),
+      active: false,
+    });
+    prisma.utilisateur.findUnique.mockResolvedValue({
+      actif: true,
+      sessionsValidesDepuis: new Date('2026-11-10T00:00:00Z'),
+    });
+    await s.synchroniser('C1', MAINTENANT);
+    expect(google.revoquer).toHaveBeenCalledWith('R');
+    expect(prisma.connexionAgenda.delete).toHaveBeenCalledWith({ where: { id: 'C1' } });
+  });
+
   it('verrou : une synchronisation déjà en cours n’est pas doublée ; le verrou est rendu à la fin', async () => {
     const a = monter();
     a.prisma.connexionAgenda.updateMany.mockResolvedValueOnce({ count: 0 });

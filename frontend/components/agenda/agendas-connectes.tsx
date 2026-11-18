@@ -127,6 +127,11 @@ export function AgendasConnectes({
     .filter((c) => c.active)
     .flatMap((c) => c.agendas.filter((a) => a.proprietaire).map((a) => ({ ...a, compte: c.compte })));
   const cible = connexions.flatMap((c) => c.agendas).find((a) => a.cible)?.id ?? '';
+  // La cible sur un compte en pause : montrée (l'écriture reprendra là à la
+  // réactivation), mais plus choisissable.
+  const ciblePause = connexions
+    .filter((c) => !c.active)
+    .flatMap((c) => c.agendas.filter((a) => a.cible).map((a) => ({ ...a, compte: c.compte })))[0];
   const peutConnecter = !!etat?.disponibles.google && connexions.length < COMPTES_MAX;
 
   return (
@@ -196,6 +201,11 @@ export function AgendasConnectes({
                   onChange={(e) => agir(() => choisirCibleAgenda(slug, e.target.value || null))}
                 >
                   <option value="">Nulle part</option>
+                  {ciblePause && (
+                    <option value={ciblePause.id} disabled>
+                      {ciblePause.nom} · {ciblePause.compte} (en pause)
+                    </option>
+                  )}
                   {cibles.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.nom} · {a.compte}

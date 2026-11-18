@@ -97,6 +97,17 @@ describe('AgendasConnectes', () => {
     expect(api.choisirCibleAgenda).toHaveBeenLastCalledWith('gc', null);
   });
 
+  it('la cible sur un compte en pause reste montrée, mais plus choisissable', async () => {
+    api.getConnexions.mockResolvedValue({
+      ...CONNECTE,
+      connexions: [{ ...CONNECTE.connexions[0], active: false }, CONNECTE.connexions[1]],
+    });
+    render(<AgendasConnectes slug="gc" onClose={vi.fn()} onChange={vi.fn()} />);
+    const choix = await screen.findByRole('combobox', { name: /Où le HUB écrit vos réunions/ });
+    expect(choix).toHaveValue('A1');
+    expect(within(choix).getByRole('option', { name: 'Awa · awa@gc.sn (en pause)' })).toBeDisabled();
+  });
+
   it('interrupteur : un compte mis en pause (ses agendas masqués), puis réactivé', async () => {
     const enPause: EtatConnexions = {
       ...CONNECTE,
@@ -112,8 +123,8 @@ describe('AgendasConnectes', () => {
     const pro = screen.getByRole('region', { name: 'Google Agenda · awa@gc.sn' });
     expect(await within(pro).findByText('En pause : rien ne se synchronise.')).toBeInTheDocument();
     expect(within(pro).queryByLabelText('Afficher Awa dans le HUB')).not.toBeInTheDocument();
-    // Un compte en pause n'est pas proposé pour écrire.
-    expect(screen.getByRole('combobox', { name: /Où le HUB écrit/ })).not.toHaveTextContent('awa@gc.sn');
+    // Un compte en pause n'est plus choisissable pour écrire (sa cible reste montrée).
+    expect(screen.getByRole('option', { name: 'Awa · awa@gc.sn (en pause)' })).toBeDisabled();
     await userEvent.click(within(pro).getByRole('switch'));
     expect(api.activerConnexion).toHaveBeenLastCalledWith('gc', 'C1', true);
   });
