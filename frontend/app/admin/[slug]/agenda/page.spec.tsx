@@ -127,11 +127,45 @@ describe('Page Agenda', () => {
       await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
     });
 
-    it('sur téléphone, le planning s’ouvre par défaut', async () => {
-      window.matchMedia = vi.fn().mockImplementation((q: string) => ({ matches: q === '(max-width: 640px)' }));
+    it('sur téléphone : 3 jours par défaut, barre compacte, tiroir des vues, bouton Créer flottant', async () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(max-width: 640px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
       await monter();
-      await waitFor(() => expect(screen.getByRole('radio', { name: 'Planning' })).toBeChecked());
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-11-14'));
+      expect(await screen.findByRole('button', { name: /Point chantier/ })).toBeInTheDocument();
+      // Le mois en titre, pas de flèches ; Créer flotte au pouce.
+      expect(screen.getByRole('button', { name: /Novembre 2026/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /suivants/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Nouveau rendez-vous' })).toBeInTheDocument();
+      // Les vues, dans le tiroir : Planning charge les 30 jours.
+      await userEvent.click(screen.getByRole('button', { name: 'Vues et agendas' }));
+      const tiroir = await screen.findByRole('dialog', { name: 'Vues et agendas' });
+      expect(within(tiroir).getByRole('button', { name: '3 jours' })).toHaveAttribute('aria-current', 'true');
+      await userEvent.click(within(tiroir).getByRole('button', { name: 'Planning' }));
       await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11'));
+      expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
+    });
+
+    it('sur téléphone, glisser le doigt vers la gauche avance de trois jours', async () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(max-width: 640px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      await monter();
+      const bloc = await screen.findByRole('button', { name: /Point chantier/ });
+      const zone = bloc.closest('.agenda-principal')!;
+      fireEvent.touchStart(zone, { touches: [{ clientX: 300, clientY: 400 }] });
+      fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 120, clientY: 410 }] });
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-15', '2026-11-17'));
+      // Un geste surtout vertical (défilement) ne change pas de période.
+      const appels = api.getAgenda.mock.calls.length;
+      fireEvent.touchStart(zone, { touches: [{ clientX: 200, clientY: 100 }] });
+      fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 120, clientY: 400 }] });
+      expect(api.getAgenda.mock.calls.length).toBe(appels);
     });
   });
 

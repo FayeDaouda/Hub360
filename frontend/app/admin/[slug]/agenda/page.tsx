@@ -1,12 +1,12 @@
 'use client';
 
-import { use, useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarPlus, CalendarSync, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus } from 'lucide-react';
+import { use, useCallback, useEffect, useRef, useState, type TouchEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { MapPin } from 'lucide-react';
 import {
   addDays,
   addMonths,
   daysBetween,
-  formatDayLongMonth,
   formatMonthYear,
   formatRRule,
   formatTime,
@@ -28,24 +28,26 @@ import {
   type ReponseInvitation,
   type SemaineAgenda,
 } from '@/lib/agenda';
+import { decaler as decalerAncre, enGrille, periode, type Vue } from '@/lib/agenda-periode';
 import { LIBELLE_TYPE_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
 import { useTitrePage } from '@/lib/layout-contexte';
+import { useMediaQuery } from '@/lib/media';
 import { DecisionN1Modal } from '@/components/absences/decision-n1-modal';
 import { AbonnementAgendaModal } from '@/components/agenda/abonnement-agenda-modal';
 import { AgendasConnectes } from '@/components/agenda/agendas-connectes';
-import { CALQUES_MAX, ColonneAgenda, COULEURS_CALQUES } from '@/components/agenda/colonne-agenda';
+import { BarreAgenda, BoutonCreerFlottant } from '@/components/agenda/barre-agenda';
+import { CALQUES_MAX, ColonneAgenda, COULEURS_CALQUES, MiniCalendrier } from '@/components/agenda/colonne-agenda';
 import { FicheElement, LIBELLES } from '@/components/agenda/fiche-element';
 import { useChoixPortee } from '@/components/agenda/choix-portee';
 import { useConfirmer } from '@/components/confirmation';
 import { GrilleHoraire, styleCalque, titreAffiche, TONS } from '@/components/agenda/grille-horaire';
 import { RendezVousFormulaire, valeursVides, type ValeursRendezVous } from '@/components/agenda/rendez-vous-formulaire';
-import { CloseButton, Modal } from '@/components/ui/dialog';
+import { CloseButton, Dialog, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/feedback';
 import { Pill } from '@/components/ui/pill';
 
 type Props = { params: Promise<{ slug: string }> };
-type Vue = 'jour' | 'semaine' | 'mois' | 'annee' | 'planning';
 // Formulaire ouvert : création (pré-remplie d'un créneau) ou modification.
 type Formulaire = {
   rendezVousId?: string;
@@ -55,11 +57,6 @@ type Formulaire = {
 };
 type ADecider = NonNullable<ElementAgenda['demande']> & { nom: string };
 
-// Lundi de la semaine d'un jour AAAA-MM-JJ.
-const lundi = (jour: string) => {
-  const d = new Date(`${jour}T12:00:00Z`).getUTCDay(); // 0 = dimanche
-  return addDays(jour, d === 0 ? -6 : 1 - d);
-};
 const TYPES = Object.fromEntries(
   (Object.keys(LIBELLES) as ElementAgenda['type'][]).map((t) => [t, { libelle: LIBELLES[t], tone: TONS[t] }]),
 ) as Record<ElementAgenda['type'], { libelle: string; tone: (typeof TONS)[ElementAgenda['type']] }>;
@@ -67,35 +64,11 @@ const TYPES = Object.fromEntries(
 const decline = (e: ElementAgenda) => e.maReponse === 'non' && !e.calque;
 // Vue Année : la pastille d'un jour prend la couleur de son élément le plus pressant.
 const PRIORITE: ElementAgenda['type'][] = ['demande', 'echeance', 'rendez_vous', 'externe', 'conge'];
-const VUES: { cle: Vue; libelle: string }[] = [
-  { cle: 'jour', libelle: 'Jour' },
-  { cle: 'semaine', libelle: 'Semaine' },
-  { cle: 'mois', libelle: 'Mois' },
-  { cle: 'annee', libelle: 'Année' },
-  { cle: 'planning', libelle: 'Planning' },
-];
-// Planning : la liste des 30 jours qui viennent, jours chargés seulement.
-const JOURS_PLANNING = 30;
-// Téléphone : la liste se lit mieux qu'une grille (vue par défaut).
+// Téléphone (18/11/2026) : barre compacte, tiroir, 3 jours par défaut.
 const ECRAN_ETROIT = '(max-width: 640px)';
 const JOURS_COURTS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-// Période affichée autour du jour `ancre` : le jour ; la semaine ; le mois en
-// grille de 6 semaines (jours voisins compris) ; l'année civile ; le planning
-// des 30 jours à partir de l'ancre.
-function periode(vue: Vue, ancre: string) {
-  if (vue === 'jour') return { du: ancre, au: ancre };
-  if (vue === 'planning') return { du: ancre, au: addDays(ancre, JOURS_PLANNING - 1) };
-  if (vue === 'semaine') {
-    const du = lundi(ancre);
-    return { du, au: addDays(du, 6) };
-  }
-  if (vue === 'mois') {
-    const du = lundi(`${ancre.slice(0, 7)}-01`);
-    return { du, au: addDays(du, 41) };
-  }
-  return { du: `${ancre.slice(0, 4)}-01-01`, au: `${ancre.slice(0, 4)}-12-31` };
-}
+// Balayage horizontal du doigt : au moins 60 px, franchement horizontal.
+const BALAYAGE_PX = 60;
 
 // Agenda (lot 11, 01/11/2026) : rendez-vous et réunions, plus les échéances
 // des tâches et les congés validés, ajoutés d'office ; vues Semaine, Mois et
@@ -123,6 +96,8 @@ export default function AgendaPage(props: Props) {
     parId: {},
   });
   const [colonneOuverte, setColonneOuverte] = useState(false);
+  const [miniOuvert, setMiniOuvert] = useState(false);
+  const etroit = useMediaQuery(ECRAN_ETROIT);
   const [agenda, setAgenda] = useState<SemaineAgenda | null>(null);
   const [personnes, setPersonnes] = useState<{ id: string; nom: string }[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -168,12 +143,14 @@ export default function AgendaPage(props: Props) {
   }, [slug, du, au]);
 
   useEffect(charger, [charger]);
-  // Téléphone : le planning d'abord (une fois, à l'arrivée). Lu après le
-  // premier rendu : le rendu serveur ne connaît pas la largeur de l'écran.
+  // Téléphone : 3 jours (comme Google Agenda) ; revenu sur un grand écran,
+  // la semaine (la vue « 3 jours » n'y est pas proposée). Lu après le premier
+  // rendu : le rendu serveur ne connaît pas la largeur de l'écran.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (window.matchMedia?.(ECRAN_ETROIT).matches) setVue('planning');
-  }, []);
+    if (etroit) setVue((v) => (v === 'semaine' ? '3jours' : v));
+    else setVue((v) => (v === '3jours' ? 'semaine' : v));
+  }, [etroit]);
   // Préférences de la colonne : propres à ce navigateur et à ce compte
   // (commodité ; un navigateur partagé ne mêle pas deux personnes).
   const moiId = agenda?.personne.id;
@@ -246,12 +223,22 @@ export default function AgendaPage(props: Props) {
     }
   }
 
-  function decaler(sens: 1 | -1) {
-    if (vue === 'jour') setAncre(addDays(ancre, sens));
-    else if (vue === 'semaine') setAncre(addDays(ancre, 7 * sens));
-    else if (vue === 'planning') setAncre(addDays(ancre, JOURS_PLANNING * sens));
-    else setAncre(addMonths(ancre, (vue === 'mois' ? 1 : 12) * sens));
-  }
+  const decaler = (sens: 1 | -1) => setAncre((a) => decalerAncre(vue, a, sens));
+  // Téléphone : glisser vers la gauche avance, vers la droite recule.
+  const toucher = useRef<{ x: number; y: number } | null>(null);
+  const balayage = {
+    onTouchStart: (ev: TouchEvent) => {
+      toucher.current = ev.touches.length === 1 ? { x: ev.touches[0].clientX, y: ev.touches[0].clientY } : null;
+    },
+    onTouchEnd: (ev: TouchEvent) => {
+      const t = toucher.current;
+      toucher.current = null;
+      if (!t || !etroit) return;
+      const dx = ev.changedTouches[0].clientX - t.x;
+      const dy = ev.changedTouches[0].clientY - t.y;
+      if (Math.abs(dx) >= BALAYAGE_PX && Math.abs(dx) > 1.5 * Math.abs(dy)) decaler(dx < 0 ? 1 : -1);
+    },
+  };
   // Création : depuis le bouton (aujourd'hui s'il est affiché) ou un créneau.
   const peutCreer = !!agenda?.peutCreer;
   // Ce qui s'affiche : son agenda, puis ceux des collègues cochés (dans leur
@@ -274,6 +261,8 @@ export default function AgendaPage(props: Props) {
     );
   const creer = (jour: string, debut?: string, fin?: string) =>
     setFormulaire({ initial: valeursVides(jour, debut, fin) });
+  // « Créer » : aujourd'hui s'il est affiché, sinon le premier jour affiché.
+  const creerMaintenant = () => creer(du <= aujourdhui && aujourdhui <= au ? aujourdhui : du);
   // Une occurrence d'une série : la portée d'abord (comme Google Agenda),
   // puis le formulaire rempli avec ce qu'elle vise — cette date, ou toute la
   // série (ses propres valeurs, jamais celles de l'occurrence).
@@ -411,21 +400,6 @@ export default function AgendaPage(props: Props) {
     setAncre(jour);
   }
 
-  const titre =
-    vue === 'jour'
-      ? formatWeekdayDayMonth(ancre)
-      : vue === 'semaine' || vue === 'planning'
-        ? `${formatDayLongMonth(du)} → ${formatDayLongMonth(au)}`
-        : vue === 'mois'
-          ? formatMonthYear(ancre)
-          : ancre.slice(0, 4);
-  const [precedent, suivant] = {
-    jour: ['Jour précédent', 'Jour suivant'],
-    semaine: ['Semaine précédente', 'Semaine suivante'],
-    mois: ['Mois précédent', 'Mois suivant'],
-    annee: ['Année précédente', 'Année suivante'],
-    planning: ['Période précédente', 'Période suivante'],
-  }[vue];
   // Une ligne par demande (pas une par jour couvert).
   const demandes = agenda
     ? [
@@ -438,77 +412,49 @@ export default function AgendaPage(props: Props) {
 
   return (
     <div className="agenda">
-      <div className="agenda-barre">
-        <div className="agenda-nav">
-          <button type="button" className="btn-ghost btn-ghost--sm" aria-label={precedent} onClick={() => decaler(-1)}>
-            <ChevronLeft size={16} aria-hidden />
-          </button>
-          <strong className="agenda-titre">{titre}</strong>
-          <button type="button" className="btn-ghost btn-ghost--sm" aria-label={suivant} onClick={() => decaler(1)}>
-            <ChevronRight size={16} aria-hidden />
-          </button>
-          <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setAncre(aujourdhui)}>
-            Aujourd’hui
-          </button>
-        </div>
-        <div className="agenda-actions">
-          <div className="vue-toggle" role="radiogroup" aria-label="Vue">
-            {VUES.map((v) => (
-              <button
-                key={v.cle}
-                type="button"
-                role="radio"
-                aria-checked={vue === v.cle}
-                className={vue === v.cle ? 'is-active' : ''}
-                onClick={() => setVue(v.cle)}
-              >
-                {v.libelle}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="btn-ghost agenda-bouton-colonne"
-            aria-expanded={colonneOuverte}
-            aria-controls="agenda-colonne"
-            onClick={() => setColonneOuverte((o) => !o)}
-          >
-            <PanelLeft size={16} aria-hidden /> Agendas
-          </button>
-          {/* Son propre agenda dans Google, Apple ou Outlook (12/11/2026). */}
-          {agenda && (
-            <button type="button" className="btn-ghost" onClick={() => setAbonnement(true)}>
-              <CalendarPlus size={16} aria-hidden /> Ajouter à mon agenda
-            </button>
-          )}
-          {agenda && (
-            <button type="button" className="btn-ghost" onClick={() => setConnectes({ resultat: null })}>
-              <CalendarSync size={16} aria-hidden /> Agendas connectés
-            </button>
-          )}
-          {peutCreer && (
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => creer(du <= aujourdhui && aujourdhui <= au ? aujourdhui : du)}
-            >
-              <Plus size={16} aria-hidden /> Nouveau rendez-vous
-            </button>
-          )}
-        </div>
-      </div>
+      <BarreAgenda
+        vue={vue}
+        ancre={ancre}
+        aujourdhui={aujourdhui}
+        etroit={etroit}
+        peutCreer={peutCreer}
+        colonneOuverte={colonneOuverte}
+        miniOuvert={miniOuvert}
+        onVue={setVue}
+        onAujourdhui={() => setAncre(aujourdhui)}
+        onDecaler={decaler}
+        onColonne={() => setColonneOuverte((o) => !o)}
+        onMini={() => setMiniOuvert((o) => !o)}
+        onCreer={creerMaintenant}
+        onAbonnement={() => setAbonnement(true)}
+        onConnectes={() => setConnectes({ resultat: null })}
+      />
 
-      <div className={`agenda-disposition${colonneOuverte ? ' is-colonne-ouverte' : ''}`}>
-        {agenda && (
-          <ColonneAgenda
+      {/* Téléphone : le mini-calendrier sous le mois (comme Google Agenda). */}
+      {etroit && miniOuvert && (
+        <div id="agenda-mini-deroulant" className="agenda-mini-deroulant">
+          <MiniCalendrier
+            key={ancre.slice(0, 7)}
             ancre={ancre}
             du={du}
             au={au}
             aujourdhui={aujourdhui}
             onJour={(j) => {
               setAncre(j);
-              setColonneOuverte(false);
+              setMiniOuvert(false);
             }}
+          />
+        </div>
+      )}
+
+      <div className="agenda-disposition">
+        {agenda && (
+          <ColonneAgenda
+            ancre={ancre}
+            du={du}
+            au={au}
+            aujourdhui={aujourdhui}
+            onJour={setAncre}
             masques={masques}
             onMasques={(m) => preferences(m, collegues)}
             personnes={collegaux}
@@ -516,7 +462,7 @@ export default function AgendaPage(props: Props) {
             onCollegues={(c) => preferences(masques, c)}
           />
         )}
-        <div className="agenda-principal">
+        <div className="agenda-principal" {...balayage}>
           {erreur && <FieldError>{erreur}</FieldError>}
 
           {/* Demandes d'absence de la période qui attendent sa décision. */}
@@ -546,16 +492,16 @@ export default function AgendaPage(props: Props) {
 
           {!agenda ? (
             <Skeleton size="sm" />
-          ) : vue === 'jour' || vue === 'semaine' ? (
+          ) : enGrille(vue) ? (
             <GrilleHoraire
-              key={du}
-              jours={Array.from({ length: vue === 'jour' ? 1 : 7 }, (_, k) => addDays(du, k))}
+              key={`${vue}|${du}`}
+              jours={Array.from({ length: daysBetween(du, au) + 1 }, (_, k) => addDays(du, k))}
               aujourdhui={aujourdhui}
               elements={elements}
               peutCreer={peutCreer}
               onCreneau={creer}
               onOuvrir={setFiche}
-              onJour={vue === 'semaine' ? (j) => ouvrir('jour', j) : undefined}
+              onJour={vue === 'jour' ? undefined : (j) => ouvrir('jour', j)}
               onDeplacer={deplacerRendezVous}
             />
           ) : vue === 'planning' ? (
@@ -579,6 +525,51 @@ export default function AgendaPage(props: Props) {
           )}
         </div>
       </div>
+
+      {/* Sous 1100 px : la colonne dans un tiroir (vues, mini-calendrier,
+          agendas, collègues). Dans un portail : jamais rognée par le verre. */}
+      {colonneOuverte && agenda && (
+        <Dialog
+          onClose={() => setColonneOuverte(false)}
+          portal
+          backdropClassName="agenda-tiroir-fond"
+          className="agenda-tiroir"
+          label="Vues et agendas"
+          trapFocus
+        >
+          <div className="agenda-tiroir-tete">
+            <strong>Agenda</strong>
+            <CloseButton onClick={() => setColonneOuverte(false)} />
+          </div>
+          <ColonneAgenda
+            ancre={ancre}
+            du={du}
+            au={au}
+            aujourdhui={aujourdhui}
+            onJour={(j) => {
+              setAncre(j);
+              setColonneOuverte(false);
+            }}
+            masques={masques}
+            onMasques={(m) => preferences(m, collegues)}
+            personnes={collegaux}
+            collegues={colleguesValides}
+            onCollegues={(c) => preferences(masques, c)}
+            {...(etroit && {
+              vue,
+              onVue: (v: Vue) => {
+                setVue(v);
+                setColonneOuverte(false);
+              },
+            })}
+          />
+        </Dialog>
+      )}
+
+      {etroit &&
+        peutCreer &&
+        !formulaire &&
+        createPortal(<BoutonCreerFlottant onCreer={creerMaintenant} />, document.body)}
 
       {formulaire && agenda && (
         <RendezVousFormulaire

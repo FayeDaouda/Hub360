@@ -8,15 +8,16 @@ import { useCallback, useSyncExternalStore } from 'react';
 export function useMediaQuery(requete: string): boolean {
   const sAbonner = useCallback(
     (rappel: () => void) => {
-      const mq = window.matchMedia(requete);
-      mq.addEventListener('change', rappel);
-      return () => mq.removeEventListener('change', rappel);
+      // Sans matchMedia (environnement de test, très vieux navigateur) : faux.
+      const mq = window.matchMedia?.(requete);
+      mq?.addEventListener('change', rappel);
+      return () => mq?.removeEventListener('change', rappel);
     },
     [requete],
   );
   return useSyncExternalStore(
     sAbonner,
-    () => window.matchMedia(requete).matches,
+    () => window.matchMedia?.(requete).matches ?? false,
     () => false,
   );
 }
