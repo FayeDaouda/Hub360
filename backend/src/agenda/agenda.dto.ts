@@ -124,6 +124,9 @@ export class ElementAgendaDto {
   // Demande d'absence à trancher : son identifiant ; `validationFinale` = celle
   // du CEO (demande de la RH), sinon la décision du N+1.
   demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };
+  // Rendez-vous importé (18/11/2026) : la couleur de son agenda d'origine
+  // (« #rrggbb »), pour la personne elle-même.
+  couleur?: string;
 }
 
 export class SemaineAgendaDto {

@@ -134,7 +134,7 @@ describe('GrilleHoraire', () => {
     expect(lendemain.querySelector('.agenda-bloc')).toHaveStyle({ top: '1px', height: `${48 - 2}px` });
   });
 
-  it('court (moins de 40 min) : une ligne « Titre, 15:30 » ; long : le lieu en plus', () => {
+  it('court (moins de 50 min) : une ligne « Titre, 15:30 » ; long : le lieu en plus', () => {
     const { container } = render(
       <GrilleHoraire
         jours={[J]}

@@ -10217,9 +10217,49 @@
         ]
       }
     },
-    "/api/societes/{slug}/agenda/connexions/{id}": {
+    "/api/societes/{slug}/agenda/connexions/cible": {
       "put": {
-        "operationId": "ConnexionsAgendaController_choisir",
+        "operationId": "ConnexionsAgendaController_cible",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CibleAgendaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}/active": {
+      "put": {
+        "operationId": "ConnexionsAgendaController_activer",
         "parameters": [
           {
             "name": "slug",
@@ -10243,7 +10283,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ChoisirAgendasDto"
+                "$ref": "#/components/schemas/ActiverConnexionDto"
               }
             }
           }
@@ -10263,9 +10303,11 @@
         "tags": [
           "ConnexionsAgenda"
         ]
-      },
-      "delete": {
-        "operationId": "ConnexionsAgendaController_deconnecter",
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}/agendas/{agendaId}": {
+      "put": {
+        "operationId": "ConnexionsAgendaController_afficher",
         "parameters": [
           {
             "name": "slug",
@@ -10282,8 +10324,26 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "agendaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AfficherAgendaDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -10324,6 +10384,44 @@
         ],
         "responses": {
           "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}": {
+      "delete": {
+        "operationId": "ConnexionsAgendaController_deconnecter",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": "",
             "content": {
               "application/json": {
@@ -19207,6 +19305,9 @@
               "jours",
               "validationFinale"
             ]
+          },
+          "couleur": {
+            "type": "string"
           }
         },
         "required": [
@@ -19548,6 +19649,9 @@
           "compte": {
             "type": "string"
           },
+          "active": {
+            "type": "boolean"
+          },
           "derniereSynchroLe": {
             "type": "string",
             "nullable": true
@@ -19567,6 +19671,7 @@
           "id",
           "fournisseur",
           "compte",
+          "active",
           "derniereSynchroLe",
           "erreur",
           "agendas"
@@ -19615,26 +19720,39 @@
           "ticket"
         ]
       },
-      "ChoisirAgendasDto": {
+      "CibleAgendaDto": {
         "type": "object",
         "properties": {
-          "importes": {
-            "maxItems": 10,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "cible": {
+          "agendaId": {
             "type": "string",
             "nullable": true,
             "format": "uuid"
           }
         },
         "required": [
-          "importes",
-          "cible"
+          "agendaId"
+        ]
+      },
+      "ActiverConnexionDto": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "active"
+        ]
+      },
+      "AfficherAgendaDto": {
+        "type": "object",
+        "properties": {
+          "importe": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "importe"
         ]
       },
       "CreerLocaliteDto": {

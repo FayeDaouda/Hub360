@@ -56,6 +56,8 @@ export type ElementAgenda = {
   // Front seulement (12/11/2026) : élément de l'agenda d'un collègue
   // superposé au sien, avec la couleur de ce collègue.
   calque?: Calque;
+  // Rendez-vous importé (18/11/2026) : la couleur de son agenda d'origine.
+  couleur?: string;
   // Demande d'absence à trancher (son agenda) : décision du N+1, ou
   // validation finale du CEO.
   demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };
@@ -139,7 +141,9 @@ export const getDisponibilites = (slug: string, debut: string, fin: string, ids:
 //   GET    …/agenda/connexions                  état (jamais l'accès chiffré)
 //   POST   …/agenda/connexions/google           adresse où autoriser chez Google
 //   POST   …/agenda/connexions/google/confirmer { ticket } au retour : relier le compte
-//   PUT    …/agenda/connexions/:id              { importes, cible } agendas choisis
+//   PUT    …/agenda/connexions/:id/agendas/:a   { importe } un agenda affiché ou masqué
+//   PUT    …/agenda/connexions/cible            { agendaId | null } où le HUB écrit
+//   PUT    …/agenda/connexions/:id/active       { active } un compte activé ou en pause
 //   POST   …/agenda/connexions/:id/synchroniser synchroniser maintenant
 //   DELETE …/agenda/connexions/:id              déconnecter
 export type AgendaExterne = {
@@ -156,6 +160,7 @@ export type ConnexionAgenda = {
   id: string;
   fournisseur: 'google' | 'apple';
   compte: string;
+  active: boolean; // en pause : plus de synchronisation (18/11/2026)
   derniereSynchroLe: string | null;
   erreur: string | null;
   agendas: AgendaExterne[];
@@ -167,8 +172,15 @@ export const connecterGoogle = (slug: string) =>
   apiSociete<{ url: string }>(slug, '/agenda/connexions/google', { method: 'POST' });
 export const confirmerGoogle = (slug: string, ticket: string) =>
   apiSociete<EtatConnexions>(slug, '/agenda/connexions/google/confirmer', { method: 'POST', body: { ticket } });
-export const choisirAgendas = (slug: string, id: string, importes: string[], cible: string | null) =>
-  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}`, { method: 'PUT', body: { importes, cible } });
+export const afficherAgendaExterne = (slug: string, connexionId: string, agendaId: string, importe: boolean) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${connexionId}/agendas/${agendaId}`, {
+    method: 'PUT',
+    body: { importe },
+  });
+export const choisirCibleAgenda = (slug: string, agendaId: string | null) =>
+  apiSociete<EtatConnexions>(slug, '/agenda/connexions/cible', { method: 'PUT', body: { agendaId } });
+export const activerConnexion = (slug: string, id: string, active: boolean) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}/active`, { method: 'PUT', body: { active } });
 export const synchroniserConnexion = (slug: string, id: string) =>
   apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}/synchroniser`, { method: 'POST' });
 export const deconnecterAgenda = (slug: string, id: string) =>

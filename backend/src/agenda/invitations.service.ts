@@ -63,6 +63,7 @@ export class InvitationsAgendaService {
           where: {
             societeId: r.societeId,
             utilisateurId: { in: pour },
+            active: true,
             erreur: null,
             derniereSynchroLe: { not: null },
             agendas: { some: { cible: true } },

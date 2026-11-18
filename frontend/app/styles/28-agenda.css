@@ -814,7 +814,7 @@
     display: none;
   }
 }
-/* Moins de 40 minutes : une ligne, « Titre, 15:30 ». */
+/* Moins de 50 minutes : une ligne, « Titre, 15:30 ». */
 .agenda-bloc.is-court {
   justify-content: center;
   padding-block: 0;
@@ -1936,4 +1936,165 @@
     width: 44px;
     height: 44px;
   }
+}
+
+/* Agendas connectés, plusieurs comptes (18/11/2026) : une carte par compte
+   (interrupteur Activé / En pause, agendas affichés d'un clic), puis l'unique
+   agenda où le HUB écrit. */
+.agenda-connexions-fenetre {
+  max-width: 600px;
+}
+.agenda-connexion {
+  gap: var(--e-12);
+  padding: var(--e-16);
+  overflow: visible;
+  transition: opacity 200ms ease;
+}
+.agenda-connexion.is-pause {
+  background: color-mix(in oklch, var(--surface-2) 40%, var(--surface));
+}
+.agenda-connexion.is-pause .agenda-connexion-compte strong {
+  color: var(--text-muted);
+}
+.agenda-connexion .agenda-connexion-tete {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-12);
+}
+.agenda-connexion-logo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+.agenda-connexion-compte {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.agenda-connexion-compte strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agenda-connexion-agendas {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.agenda-connexion-nom {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agenda-connexion-badge {
+  flex-shrink: 0;
+  padding: 1px var(--e-8);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--action) 14%, transparent);
+  color: var(--action);
+  font-size: var(--t-12);
+  font-weight: 600;
+}
+:root[data-theme='dark'] .agenda-connexion-badge {
+  color: color-mix(in oklch, var(--action) 50%, white);
+}
+.agenda-connexion .agenda-connexion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--e-8);
+}
+.agenda-connexion-ajouter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-8);
+  min-height: 48px;
+  border: 1.5px dashed var(--border-hover);
+  border-radius: var(--r-14);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.agenda-connexion-ajouter:hover:not(:disabled) {
+  border-color: var(--action);
+  background: color-mix(in oklch, var(--action) 6%, transparent);
+}
+.agenda-connexion-cible {
+  display: grid;
+  gap: var(--e-8);
+  padding-top: var(--e-12);
+  border-top: 1px solid var(--border);
+}
+.agenda-connexion-cible > span {
+  display: grid;
+  gap: 2px;
+}
+
+/* Colonne de gauche : ses agendas connectés, compte par compte. */
+.agenda-cote-legende {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.agenda-cote-gerer {
+  padding: 2px var(--e-8);
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--action);
+  font: inherit;
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+.agenda-cote-gerer:hover {
+  background: color-mix(in oklch, var(--action) 12%, transparent);
+}
+:root[data-theme='dark'] .agenda-cote-gerer {
+  color: color-mix(in oklch, var(--action) 45%, white);
+}
+.agenda-cote-aide {
+  margin: 0;
+  padding: 0 var(--e-8);
+}
+.agenda-cote-compte {
+  display: grid;
+  gap: 2px;
+}
+.agenda-cote-compte + .agenda-cote-compte {
+  margin-top: var(--e-8);
+}
+.agenda-cote-compte-nom {
+  overflow: hidden;
+  padding: 0 var(--e-8);
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agenda-cote-texte {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

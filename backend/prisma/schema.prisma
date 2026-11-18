@@ -3139,13 +3139,17 @@ model ConnexionAgenda {
   autoriseLe        DateTime          @default(now()) @map("autorise_le")
   // Synchronisation en cours depuis (verrou par connexion : jamais deux à la fois).
   synchroDepuis     DateTime?         @map("synchro_depuis")
+  // En pause (18/11/2026) : plus de synchronisation, ses rendez-vous quittent
+  // le HUB ; la connexion reste (réactivée d'un geste).
+  active            Boolean           @default(true)
 
   societe     Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
   utilisateur Utilisateur        @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
   agendas     AgendaExterne[]
   liens       LienExportAgenda[]
 
-  @@unique([societeId, utilisateurId, fournisseur])
+  // Plusieurs comptes par personne (18/11/2026) : un par adresse.
+  @@unique([societeId, utilisateurId, fournisseur, compte])
   @@map("connexions_agenda")
 }
 

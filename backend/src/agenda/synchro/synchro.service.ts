@@ -70,7 +70,7 @@ export class SynchroAgendaService {
         this.prisma.etatConnexionAgenda.deleteMany({ where: { expireLe: { lt: new Date() } } }),
       );
       const connexions = await runAsSystem('agenda : connexions à synchroniser', () =>
-        this.prisma.connexionAgenda.findMany({ select: { id: true, societeId: true } }),
+        this.prisma.connexionAgenda.findMany({ where: { active: true }, select: { id: true, societeId: true } }),
       );
       let faites = 0;
       for (const c of connexions) {
@@ -118,7 +118,8 @@ export class SynchroAgendaService {
       where: { id: connexionId },
       include: { agendas: true, liens: true },
     });
-    if (!c || c.fournisseur !== 'google') return;
+    // En pause : rien ne bouge (la reprise relit tout).
+    if (!c || c.fournisseur !== 'google' || !c.active) return;
     const noter = (erreur: string | null) =>
       this.prisma.connexionAgenda.update({
         where: { id: c.id },

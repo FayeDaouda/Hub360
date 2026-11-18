@@ -22,12 +22,16 @@ import { SynchroAgendaService, VERROU_MS } from './synchro.service';
 const DUREE_ETAT_MS = 10 * 60_000;
 // Agendas importés au plus par connexion (volume de la synchronisation).
 export const AGENDAS_IMPORTES_MAX = 10;
+// Comptes reliés au plus par personne (18/11/2026 : perso, pro…).
+export const COMPTES_MAX = 5;
 export const redirectionGoogle = () => `${urlApiPublique()}/agenda/google/retour`;
 
 // Agendas connectés d'une personne (16/11/2026) : Google aujourd'hui (Apple
-// ensuite). Chacun connecte le sien, dans la société de sa session, choisit
-// les agendas à importer et celui où le HUB écrit (un agenda dont il est
-// propriétaire), et peut se déconnecter (l'accès est révoqué chez Google).
+// ensuite). Chacun connecte les siens, dans la société de sa session —
+// plusieurs comptes (18/11/2026 : perso, pro…), chacun activé ou en pause —,
+// choisit les agendas affichés dans le HUB et le seul agenda, tous comptes
+// confondus, où le HUB écrit (un agenda dont il est propriétaire), et peut
+// se déconnecter (l'accès est révoqué chez Google).
 // Connexion en trois temps, liée à la personne qui l'a lancée :
 //  1. le HUB rend l'adresse d'autorisation (état aléatoire, PKCE) ;
 //  2. au retour de Google, rien n'est encore relié : le code est gardé
@@ -55,18 +59,20 @@ export class ConnexionsAgendaService {
       orderBy: { creeLe: 'asc' },
     });
     const chiffrementPret = !!cleChiffrement();
+    const couleur = (c: string | null) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : null);
     return {
       disponibles: { google: chiffrementPret && this.google.configure(), apple: false },
       connexions: connexions.map((c) => ({
         id: c.id,
         fournisseur: c.fournisseur,
         compte: c.compte,
+        active: c.active,
         derniereSynchroLe: c.derniereSynchroLe?.toISOString() ?? null,
         erreur: c.erreur,
         agendas: c.agendas.map((x) => ({
           id: x.id,
           nom: x.nom,
-          couleur: x.couleur,
+          couleur: couleur(x.couleur),
           importe: x.importe,
           cible: x.cible,
           proprietaire: x.proprietaire,
@@ -162,31 +168,31 @@ export class ConnexionsAgendaService {
       this.log.error(`échange du code Google : ${e instanceof Error ? e.message : e}`);
       throw new BadRequestException('Google n’a pas confirmé l’autorisation : recommencez la connexion.');
     }
+    // Plusieurs comptes par personne (18/11/2026) : celui-ci est relié de
+    // nouveau (accès renouvelé, choix gardés, réactivé), ou ajouté.
     const ou = {
-      societeId_utilisateurId_fournisseur: {
+      societeId_utilisateurId_fournisseur_compte: {
         societeId: a.societeId,
         utilisateurId: a.userId,
         fournisseur: 'google' as const,
+        compte: jeton.compte,
       },
     };
-    const avant = await this.prisma.connexionAgenda.findUnique({ where: ou, include: { liens: true } });
-    // Un autre compte Google : les réunions écrites dans l'ancien en sont
-    // retirées, son accès révoqué, et tout ce qui en venait quitte le HUB.
-    // (Même compte : surtout pas de révocation, elle couperait aussi le
-    // nouvel accès, Google révoquant toute l'autorisation.)
-    if (avant && avant.compte !== jeton.compte) {
-      // Pas pendant une synchronisation de l'ancien compte (elle écrirait
-      // encore chez lui) : le nouvel accès est alors rendu à Google.
-      if (!(await this.prendreVerrou(avant.id))) {
+    const existe = await this.prisma.connexionAgenda.findUnique({ where: ou, select: { id: true } });
+    if (!existe) {
+      const comptes = await this.prisma.connexionAgenda.count({
+        where: { societeId: a.societeId, utilisateurId: a.userId },
+      });
+      if (comptes >= COMPTES_MAX) {
+        // Le nouvel accès est rendu à Google : rien n'est relié.
         await this.google.revoquer(jeton.rafraichissement).catch(() => undefined);
-        throw new ConflictException('Synchronisation en cours : recommencez la connexion dans un instant.');
+        throw new BadRequestException(`${COMPTES_MAX} comptes reliés au plus : déconnectez-en un d’abord.`);
       }
-      // Ancien compte injoignable : on relie quand même le nouveau.
-      if ((await retirerDeGoogle(this.google, avant, cle, this.log)) === 'injoignable') {
-        this.log.warn(`ancien compte Google ${avant.id} injoignable : réunions laissées chez lui`);
-      }
-      await this.prisma.connexionAgenda.delete({ where: { id: avant.id } });
     }
+    // Le HUB écrit déjà ailleurs (un autre compte) : ce compte n'y touche pas.
+    const ecritDeja = await this.prisma.agendaExterne.count({
+      where: { cible: true, connexion: { societeId: a.societeId, utilisateurId: a.userId } },
+    });
     const maintenant = new Date();
     const accesChiffre = chiffrer(jeton.rafraichissement, cle);
     const connexion = await this.prisma.connexionAgenda.upsert({
@@ -201,7 +207,7 @@ export class ConnexionsAgendaService {
       },
       // Pas encore synchronisée avec ce nouvel accès : les invitations
       // repartent par e-mail jusqu'à la première tournée réussie.
-      update: { accesChiffre, erreur: null, autoriseLe: maintenant, derniereSynchroLe: null },
+      update: { accesChiffre, erreur: null, autoriseLe: maintenant, derniereSynchroLe: null, active: true },
     });
     // Ses agendas, à la première connexion : le principal importé, et le HUB
     // y écrit s'il lui appartient (modifiable ensuite). Une reconnexion garde
@@ -219,7 +225,7 @@ export class ConnexionsAgendaService {
             couleur: g.couleur,
             proprietaire: g.proprietaire,
             importe: !dejaChoisis && g.principal,
-            cible: !dejaChoisis && g.principal && g.proprietaire,
+            cible: !dejaChoisis && !ecritDeja && g.principal && g.proprietaire,
           },
           update: { nom: g.nom, couleur: g.couleur, proprietaire: g.proprietaire },
         });
@@ -230,43 +236,105 @@ export class ConnexionsAgendaService {
     }
     await this.avertir(a.userId, jeton.compte, maintenant);
     // Première synchronisation tout de suite, sans faire attendre l'écran.
-    Promise.resolve()
-      .then(() => this.synchro.synchroniser(connexion.id))
-      .catch((e) => this.log.error(`première synchro ${connexion.id} : ${e instanceof Error ? e.message : e}`));
+    this.synchroniserPlusTard(connexion.id);
     return this.etat(a);
   }
 
-  // Les agendas importés (dix au plus), et celui où le HUB écrit : un agenda
-  // dont la personne est propriétaire, ou aucun.
-  async choisirAgendas(a: Acteur, connexionId: string, importes: string[], cible: string | null) {
+  // Un agenda affiché ou masqué dans le HUB (colonne de gauche, fenêtre),
+  // dix au plus par compte. Masqué : ses rendez-vous quittent le HUB ;
+  // affiché : ils arrivent à la synchronisation lancée aussitôt.
+  async afficherAgenda(a: Acteur, connexionId: string, agendaId: string, importe: boolean) {
     const c = await this.connexion(a, connexionId);
-    const parId = new Map(c.agendas.map((x) => [x.id, x]));
-    if (importes.some((x) => !parId.has(x)) || (cible && !parId.has(cible))) {
-      throw new BadRequestException('Agenda inconnu pour cette connexion.');
+    const agenda = c.agendas.find((x) => x.id === agendaId);
+    if (!agenda) throw new NotFoundException('Agenda inconnu pour ce compte.');
+    if (importe && !agenda.importe && c.agendas.filter((x) => x.importe).length >= AGENDAS_IMPORTES_MAX) {
+      throw new BadRequestException(`${AGENDAS_IMPORTES_MAX} agendas affichés au plus par compte.`);
     }
-    if (new Set(importes).size > AGENDAS_IMPORTES_MAX) {
-      throw new BadRequestException(`${AGENDAS_IMPORTES_MAX} agendas affichés au plus.`);
-    }
-    if (cible && !parId.get(cible)!.proprietaire) {
-      throw new BadRequestException('Le HUB n’écrit que dans un agenda qui vous appartient, jamais un agenda partagé.');
-    }
-    await this.prisma.$transaction(
-      c.agendas.map((x) =>
-        this.prisma.agendaExterne.update({
-          where: { id: x.id },
-          data: { importe: importes.includes(x.id), cible: x.id === cible },
-        }),
-      ),
-    );
-    // Un agenda qui n'est plus importé : ses rendez-vous quittent le HUB.
-    await this.prisma.evenementExterne.deleteMany({
-      where: { agendaId: { in: c.agendas.filter((x) => !importes.includes(x.id)).map((x) => x.id) } },
-    });
+    await this.prisma.agendaExterne.update({ where: { id: agenda.id }, data: { importe } });
+    if (!importe) await this.prisma.evenementExterne.deleteMany({ where: { agendaId: agenda.id } });
+    else if (c.active) this.synchroniserPlusTard(c.id);
     return this.etat(a);
+  }
+
+  // Le seul agenda où le HUB écrit ses réunions, tous comptes confondus : un
+  // agenda à soi, d'un compte actif — ou aucun. L'ancien est vidé de ce que
+  // le HUB y avait écrit à la synchronisation suivante, lancée aussitôt.
+  async choisirCible(a: Acteur, agendaId: string | null) {
+    const miens = { societeId: a.societeId, utilisateurId: a.userId };
+    if (agendaId) {
+      const agenda = await this.prisma.agendaExterne.findFirst({
+        where: { id: agendaId, connexion: miens },
+        include: { connexion: { select: { active: true } } },
+      });
+      if (!agenda) throw new NotFoundException('Agenda inconnu.');
+      if (!agenda.proprietaire) {
+        throw new BadRequestException(
+          'Le HUB n’écrit que dans un agenda qui vous appartient, jamais un agenda partagé.',
+        );
+      }
+      if (!agenda.connexion.active) throw new BadRequestException('Ce compte est en pause : réactivez-le d’abord.');
+    }
+    await this.prisma.$transaction([
+      this.prisma.agendaExterne.updateMany({ where: { cible: true, connexion: miens }, data: { cible: false } }),
+      ...(agendaId ? [this.prisma.agendaExterne.update({ where: { id: agendaId }, data: { cible: true } })] : []),
+    ]);
+    const actives = await this.prisma.connexionAgenda.findMany({
+      where: { ...miens, active: true },
+      select: { id: true },
+    });
+    for (const c of actives) this.synchroniserPlusTard(c.id);
+    return this.etat(a);
+  }
+
+  // Activer ou mettre en pause un compte (18/11/2026). En pause : les
+  // réunions que le HUB y avait écrites en sont retirées (sans couper
+  // l'accès), ses rendez-vous quittent le HUB, plus rien ne se synchronise ;
+  // la reprise relit tout. Google injoignable : on demande de réessayer
+  // (jamais de réunions laissées figées chez Google).
+  async activer(a: Acteur, connexionId: string, active: boolean) {
+    const c = await this.connexion(a, connexionId);
+    if (c.active === active) return this.etat(a);
+    if (active) {
+      await this.prisma.connexionAgenda.update({
+        where: { id: c.id },
+        data: { active: true, erreur: null, derniereSynchroLe: null },
+      });
+      this.synchroniserPlusTard(c.id);
+      return this.etat(a);
+    }
+    if (!(await this.prendreVerrou(c.id))) {
+      throw new ConflictException('Synchronisation en cours : réessayez dans un instant.');
+    }
+    const cle = cleChiffrement();
+    if (
+      cle &&
+      c.fournisseur === 'google' &&
+      (await retirerDeGoogle(this.google, c, cle, this.log, { revoquer: false })) === 'injoignable'
+    ) {
+      await this.prisma.connexionAgenda.updateMany({ where: { id: c.id }, data: { synchroDepuis: null } });
+      throw new ServiceUnavailableException('Google Agenda ne répond pas : réessayez dans un instant.');
+    }
+    await this.prisma.$transaction([
+      this.prisma.lienExportAgenda.deleteMany({ where: { connexionId: c.id } }),
+      this.prisma.evenementExterne.deleteMany({ where: { agendaId: { in: c.agendas.map((x) => x.id) } } }),
+      this.prisma.connexionAgenda.update({
+        where: { id: c.id },
+        data: { active: false, erreur: null, synchroDepuis: null },
+      }),
+    ]);
+    return this.etat(a);
+  }
+
+  // Une synchronisation lancée sans faire attendre l'écran.
+  private synchroniserPlusTard(connexionId: string) {
+    Promise.resolve()
+      .then(() => this.synchro.synchroniser(connexionId))
+      .catch((e) => this.log.error(`synchro ${connexionId} : ${e instanceof Error ? e.message : e}`));
   }
 
   async synchroniserMaintenant(a: Acteur, connexionId: string) {
-    await this.connexion(a, connexionId);
+    const c = await this.connexion(a, connexionId);
+    if (!c.active) throw new BadRequestException('Ce compte est en pause : réactivez-le d’abord.');
     if (!(await this.synchro.synchroniser(connexionId))) {
       throw new ConflictException('Une synchronisation est déjà en cours : le résultat arrive dans un instant.');
     }

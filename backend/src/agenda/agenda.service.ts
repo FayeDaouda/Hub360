@@ -107,7 +107,7 @@ function elementsExternes(
     debut: Date;
     fin: Date;
     journee: boolean;
-    agenda: { nom: string; connexion: { fournisseur: 'google' | 'apple' } };
+    agenda: { nom: string; couleur: string | null; connexion: { fournisseur: 'google' | 'apple' } };
   },
   pourSoi: boolean,
   du: string,
@@ -118,6 +118,8 @@ function elementsExternes(
     titre: pourSoi ? x.titre : 'Occupé',
     lieu: pourSoi ? x.lieu : null,
     detail: pourSoi ? `${NOMS_FOURNISSEURS[x.agenda.connexion.fournisseur]} · ${x.agenda.nom}` : null,
+    // La couleur de son agenda d'origine (pour soi seulement ; « #rrggbb »).
+    ...(pourSoi && x.agenda.couleur && /^#[0-9a-f]{6}$/i.test(x.agenda.couleur) && { couleur: x.agenda.couleur }),
     organisateur: null,
     invites: [],
     annulable: false,
@@ -250,9 +252,11 @@ export class AgendaService {
           societeId: a.societeId,
           debut: { lt: finExclue },
           fin: { gt: debut },
-          agenda: { importe: true, connexion: { utilisateurId: cible } },
+          agenda: { importe: true, connexion: { utilisateurId: cible, active: true } },
         },
-        include: { agenda: { select: { nom: true, connexion: { select: { fournisseur: true } } } } },
+        include: {
+          agenda: { select: { nom: true, couleur: true, connexion: { select: { fournisseur: true } } } },
+        },
         orderBy: { debut: 'asc' },
       }),
     ]);
@@ -918,7 +922,7 @@ export class AgendaService {
           societeId: a.societeId,
           debut: { lt: fin },
           fin: { gt: debut },
-          agenda: { importe: true, connexion: { utilisateurId: { in: ids } } },
+          agenda: { importe: true, connexion: { utilisateurId: { in: ids }, active: true } },
         },
         select: { agenda: { select: { connexion: { select: { utilisateurId: true } } } } },
       }),

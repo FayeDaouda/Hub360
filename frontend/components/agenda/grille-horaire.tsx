@@ -15,9 +15,14 @@ import type { Rect } from '@/lib/agenda-placement';
 import { creneauClique, MINUTES_JOUR, placerJour } from '@/lib/agenda-grille';
 import { creneauDe, deplacer, instants, memeCreneau, redimensionner, type Creneau } from '@/lib/agenda-glisser';
 
-// Couleur d'un élément : celle du collègue dont l'agenda est superposé.
+// Couleur d'un élément : celle du collègue dont l'agenda est superposé ;
+// pour un rendez-vous importé, celle de son agenda d'origine (« #rrggbb »).
 export const styleCalque = (e: ElementAgenda) =>
-  e.calque ? { ['--ton' as string]: `var(--${e.calque.couleur})` } : undefined;
+  e.calque
+    ? { ['--ton' as string]: `var(--${e.calque.couleur})` }
+    : e.couleur && /^#[0-9a-f]{6}$/i.test(e.couleur)
+      ? { ['--ton' as string]: e.couleur }
+      : undefined;
 export const titreAffiche = (e: ElementAgenda) =>
   e.calque && e.type !== 'rendez_vous' ? `${e.calque.nom} · ${e.titre}` : e.titre;
 
@@ -45,8 +50,8 @@ const px = (minutes: number) => (minutes / 60) * HEURE_PX;
 // rendez-vous commence avant ; une demi-heure de marge au-dessus.
 const DEBUT_JOURNEE_MIN = 7 * 60;
 const MARGE_MIN = 30;
-// Un rendez-vous de moins de 40 minutes tient sur une ligne : « Titre, 15:30 ».
-const COURT_MIN = 40;
+// Un rendez-vous de moins de 50 minutes tient sur une ligne : « Titre, 15:30 ».
+const COURT_MIN = 50;
 // Chevauchements (comme Google Agenda) : chaque rendez-vous déborde sur la
 // colonne suivante, celui qui commence après passe devant.
 const DEBORD = 1.7;

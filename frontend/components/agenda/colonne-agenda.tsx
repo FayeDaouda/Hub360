@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays, addMonths, daysBetween, formatMonthYear, formatWeekdayDayMonth } from '@hub/domain';
-import type { ElementAgenda } from '@/lib/agenda';
+import type { ConnexionAgenda, ElementAgenda } from '@/lib/agenda';
 import { VUES, type Vue } from '@/lib/agenda-periode';
 import { LIBELLES } from './fiche-element';
 import { TONS } from './grille-horaire';
@@ -32,6 +32,9 @@ export function ColonneAgenda({
   onCollegues,
   vue,
   onVue,
+  connectes = [],
+  onAfficherExterne,
+  onGererConnexions,
 }: {
   ancre: string;
   du: string;
@@ -47,7 +50,13 @@ export function ColonneAgenda({
   // Téléphone (tiroir) : les vues en tête, comme Google Agenda.
   vue?: Vue;
   onVue?: (v: Vue) => void;
+  // Ses comptes reliés (Google…) : chaque agenda affiché ou masqué d'un clic
+  // (18/11/2026) ; « Gérer » ouvre la fenêtre des agendas connectés.
+  connectes?: ConnexionAgenda[];
+  onAfficherExterne?: (connexionId: string, agendaId: string, importe: boolean) => void;
+  onGererConnexions?: () => void;
 }) {
+  const comptesActifs = connectes.filter((c) => c.active);
   const [filtre, setFiltre] = useState('');
   const basculerType = (t: ElementAgenda['type']) =>
     onMasques(masques.includes(t) ? masques.filter((x) => x !== t) : [...masques, t]);
@@ -84,6 +93,46 @@ export function ColonneAgenda({
           </label>
         ))}
       </fieldset>
+
+      {onGererConnexions && (
+        <fieldset className="agenda-cote-groupe">
+          <legend className="agenda-cote-legende">
+            Agendas connectés
+            <button type="button" className="agenda-cote-gerer" onClick={onGererConnexions}>
+              {connectes.length ? 'Gérer' : 'Connecter'}
+            </button>
+          </legend>
+          {comptesActifs.length === 0 && (
+            <p className="agenda-detail agenda-cote-aide">
+              {connectes.length
+                ? 'Vos comptes sont en pause.'
+                : 'Vos agendas Google (perso, pro…) dans le HUB, dans les deux sens.'}
+            </p>
+          )}
+          {comptesActifs.map((c) => (
+            <div key={c.id} className="agenda-cote-compte">
+              <span className="agenda-cote-compte-nom" title={c.compte}>
+                {c.compte}
+              </span>
+              {c.agendas.map((a) => (
+                <label key={a.id} className="agenda-cote-choix">
+                  <input
+                    type="checkbox"
+                    checked={a.importe}
+                    onChange={() => onAfficherExterne?.(c.id, a.id, !a.importe)}
+                  />
+                  <span
+                    className="agenda-cote-pastille"
+                    style={{ ['--ton' as string]: a.couleur ?? 'var(--ag-externe)' }}
+                    aria-hidden
+                  />
+                  <span className="agenda-cote-texte">{a.nom}</span>
+                </label>
+              ))}
+            </div>
+          ))}
+        </fieldset>
+      )}
 
       {personnes.length > 0 && (
         <fieldset className="agenda-cote-groupe">

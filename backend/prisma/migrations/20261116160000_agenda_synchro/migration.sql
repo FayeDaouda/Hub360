@@ -2,11 +2,11 @@
 -- (accès chiffrés), agendas externes, événements importés, réunions écrites
 -- chez Google ou Apple, connexions Google en cours (confirmées par la session).
 
--- AlterEnum
-ALTER TYPE "NotificationType" ADD VALUE 'agenda_deconnecte';
-
 -- CreateEnum
 CREATE TYPE "FournisseurAgenda" AS ENUM ('google', 'apple');
+
+-- AlterEnum
+ALTER TYPE "NotificationType" ADD VALUE 'agenda_deconnecte';
 
 -- CreateTable
 CREATE TABLE "connexions_agenda" (
@@ -21,6 +21,7 @@ CREATE TABLE "connexions_agenda" (
     "cree_le" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "autorise_le" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "synchro_depuis" TIMESTAMP(3),
+    "active" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "connexions_agenda_pkey" PRIMARY KEY ("id")
 );
@@ -87,7 +88,7 @@ CREATE TABLE "etats_connexion_agenda" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "connexions_agenda_societe_id_utilisateur_id_fournisseur_key" ON "connexions_agenda"("societe_id", "utilisateur_id", "fournisseur");
+CREATE UNIQUE INDEX "connexions_agenda_societe_id_utilisateur_id_fournisseur_com_key" ON "connexions_agenda"("societe_id", "utilisateur_id", "fournisseur", "compte");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "agendas_externes_connexion_id_id_externe_key" ON "agendas_externes"("connexion_id", "id_externe");

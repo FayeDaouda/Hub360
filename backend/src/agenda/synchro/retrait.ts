@@ -14,6 +14,8 @@ export async function retirerDeGoogle(
   c: { id: string; accesChiffre: string; liens: { agendaId: string; idExterne: string }[] },
   cle: Buffer,
   log: Logger,
+  // Pause (18/11/2026) : retirer les réunions sans révoquer l'accès.
+  options: { revoquer?: boolean } = {},
 ): Promise<'fait' | 'injoignable'> {
   let rafraichissement: string;
   try {
@@ -35,6 +37,7 @@ export async function retirerDeGoogle(
       // Un événement déjà parti chez Google : on continue.
     }
   }
+  if (options.revoquer === false) return 'fait';
   try {
     await google.revoquer(rafraichissement);
   } catch (e) {

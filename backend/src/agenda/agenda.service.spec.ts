@@ -888,7 +888,7 @@ describe('AgendaService', () => {
       debut: new Date('2026-11-03T08:00:00.000Z'),
       fin: new Date('2026-11-03T09:00:00.000Z'),
       journee: false,
-      agenda: { nom: 'Awa', connexion: { fournisseur: 'google' } },
+      agenda: { nom: 'Awa', couleur: '#039be5', connexion: { fournisseur: 'google' } },
     };
 
     it('pour soi : le titre et le lieu ; pour un collègue : « Occupé », sans détail', async () => {
@@ -899,16 +899,22 @@ describe('AgendaService', () => {
         titre: 'Dentiste',
         lieu: 'Mermoz',
         detail: 'Google Agenda · Awa',
+        // La couleur de son agenda d'origine, pour soi.
+        couleur: '#039be5',
         modifiable: false,
         annulable: false,
       });
       const autre = await s.semaine(moi({ agenda: 'L', 'agenda.autres': 'L' }), '2026-11-02', 'U9');
       const vu = autre.elements.find((e) => e.type === 'externe');
       expect(vu).toMatchObject({ titre: 'Occupé', lieu: null, detail: null });
+      expect(vu).not.toHaveProperty('couleur');
       expect(JSON.stringify(vu)).not.toContain('Dentiste');
       expect(prisma.evenementExterne.findMany).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ agenda: { importe: true, connexion: { utilisateurId: 'U9' } } }),
+          // Seulement les comptes actifs (un compte en pause n'affiche rien).
+          where: expect.objectContaining({
+            agenda: { importe: true, connexion: { utilisateurId: 'U9', active: true } },
+          }),
         }),
       );
     });

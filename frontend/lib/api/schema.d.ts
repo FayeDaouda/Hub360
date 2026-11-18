@@ -4132,7 +4132,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/societes/{slug}/agenda/connexions/{id}": {
+    "/api/societes/{slug}/agenda/connexions/cible": {
         parameters: {
             query?: never;
             header?: never;
@@ -4140,9 +4140,41 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["ConnexionsAgendaController_choisir"];
+        put: operations["ConnexionsAgendaController_cible"];
         post?: never;
-        delete: operations["ConnexionsAgendaController_deconnecter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/connexions/{id}/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ConnexionsAgendaController_activer"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/connexions/{id}/agendas/{agendaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ConnexionsAgendaController_afficher"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4159,6 +4191,22 @@ export interface paths {
         put?: never;
         post: operations["ConnexionsAgendaController_synchroniser"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/connexions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ConnexionsAgendaController_deconnecter"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6536,6 +6584,7 @@ export interface components {
                 jours: number;
                 validationFinale: boolean;
             };
+            couleur?: string;
         };
         SemaineAgendaDto: {
             du: string;
@@ -6611,6 +6660,7 @@ export interface components {
             /** @enum {string} */
             fournisseur: "apple" | "google";
             compte: string;
+            active: boolean;
             derniereSynchroLe: string | null;
             erreur: string | null;
             agendas: components["schemas"]["AgendaExterneDto"][];
@@ -6625,10 +6675,15 @@ export interface components {
         ConfirmerConnexionDto: {
             ticket: string;
         };
-        ChoisirAgendasDto: {
-            importes: string[];
+        CibleAgendaDto: {
             /** Format: uuid */
-            cible: string | null;
+            agendaId: string | null;
+        };
+        ActiverConnexionDto: {
+            active: boolean;
+        };
+        AfficherAgendaDto: {
+            importe: boolean;
         };
         CreerLocaliteDto: {
             code: string;
@@ -13308,19 +13363,18 @@ export interface operations {
             };
         };
     };
-    ConnexionsAgendaController_choisir: {
+    ConnexionsAgendaController_cible: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 slug: string;
-                id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ChoisirAgendasDto"];
+                "application/json": components["schemas"]["CibleAgendaDto"];
             };
         };
         responses: {
@@ -13334,7 +13388,7 @@ export interface operations {
             };
         };
     };
-    ConnexionsAgendaController_deconnecter: {
+    ConnexionsAgendaController_activer: {
         parameters: {
             query?: never;
             header?: never;
@@ -13344,7 +13398,38 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActiverConnexionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatConnexionsDto"];
+                };
+            };
+        };
+    };
+    ConnexionsAgendaController_afficher: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                agendaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AfficherAgendaDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13369,6 +13454,28 @@ export interface operations {
         requestBody?: never;
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatConnexionsDto"];
+                };
+            };
+        };
+    };
+    ConnexionsAgendaController_deconnecter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

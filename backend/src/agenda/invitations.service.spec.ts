@@ -233,6 +233,7 @@ describe('InvitationsAgendaService', () => {
     expect(email.envoyerInvitationAgenda).not.toHaveBeenCalled();
     // Seulement une connexion saine : sans erreur, déjà synchronisée, avec un agenda cible.
     expect(connexions.mock.calls[0][0].where).toMatchObject({
+      active: true,
       erreur: null,
       derniereSynchroLe: { not: null },
       agendas: { some: { cible: true } },

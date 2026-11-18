@@ -17,7 +17,10 @@ import {
 } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
 import {
+  afficherAgendaExterne,
   annulerRendezVous,
+  getConnexions,
+  type ConnexionAgenda,
   getAgenda,
   getPersonnesAgenda,
   cibleDe,
@@ -111,6 +114,23 @@ export default function AgendaPage(props: Props) {
   // Création rapide (18/11/2026) : un créneau cliqué ou tracé dans la grille.
   const [rapide, setRapide] = useState<{ creneau: Creneau; ancre: Rect | null } | null>(null);
   const [abonnement, setAbonnement] = useState(false);
+  // Ses comptes reliés (Google…), pour la colonne de gauche (18/11/2026).
+  const [comptes, setComptes] = useState<ConnexionAgenda[]>([]);
+  const lireComptes = useCallback(() => {
+    getConnexions(slug)
+      .then((e) => setComptes(e.connexions))
+      .catch(() => setComptes([]));
+  }, [slug]);
+  useEffect(lireComptes, [lireComptes]);
+  async function afficherExterne(connexionId: string, agendaId: string, importe: boolean) {
+    try {
+      setComptes((await afficherAgendaExterne(slug, connexionId, agendaId, importe)).connexions);
+      setErreur(null);
+      charger();
+    } catch (e) {
+      setErreur(e instanceof ApiError ? e.message : 'L’agenda n’a pas pu être affiché.');
+    }
+  }
   // Agendas connectés (Google) : ouverte d'un bouton, ou au retour de Google
   // avec son résultat (« ?connexion=…[#ticket=…] », retiré de l'adresse
   // aussitôt ; le ticket est confirmé par la session, à usage unique).
@@ -481,6 +501,9 @@ export default function AgendaPage(props: Props) {
             personnes={collegaux}
             collegues={colleguesValides}
             onCollegues={(c) => preferences(masques, c)}
+            connectes={comptes}
+            onAfficherExterne={afficherExterne}
+            onGererConnexions={() => setConnectes({ resultat: null })}
           />
         )}
         <div className="agenda-principal" {...balayage}>
@@ -589,6 +612,12 @@ export default function AgendaPage(props: Props) {
             personnes={collegaux}
             collegues={colleguesValides}
             onCollegues={(c) => preferences(masques, c)}
+            connectes={comptes}
+            onAfficherExterne={afficherExterne}
+            onGererConnexions={() => {
+              setColonneOuverte(false);
+              setConnectes({ resultat: null });
+            }}
             {...(etroit && {
               vue,
               onVue: (v: Vue) => {
@@ -661,7 +690,10 @@ export default function AgendaPage(props: Props) {
           resultat={connectes.resultat}
           ticket={connectes.ticket}
           onClose={() => setConnectes(null)}
-          onChange={charger}
+          onChange={() => {
+            charger();
+            lireComptes();
+          }}
         />
       )}
 

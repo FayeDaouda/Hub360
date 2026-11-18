@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CalendarSync, RefreshCw } from 'lucide-react';
+import { CalendarSync, Plus, RefreshCw } from 'lucide-react';
 import { formatDateTime } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
 import {
+  activerConnexion,
   AGENDAS_IMPORTES_MAX,
-  choisirAgendas,
+  afficherAgendaExterne,
+  choisirCibleAgenda,
   confirmerGoogle,
   connecterGoogle,
   deconnecterAgenda,
@@ -22,15 +24,17 @@ import { Skeleton } from '@/components/ui/feedback';
 
 const RESULTATS: Record<string, string> = {
   confirmer: 'Connexion de Google Agenda en cours…',
-  google: 'Google Agenda est connecté. Choisissez les agendas à afficher et celui où le HUB écrit ses réunions.',
+  google: 'Compte Google relié. Choisissez les agendas à afficher dans le HUB.',
   annulee: 'La connexion à Google Agenda a été annulée.',
   echec: 'La connexion à Google Agenda n’a pas abouti : réessayez.',
 };
+// Comptes reliés au plus par personne (même borne que l'API).
+const COMPTES_MAX = 5;
 
-// Agendas connectés (16/11/2026) : Google Agenda dans les deux sens — ses
-// rendez-vous dans le HUB (visibles par soi seul ; « occupé » pour les
-// collègues), ses réunions du HUB dans Google. Apple suit (lot C2). Chacun
-// choisit les agendas à afficher et celui où le HUB écrit.
+// Agendas connectés (16/11/2026 ; plusieurs comptes le 18/11/2026) : ses
+// comptes Google (perso, pro…), chacun activé ou en pause ; dans chacun, les
+// agendas affichés dans le HUB (effet immédiat) ; et, tous comptes confondus,
+// le seul agenda où le HUB écrit ses réunions. Apple suit (lot C2).
 export function AgendasConnectes({
   slug,
   resultat: resultatInitial,
@@ -40,7 +44,7 @@ export function AgendasConnectes({
 }: {
   slug: string;
   resultat?: string | null; // retour de Google (?connexion=…)
-  ticket?: string; // à confirmer par la session (?connexion=confirmer&ticket=…)
+  ticket?: string; // à confirmer par la session (?connexion=confirmer#ticket=…)
   onClose: () => void;
   onChange: () => void; // l'Agenda se relit
 }) {
@@ -81,12 +85,11 @@ export function AgendasConnectes({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- une fois à l'ouverture
   }, [slug]);
 
-  async function agir(action: () => Promise<EtatConnexions>, apres?: () => void) {
+  async function agir(action: () => Promise<EtatConnexions>) {
     setEnvoi(true);
     setErreur(null);
     try {
       setEtat(await action());
-      apres?.();
       onChange();
     } catch (e) {
       setErreur(e instanceof ApiError ? e.message : 'L’action n’a pas abouti.');
@@ -107,9 +110,33 @@ export function AgendasConnectes({
     }
   }
 
-  const google = etat?.connexions.find((c) => c.fournisseur === 'google');
+  async function deconnecter(c: ConnexionAgenda) {
+    const ok = await confirmer({
+      titre: `Déconnecter ${c.compte} ?`,
+      message:
+        'Ses rendez-vous quittent le HUB et les réunions que le HUB avait écrites dans cet agenda en sont retirées. Pour une simple pause, utilisez plutôt l’interrupteur.',
+      confirmer: 'Déconnecter',
+      danger: true,
+    });
+    if (ok) await agir(() => deconnecterAgenda(slug, c.id));
+  }
+
+  const connexions = etat?.connexions ?? [];
+  // Où le HUB peut écrire : un agenda à soi, d'un compte actif.
+  const cibles = connexions
+    .filter((c) => c.active)
+    .flatMap((c) => c.agendas.filter((a) => a.proprietaire).map((a) => ({ ...a, compte: c.compte })));
+  const cible = connexions.flatMap((c) => c.agendas).find((a) => a.cible)?.id ?? '';
+  const peutConnecter = !!etat?.disponibles.google && connexions.length < COMPTES_MAX;
+
   return (
-    <Modal onClose={onClose} busy={envoi} portal labelledBy="agendas-connectes-titre">
+    <Modal
+      onClose={onClose}
+      busy={envoi}
+      portal
+      labelledBy="agendas-connectes-titre"
+      className="agenda-connexions-fenetre"
+    >
       <header className="modal-header">
         <h2 id="agendas-connectes-titre">
           <CalendarSync size={18} aria-hidden /> Agendas connectés
@@ -123,42 +150,61 @@ export function AgendasConnectes({
           </p>
         )}
         <p className="agenda-detail">
-          Vos rendez-vous Google apparaissent dans votre Agenda du HUB (vous seul en voyez le titre ; vos collègues
-          voient « occupé »), et vos réunions du HUB s’écrivent dans votre Google Agenda, à jour dans les deux sens
+          Vos rendez-vous personnels apparaissent dans votre Agenda du HUB (vous seul en voyez le titre ; vos collègues
+          voient « occupé »), et vos réunions du HUB s’écrivent dans l’agenda de votre choix, à jour dans les deux sens
           toutes les 5 minutes.
         </p>
+
         {!etat && !erreur ? (
           <Skeleton size="sm" />
-        ) : etat && !etat.disponibles.google && !google ? (
+        ) : etat && !etat.disponibles.google && !connexions.length ? (
           <p>La connexion à Google Agenda sera proposée dès qu’elle aura été activée sur ce HUB.</p>
-        ) : google ? (
-          <Connexion
-            // Nouvel état du serveur (enregistré, resynchronisé) : les choix repartent de lui.
-            key={google.agendas.map((a) => `${a.id}:${+a.importe}${+a.cible}`).join(',')}
-            connexion={google}
-            envoi={envoi}
-            onChoisir={(importes, cible) => agir(() => choisirAgendas(slug, google.id, importes, cible))}
-            onSynchroniser={() => agir(() => synchroniserConnexion(slug, google.id))}
-            onDeconnecter={async () => {
-              if (
-                await confirmer({
-                  titre: 'Déconnecter Google Agenda ?',
-                  message:
-                    'Vos rendez-vous Google quittent le HUB et les réunions que le HUB avait écrites dans votre Google Agenda en sont retirées.',
-                  confirmer: 'Déconnecter',
-                  danger: true,
-                })
-              ) {
-                await agir(() => deconnecterAgenda(slug, google.id));
-              }
-            }}
-          />
         ) : (
-          <div className="modal-actions agenda-connexion-actions">
-            <button type="button" className="btn-primary" onClick={connecter} disabled={envoi}>
-              Connecter Google Agenda
-            </button>
-          </div>
+          <>
+            {connexions.map((c) => (
+              <Compte
+                key={c.id}
+                connexion={c}
+                envoi={envoi}
+                onActiver={(active) => agir(() => activerConnexion(slug, c.id, active))}
+                onAfficher={(agendaId, importe) => agir(() => afficherAgendaExterne(slug, c.id, agendaId, importe))}
+                onSynchroniser={() => agir(() => synchroniserConnexion(slug, c.id))}
+                onDeconnecter={() => deconnecter(c)}
+              />
+            ))}
+
+            {peutConnecter && (
+              <button type="button" className="agenda-connexion-ajouter" onClick={connecter} disabled={envoi}>
+                <Plus size={18} aria-hidden />
+                {connexions.length ? 'Connecter un autre compte Google' : 'Connecter Google Agenda'}
+              </button>
+            )}
+            {connexions.length >= COMPTES_MAX && <p className="agenda-detail">{COMPTES_MAX} comptes reliés au plus.</p>}
+
+            {connexions.length > 0 && (
+              <label className="agenda-connexion-cible">
+                <span>
+                  <strong>Où le HUB écrit vos réunions</strong>
+                  <span className="agenda-detail">
+                    Un seul agenda, tous comptes confondus (jamais de doublon), et seulement un agenda à vous.
+                  </span>
+                </span>
+                <select
+                  className="field-input"
+                  value={cible}
+                  disabled={envoi}
+                  onChange={(e) => agir(() => choisirCibleAgenda(slug, e.target.value || null))}
+                >
+                  <option value="">Nulle part</option>
+                  {cibles.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.nom} · {a.compte}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </>
         )}
         <p className="agenda-detail">Apple Calendrier (iCloud) : bientôt.</p>
         {erreur && <FieldError>{erreur}</FieldError>}
@@ -167,117 +213,82 @@ export function AgendasConnectes({
   );
 }
 
-function Connexion({
-  connexion,
+// Un compte relié : son interrupteur, ses agendas à afficher, ses actions.
+function Compte({
+  connexion: c,
   envoi,
-  onChoisir,
+  onActiver,
+  onAfficher,
   onSynchroniser,
   onDeconnecter,
 }: {
   connexion: ConnexionAgenda;
   envoi: boolean;
-  onChoisir: (importes: string[], cible: string | null) => void;
+  onActiver: (active: boolean) => void;
+  onAfficher: (agendaId: string, importe: boolean) => void;
   onSynchroniser: () => void;
   onDeconnecter: () => void;
 }) {
-  const [importes, setImportes] = useState(connexion.agendas.filter((a) => a.importe).map((a) => a.id));
-  const [cible, setCible] = useState<string | null>(connexion.agendas.find((a) => a.cible)?.id ?? null);
-  const change =
-    importes.slice().sort().join(',') !==
-      connexion.agendas
-        .filter((a) => a.importe)
-        .map((a) => a.id)
-        .sort()
-        .join(',') || cible !== (connexion.agendas.find((a) => a.cible)?.id ?? null);
+  const affiches = c.agendas.filter((a) => a.importe).length;
   return (
-    <section className="agenda-connexion" aria-label={`Google Agenda · ${connexion.compte}`}>
+    <section className={`agenda-connexion${c.active ? '' : ' is-pause'}`} aria-label={`Google Agenda · ${c.compte}`}>
       <div className="agenda-connexion-tete">
-        <strong>Google Agenda</strong>
-        <span className="agenda-detail">{connexion.compte}</span>
-      </div>
-      <p className="agenda-detail">
-        {connexion.derniereSynchroLe
-          ? `Dernière synchronisation : ${formatDateTime(connexion.derniereSynchroLe)}.`
-          : 'Première synchronisation dans quelques minutes.'}
-      </p>
-      {connexion.erreur && <FieldError>{connexion.erreur}</FieldError>}
-      <table className="agenda-connexion-agendas">
-        <thead>
-          <tr>
-            <th scope="col">Agenda</th>
-            <th scope="col">Afficher dans le HUB</th>
-            <th scope="col">Le HUB y écrit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {connexion.agendas.map((a) => (
-            <tr key={a.id}>
-              <td>
-                <span
-                  className="agenda-cote-pastille"
-                  style={{ ['--ton' as string]: a.couleur ?? undefined }}
-                  aria-hidden
-                />{' '}
-                {a.nom}
-              </td>
-              <td>
-                <input
-                  type="checkbox"
-                  aria-label={`Afficher ${a.nom} dans le HUB`}
-                  checked={importes.includes(a.id)}
-                  disabled={!importes.includes(a.id) && importes.length >= AGENDAS_IMPORTES_MAX}
-                  onChange={() => setImportes((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : [...l, a.id]))}
-                />
-              </td>
-              <td>
-                <input
-                  type="radio"
-                  name="agenda-cible"
-                  aria-label={
-                    a.proprietaire
-                      ? `Le HUB écrit ses réunions dans ${a.nom}`
-                      : `${a.nom} : agenda partagé, le HUB n’y écrit pas`
-                  }
-                  title={a.proprietaire ? undefined : 'Agenda partagé avec vous : le HUB n’écrit que dans vos agendas.'}
-                  checked={cible === a.id}
-                  disabled={!a.proprietaire}
-                  onChange={() => setCible(a.id)}
-                />
-              </td>
-            </tr>
-          ))}
-          <tr>
-            <td>Nulle part</td>
-            <td />
-            <td>
-              <input
-                type="radio"
-                name="agenda-cible"
-                aria-label="Le HUB n’écrit ses réunions nulle part"
-                checked={cible === null}
-                onChange={() => setCible(null)}
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      {importes.length >= AGENDAS_IMPORTES_MAX && (
-        <p className="agenda-detail">{AGENDAS_IMPORTES_MAX} agendas affichés au plus.</p>
-      )}
-      <div className="modal-actions agenda-connexion-actions">
-        <button type="button" className="btn-ghost" onClick={onDeconnecter} disabled={envoi}>
-          Déconnecter
-        </button>
-        <button type="button" className="btn-ghost" onClick={onSynchroniser} disabled={envoi}>
-          <RefreshCw size={16} aria-hidden /> Synchroniser maintenant
-        </button>
+        <span className="agenda-connexion-logo" aria-hidden>
+          G
+        </span>
+        <span className="agenda-connexion-compte">
+          <strong>{c.compte}</strong>
+          <span className="agenda-detail">
+            {!c.active
+              ? 'En pause : rien ne se synchronise.'
+              : c.derniereSynchroLe
+                ? `Synchronisé le ${formatDateTime(c.derniereSynchroLe)}`
+                : 'Première synchronisation en cours…'}
+          </span>
+        </span>
         <button
           type="button"
-          className="btn-primary"
-          onClick={() => onChoisir(importes, cible)}
-          disabled={envoi || !change}
-        >
-          Enregistrer
+          role="switch"
+          aria-checked={c.active}
+          aria-label={`${c.compte} : synchronisation ${c.active ? 'activée' : 'en pause'}`}
+          title={c.active ? 'Mettre en pause' : 'Réactiver'}
+          className={`mod-switch${c.active ? ' is-on' : ''}`}
+          disabled={envoi}
+          onClick={() => onActiver(!c.active)}
+        />
+      </div>
+      {c.erreur && c.active && <FieldError>{c.erreur}</FieldError>}
+      {c.active && (
+        <fieldset className="agenda-connexion-agendas">
+          <legend className="sr-only">Agendas de {c.compte} affichés dans le HUB</legend>
+          {c.agendas.map((a) => (
+            <label key={a.id} className="agenda-cote-choix">
+              <input
+                type="checkbox"
+                checked={a.importe}
+                disabled={envoi || (!a.importe && affiches >= AGENDAS_IMPORTES_MAX)}
+                onChange={(e) => onAfficher(a.id, e.target.checked)}
+                aria-label={`Afficher ${a.nom} dans le HUB`}
+              />
+              <span
+                className="agenda-cote-pastille"
+                style={{ ['--ton' as string]: a.couleur ?? 'var(--ag-externe)' }}
+                aria-hidden
+              />
+              <span className="agenda-connexion-nom">{a.nom}</span>
+              {a.cible && <span className="agenda-connexion-badge">Le HUB y écrit</span>}
+            </label>
+          ))}
+        </fieldset>
+      )}
+      <div className="agenda-connexion-actions">
+        {c.active && (
+          <button type="button" className="btn-ghost btn-ghost--sm" onClick={onSynchroniser} disabled={envoi}>
+            <RefreshCw size={14} aria-hidden /> Synchroniser
+          </button>
+        )}
+        <button type="button" className="btn-ghost btn-ghost--sm" onClick={onDeconnecter} disabled={envoi}>
+          Déconnecter
         </button>
       </div>
     </section>

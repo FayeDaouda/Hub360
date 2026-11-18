@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, Length, Matches, ValidateIf } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUUID, Length, Matches, ValidateIf } from 'class-validator';
 
 // Agendas connectés (Google, Apple), 16/11/2026.
 
@@ -15,6 +15,7 @@ export class ConnexionAgendaDto {
   id: string;
   fournisseur: 'google' | 'apple';
   compte: string;
+  active: boolean; // en pause : plus de synchronisation (18/11/2026)
   derniereSynchroLe: string | null;
   erreur: string | null;
   agendas: AgendaExterneDto[];
@@ -34,9 +35,19 @@ export class DebutConnexionDto {
   url: string;
 }
 
-export class ChoisirAgendasDto {
-  @IsArray() @ArrayMaxSize(10) @IsUUID('all', { each: true }) importes!: string[];
-  @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() cible!: string | null;
+// Un agenda affiché ou masqué dans le HUB (18/11/2026).
+export class AfficherAgendaDto {
+  @IsBoolean() importe!: boolean;
+}
+
+// L'agenda où le HUB écrit ses réunions, tous comptes confondus (ou aucun).
+export class CibleAgendaDto {
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() agendaId!: string | null;
+}
+
+// Un compte relié, activé ou mis en pause.
+export class ActiverConnexionDto {
+  @IsBoolean() active!: boolean;
 }
 
 // Le ticket remis au navigateur au retour de Google (base64url, 256 bits).

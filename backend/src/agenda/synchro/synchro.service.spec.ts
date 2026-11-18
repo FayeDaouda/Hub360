@@ -45,6 +45,7 @@ const monter = (x: { liens?: unknown[]; elements?: unknown[]; google?: unknown[]
         societeId: 'S1',
         utilisateurId: 'U1',
         fournisseur: 'google',
+        active: true,
         accesChiffre: chiffrer('R', CLE),
         autoriseLe: new Date('2026-11-01T00:00:00Z'),
         agendas,
@@ -271,6 +272,17 @@ describe('SynchroAgendaService', () => {
     await s.synchroniser('C1', MAINTENANT);
     expect(prisma.connexionAgenda.delete).not.toHaveBeenCalled();
     expect(prisma.connexionAgenda.update.mock.calls[0][0].data.erreur).toContain('ne répond pas');
+  });
+
+  it('compte en pause : rien n’est lu ni écrit chez Google', async () => {
+    const { s, prisma, google } = monter();
+    prisma.connexionAgenda.findUnique.mockResolvedValue({
+      ...(await prisma.connexionAgenda.findUnique()),
+      active: false,
+    });
+    await s.synchroniser('C1', MAINTENANT);
+    expect(google.acces).not.toHaveBeenCalled();
+    expect(prisma.connexionAgenda.update).not.toHaveBeenCalled();
   });
 
   it('verrou : une synchronisation déjà en cours n’est pas doublée ; le verrou est rendu à la fin', async () => {

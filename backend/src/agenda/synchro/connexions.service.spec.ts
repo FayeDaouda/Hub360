@@ -15,12 +15,21 @@ const monter = () => {
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn(),
       findUnique: jest.fn().mockResolvedValue(null),
+      count: jest.fn().mockResolvedValue(0),
       upsert: jest.fn().mockResolvedValue({ id: 'C1' }),
+      update: jest.fn(),
       delete: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }), // verrou de synchronisation
     },
-    agendaExterne: { upsert: jest.fn(), update: jest.fn(), count: jest.fn().mockResolvedValue(0) },
+    agendaExterne: {
+      upsert: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
+    },
     evenementExterne: { deleteMany: jest.fn() },
+    lienExportAgenda: { deleteMany: jest.fn() },
     etatConnexionAgenda: {
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -201,59 +210,44 @@ describe('ConnexionsAgendaService', () => {
     expect(c.prisma.connexionAgenda.upsert).not.toHaveBeenCalled();
   });
 
-  it('confirmer : un autre compte Google remplace l’ancien (réunions retirées, accès révoqué) ; une reconnexion garde les choix sans révoquer', async () => {
+  it('confirmer : un autre compte Google s’ajoute (perso + pro) ; le même compte est relié de nouveau, choix gardés, sans révoquer', async () => {
+    // Un deuxième compte : ajouté, l'ancien reste ; le HUB écrit déjà ailleurs,
+    // donc le nouveau ne devient pas la cible.
     const a = monter();
     a.prisma.etatConnexionAgenda.findUnique.mockResolvedValue(ticketPret());
-    a.prisma.connexionAgenda.findUnique.mockResolvedValue({
-      id: 'C0',
-      compte: 'ancien@gmail.com',
-      accesChiffre: chiffrer('R-ANCIEN', CLE),
-      liens: [{ agendaId: 'ancien@gmail.com', idExterne: 'G0' }],
-    });
+    a.prisma.connexionAgenda.count.mockResolvedValue(1);
+    a.prisma.agendaExterne.count.mockImplementation(({ where }: { where: Record<string, unknown> }) =>
+      Promise.resolve(where.cible ? 1 : 0),
+    );
     await a.s.confirmerGoogle(moi, 'TICKET');
-    expect(a.google.supprimer).toHaveBeenCalledWith('ACCES', 'ancien@gmail.com', 'G0');
-    expect(a.google.revoquer).toHaveBeenCalledWith('R-ANCIEN');
-    expect(a.prisma.connexionAgenda.delete).toHaveBeenCalledWith({ where: { id: 'C0' } });
-    // Ancien compte injoignable : relié quand même au nouveau.
-    const c = monter();
-    c.prisma.etatConnexionAgenda.findUnique.mockResolvedValue(ticketPret());
-    c.prisma.connexionAgenda.findUnique.mockResolvedValue({
-      id: 'C0',
-      compte: 'ancien@gmail.com',
-      accesChiffre: chiffrer('R-ANCIEN', CLE),
-      liens: [],
+    expect(a.prisma.connexionAgenda.delete).not.toHaveBeenCalled();
+    expect(a.prisma.connexionAgenda.upsert.mock.calls[0][0].where).toEqual({
+      societeId_utilisateurId_fournisseur_compte: {
+        societeId: 'S1',
+        utilisateurId: 'U1',
+        fournisseur: 'google',
+        compte: 'awa@gc.sn',
+      },
     });
-    c.google.acces.mockRejectedValueOnce(new ErreurGoogle(503, 'indisponible'));
-    await c.s.confirmerGoogle(moi, 'TICKET');
-    expect(c.prisma.connexionAgenda.delete).toHaveBeenCalledWith({ where: { id: 'C0' } });
-    expect(c.prisma.connexionAgenda.upsert).toHaveBeenCalled();
-    // Ancien compte en pleine synchronisation : refusé, le nouvel accès rendu à Google.
-    const d = monter();
-    d.prisma.etatConnexionAgenda.findUnique.mockResolvedValue(ticketPret());
-    d.prisma.connexionAgenda.findUnique.mockResolvedValue({
-      id: 'C0',
-      compte: 'ancien@gmail.com',
-      accesChiffre: 'x',
-      liens: [],
-    });
-    d.prisma.connexionAgenda.updateMany.mockResolvedValue({ count: 0 });
-    await expect(d.s.confirmerGoogle(moi, 'TICKET')).rejects.toThrow('Synchronisation en cours');
-    expect(d.google.revoquer).toHaveBeenCalledWith('R-SECRET');
-    expect(d.prisma.connexionAgenda.delete).not.toHaveBeenCalled();
-    expect(d.prisma.connexionAgenda.upsert).not.toHaveBeenCalled();
+    expect(a.prisma.agendaExterne.upsert.mock.calls[0][0].create).toMatchObject({ importe: true, cible: false });
+    // Le même compte : relié de nouveau (réactivé), choix gardés, rien révoqué.
     const b = monter();
     b.prisma.etatConnexionAgenda.findUnique.mockResolvedValue(ticketPret());
-    b.prisma.connexionAgenda.findUnique.mockResolvedValue({
-      id: 'C1',
-      compte: 'awa@gc.sn',
-      accesChiffre: 'x',
-      liens: [],
-    });
+    b.prisma.connexionAgenda.findUnique.mockResolvedValue({ id: 'C1' });
     b.prisma.agendaExterne.count.mockResolvedValue(2);
     await b.s.confirmerGoogle(moi, 'TICKET');
-    expect(b.prisma.connexionAgenda.delete).not.toHaveBeenCalled();
-    expect(b.google.revoquer).not.toHaveBeenCalled(); // couperait aussi le nouvel accès
+    expect(b.prisma.connexionAgenda.upsert.mock.calls[0][0].update).toMatchObject({ active: true });
+    expect(b.google.revoquer).not.toHaveBeenCalled();
     expect(b.prisma.agendaExterne.upsert.mock.calls[0][0].create).toMatchObject({ importe: false, cible: false });
+  });
+
+  it('confirmer : cinq comptes au plus ; au-delà, le nouvel accès est rendu à Google', async () => {
+    const { s, prisma, google } = monter();
+    prisma.etatConnexionAgenda.findUnique.mockResolvedValue(ticketPret());
+    prisma.connexionAgenda.count.mockResolvedValue(5);
+    await expect(s.confirmerGoogle(moi, 'TICKET')).rejects.toThrow('5 comptes reliés au plus');
+    expect(google.revoquer).toHaveBeenCalledWith('R-SECRET');
+    expect(prisma.connexionAgenda.upsert).not.toHaveBeenCalled();
   });
 
   it('état : jamais l’accès chiffré à l’écran', async () => {
@@ -274,48 +268,110 @@ describe('ConnexionsAgendaService', () => {
     expect(e.disponibles).toEqual({ google: true, apple: false });
   });
 
-  it('choisir : seulement ses agendas ; ceux qui ne sont plus importés quittent le HUB', async () => {
-    const { s, prisma } = monter();
-    prisma.connexionAgenda.findFirst.mockResolvedValue({
-      id: 'C1',
-      agendas: [
-        { id: 'A1', proprietaire: true },
-        { id: 'A2', proprietaire: true },
-      ],
-      liens: [],
-    });
-    await expect(s.choisirAgendas(moi, 'C1', ['A9'], null)).rejects.toThrow('Agenda inconnu');
-    await s.choisirAgendas(moi, 'C1', ['A2'], 'A2');
-    expect(prisma.agendaExterne.update.mock.calls.map((c) => c[0])).toEqual([
-      { where: { id: 'A1' }, data: { importe: false, cible: false } },
-      { where: { id: 'A2' }, data: { importe: true, cible: true } },
-    ]);
-    expect(prisma.evenementExterne.deleteMany).toHaveBeenCalledWith({ where: { agendaId: { in: ['A1'] } } });
+  const avecAgendas = (agendas: { id: string; importe?: boolean; proprietaire?: boolean }[], x = {}) => ({
+    id: 'C1',
+    fournisseur: 'google',
+    active: true,
+    accesChiffre: chiffrer('R-SECRET', CLE),
+    agendas: agendas.map((g) => ({ importe: false, proprietaire: true, ...g })),
+    liens: [],
+    ...x,
+  });
+
+  it('afficher un agenda : seulement les siens ; masqué, ses rendez-vous quittent le HUB ; affiché, synchronisé aussitôt', async () => {
+    const { s, prisma, synchro } = monter();
+    prisma.connexionAgenda.findFirst.mockResolvedValue(avecAgendas([{ id: 'A1', importe: true }, { id: 'A2' }]));
+    await expect(s.afficherAgenda(moi, 'C1', 'A9', true)).rejects.toThrow('Agenda inconnu');
+    await s.afficherAgenda(moi, 'C1', 'A1', false);
+    expect(prisma.agendaExterne.update).toHaveBeenCalledWith({ where: { id: 'A1' }, data: { importe: false } });
+    expect(prisma.evenementExterne.deleteMany).toHaveBeenCalledWith({ where: { agendaId: 'A1' } });
+    await s.afficherAgenda(moi, 'C1', 'A2', true);
+    await new Promise((r) => setImmediate(r));
+    expect(synchro.synchroniser).toHaveBeenCalledWith('C1');
     // La connexion d'un autre : introuvable.
     expect(prisma.connexionAgenda.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'C1', societeId: 'S1', utilisateurId: 'U1' } }),
     );
   });
 
-  it('choisir : le HUB n’écrit jamais dans un agenda partagé ; dix agendas importés au plus', async () => {
+  it('afficher : dix agendas au plus par compte', async () => {
     const { s, prisma } = monter();
-    const agendas = Array.from({ length: 12 }, (_, i) => ({ id: `A${i}`, proprietaire: i === 0 }));
-    prisma.connexionAgenda.findFirst.mockResolvedValue({ id: 'C1', agendas, liens: [] });
-    await expect(s.choisirAgendas(moi, 'C1', [], 'A1')).rejects.toThrow('vous appartient');
-    await expect(
-      s.choisirAgendas(
-        moi,
-        'C1',
-        agendas.map((x) => x.id),
-        null,
-      ),
-    ).rejects.toThrow('10 agendas');
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    const agendas = Array.from({ length: 11 }, (_, i) => ({ id: `A${i}`, importe: i < 10 }));
+    prisma.connexionAgenda.findFirst.mockResolvedValue(avecAgendas(agendas));
+    await expect(s.afficherAgenda(moi, 'C1', 'A10', true)).rejects.toThrow('10 agendas');
+    expect(prisma.agendaExterne.update).not.toHaveBeenCalled();
+  });
+
+  it('où le HUB écrit : un seul agenda tous comptes confondus, à soi, d’un compte actif — ou aucun', async () => {
+    const { s, prisma } = monter();
+    prisma.$transaction.mockImplementation((ops: unknown[]) => Promise.all(ops));
+    prisma.agendaExterne.findFirst.mockResolvedValue({ id: 'A2', proprietaire: true, connexion: { active: true } });
+    prisma.connexionAgenda.findMany.mockResolvedValue([]);
+    await s.choisirCible(moi, 'A2');
+    expect(prisma.agendaExterne.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'A2', connexion: { societeId: 'S1', utilisateurId: 'U1' } } }),
+    );
+    // Les autres (de tous ses comptes) ne le sont plus ; celui-ci l'est.
+    expect(prisma.agendaExterne.updateMany).toHaveBeenCalledWith({
+      where: { cible: true, connexion: { societeId: 'S1', utilisateurId: 'U1' } },
+      data: { cible: false },
+    });
+    expect(prisma.agendaExterne.update).toHaveBeenCalledWith({ where: { id: 'A2' }, data: { cible: true } });
+    // Partagé, ou compte en pause : refusé.
+    prisma.agendaExterne.findFirst.mockResolvedValue({ id: 'A3', proprietaire: false, connexion: { active: true } });
+    await expect(s.choisirCible(moi, 'A3')).rejects.toThrow('vous appartient');
+    prisma.agendaExterne.findFirst.mockResolvedValue({ id: 'A4', proprietaire: true, connexion: { active: false } });
+    await expect(s.choisirCible(moi, 'A4')).rejects.toThrow('en pause');
+    // Nulle part.
+    prisma.agendaExterne.update.mockClear();
+    await s.choisirCible(moi, null);
+    expect(prisma.agendaExterne.update).not.toHaveBeenCalled();
+  });
+
+  it('pause : réunions retirées de Google sans couper l’accès, ses rendez-vous quittent le HUB ; reprise : synchronisée', async () => {
+    const { s, prisma, google, synchro } = monter();
+    prisma.$transaction.mockImplementation((ops: unknown[]) => Promise.all(ops));
+    prisma.connexionAgenda.findFirst.mockResolvedValue(
+      avecAgendas([{ id: 'A1', importe: true }], { liens: [{ agendaId: 'awa@gc.sn', idExterne: 'G1' }] }),
+    );
+    await s.activer(moi, 'C1', false);
+    expect(google.supprimer).toHaveBeenCalledWith('ACCES', 'awa@gc.sn', 'G1');
+    expect(google.revoquer).not.toHaveBeenCalled();
+    expect(prisma.lienExportAgenda.deleteMany).toHaveBeenCalledWith({ where: { connexionId: 'C1' } });
+    expect(prisma.evenementExterne.deleteMany).toHaveBeenCalledWith({ where: { agendaId: { in: ['A1'] } } });
+    expect(prisma.connexionAgenda.update).toHaveBeenCalledWith({
+      where: { id: 'C1' },
+      data: { active: false, erreur: null, synchroDepuis: null },
+    });
+    // Reprise.
+    prisma.connexionAgenda.findFirst.mockResolvedValue(avecAgendas([{ id: 'A1' }], { active: false }));
+    await s.activer(moi, 'C1', true);
+    expect(prisma.connexionAgenda.update).toHaveBeenLastCalledWith({
+      where: { id: 'C1' },
+      data: { active: true, erreur: null, derniereSynchroLe: null },
+    });
+    await new Promise((r) => setImmediate(r));
+    expect(synchro.synchroniser).toHaveBeenCalledWith('C1');
+  });
+
+  it('pause : Google injoignable → rien n’est mis en pause, on demande de réessayer', async () => {
+    const { s, prisma, google } = monter();
+    prisma.connexionAgenda.findFirst.mockResolvedValue(avecAgendas([{ id: 'A1' }]));
+    google.acces.mockRejectedValue(new ErreurGoogle(503, 'indisponible'));
+    await expect(s.activer(moi, 'C1', false)).rejects.toThrow('réessayez');
+    expect(prisma.connexionAgenda.update).not.toHaveBeenCalled();
+  });
+
+  it('synchroniser un compte en pause : refusé', async () => {
+    const { s, prisma } = monter();
+    prisma.connexionAgenda.findFirst.mockResolvedValue(avecAgendas([], { active: false }));
+    await expect(s.synchroniserMaintenant(moi, 'C1')).rejects.toThrow('en pause');
   });
 
   const connexionGoogle = () => ({
     id: 'C1',
     fournisseur: 'google',
+    active: true,
     accesChiffre: chiffrer('R-SECRET', CLE),
     agendas: [],
     liens: [{ agendaId: 'awa@gc.sn', idExterne: 'G1' }],

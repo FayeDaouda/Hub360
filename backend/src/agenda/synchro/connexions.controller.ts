@@ -19,7 +19,14 @@ import { MembreSocieteGuard } from '../../commun/membre-societe.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { PermissionGuard } from '../../commun/permission.guard';
 import { ConnexionsAgendaService } from './connexions.service';
-import { ChoisirAgendasDto, ConfirmerConnexionDto, DebutConnexionDto, EtatConnexionsDto } from './synchro.dto';
+import {
+  ActiverConnexionDto,
+  AfficherAgendaDto,
+  CibleAgendaDto,
+  ConfirmerConnexionDto,
+  DebutConnexionDto,
+  EtatConnexionsDto,
+} from './synchro.dto';
 
 type R = { user: { userId: string; societeId: string; role: string; permissions: Record<string, string> } };
 
@@ -53,13 +60,33 @@ export class ConnexionsAgendaController {
     return this.connexions.confirmerGoogle(req.user, dto.ticket);
   }
 
-  @Put(':id')
-  choisir(
+  // L'agenda où le HUB écrit, tous comptes confondus (ou aucun).
+  @Put('cible')
+  cible(@Req() req: R, @Body() dto: CibleAgendaDto): Promise<EtatConnexionsDto> {
+    return this.connexions.choisirCible(req.user, dto.agendaId ?? null);
+  }
+
+  // Un compte activé ou mis en pause.
+  @Put(':id/active')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  activer(
     @Req() req: R,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ChoisirAgendasDto,
+    @Body() dto: ActiverConnexionDto,
   ): Promise<EtatConnexionsDto> {
-    return this.connexions.choisirAgendas(req.user, id, dto.importes, dto.cible ?? null);
+    return this.connexions.activer(req.user, id, dto.active);
+  }
+
+  // Un agenda affiché ou masqué dans le HUB.
+  @Put(':id/agendas/:agendaId')
+  afficher(
+    @Req() req: R,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('agendaId', ParseUUIDPipe) agendaId: string,
+    @Body() dto: AfficherAgendaDto,
+  ): Promise<EtatConnexionsDto> {
+    return this.connexions.afficherAgenda(req.user, id, agendaId, dto.importe);
   }
 
   @Post(':id/synchroniser')

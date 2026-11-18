@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EtatConnexions } from '@/lib/agenda';
@@ -8,7 +8,9 @@ const api = vi.hoisted(() => ({
   getConnexions: vi.fn(),
   connecterGoogle: vi.fn(),
   confirmerGoogle: vi.fn(),
-  choisirAgendas: vi.fn(),
+  afficherAgendaExterne: vi.fn(),
+  choisirCibleAgenda: vi.fn(),
+  activerConnexion: vi.fn(),
   synchroniserConnexion: vi.fn(),
   deconnecterAgenda: vi.fn(),
 }));
@@ -23,12 +25,22 @@ const CONNECTE: EtatConnexions = {
       id: 'C1',
       fournisseur: 'google',
       compte: 'awa@gc.sn',
+      active: true,
       derniereSynchroLe: '2026-11-16T10:00:00.000Z',
       erreur: null,
       agendas: [
         { id: 'A1', nom: 'Awa', couleur: '#123456', importe: true, cible: true, proprietaire: true },
         { id: 'A2', nom: 'Famille', couleur: null, importe: false, cible: false, proprietaire: false },
       ],
+    },
+    {
+      id: 'C2',
+      fournisseur: 'google',
+      compte: 'awa.perso@gmail.com',
+      active: true,
+      derniereSynchroLe: '2026-11-16T10:00:00.000Z',
+      erreur: null,
+      agendas: [{ id: 'B1', nom: 'Perso', couleur: '#33b679', importe: true, cible: false, proprietaire: true }],
     },
   ],
 };
@@ -54,20 +66,56 @@ describe('AgendasConnectes', () => {
     expect(assign).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/v2/auth?x');
   });
 
-  it('connecté : choisir les agendas à afficher et celui où le HUB écrit', async () => {
+  it('plusieurs comptes : chacun ses agendas, affichés d’un clic ; « Connecter un autre compte »', async () => {
     api.getConnexions.mockResolvedValue(CONNECTE);
-    api.choisirAgendas.mockResolvedValue(CONNECTE);
+    api.afficherAgendaExterne.mockResolvedValue(CONNECTE);
     const onChange = vi.fn();
-    render(<AgendasConnectes slug="gc" resultat="google" onClose={vi.fn()} onChange={onChange} />);
-    expect(await screen.findByText(/Google Agenda est connecté/)).toBeInTheDocument();
-    expect(screen.getByText('awa@gc.sn')).toBeInTheDocument();
-    const enregistrer = screen.getByRole('button', { name: 'Enregistrer' });
-    expect(enregistrer).toBeDisabled(); // rien de changé
-    await userEvent.click(screen.getByLabelText('Afficher Famille dans le HUB'));
-    await userEvent.click(screen.getByLabelText('Le HUB n’écrit ses réunions nulle part'));
-    await userEvent.click(enregistrer);
-    expect(api.choisirAgendas).toHaveBeenCalledWith('gc', 'C1', ['A1', 'A2'], null);
+    render(<AgendasConnectes slug="gc" onClose={vi.fn()} onChange={onChange} />);
+    const pro = await screen.findByRole('region', { name: 'Google Agenda · awa@gc.sn' });
+    expect(screen.getByRole('region', { name: 'Google Agenda · awa.perso@gmail.com' })).toBeInTheDocument();
+    expect(within(pro).getByText('Le HUB y écrit')).toBeInTheDocument();
+    // Effet immédiat, sans bouton Enregistrer.
+    await userEvent.click(within(pro).getByLabelText('Afficher Famille dans le HUB'));
+    expect(api.afficherAgendaExterne).toHaveBeenCalledWith('gc', 'C1', 'A2', true);
     await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(screen.getByRole('button', { name: 'Connecter un autre compte Google' })).toBeInTheDocument();
+  });
+
+  it('où le HUB écrit : un seul agenda à soi, tous comptes confondus (jamais un agenda partagé)', async () => {
+    api.getConnexions.mockResolvedValue(CONNECTE);
+    api.choisirCibleAgenda.mockResolvedValue(CONNECTE);
+    render(<AgendasConnectes slug="gc" onClose={vi.fn()} onChange={vi.fn()} />);
+    const choix = await screen.findByRole('combobox', { name: /Où le HUB écrit vos réunions/ });
+    expect(choix).toHaveValue('A1');
+    const options = within(choix)
+      .getAllByRole('option')
+      .map((o) => o.textContent);
+    expect(options).toEqual(['Nulle part', 'Awa · awa@gc.sn', 'Perso · awa.perso@gmail.com']);
+    await userEvent.selectOptions(choix, 'B1');
+    expect(api.choisirCibleAgenda).toHaveBeenCalledWith('gc', 'B1');
+    await userEvent.selectOptions(choix, '');
+    expect(api.choisirCibleAgenda).toHaveBeenLastCalledWith('gc', null);
+  });
+
+  it('interrupteur : un compte mis en pause (ses agendas masqués), puis réactivé', async () => {
+    const enPause: EtatConnexions = {
+      ...CONNECTE,
+      connexions: [{ ...CONNECTE.connexions[0], active: false }, CONNECTE.connexions[1]],
+    };
+    api.getConnexions.mockResolvedValue(CONNECTE);
+    api.activerConnexion.mockResolvedValueOnce(enPause).mockResolvedValueOnce(CONNECTE);
+    render(<AgendasConnectes slug="gc" onClose={vi.fn()} onChange={vi.fn()} />);
+    const interrupteur = await screen.findByRole('switch', { name: /awa@gc.sn : synchronisation activée/ });
+    expect(interrupteur).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(interrupteur);
+    expect(api.activerConnexion).toHaveBeenCalledWith('gc', 'C1', false);
+    const pro = screen.getByRole('region', { name: 'Google Agenda · awa@gc.sn' });
+    expect(await within(pro).findByText('En pause : rien ne se synchronise.')).toBeInTheDocument();
+    expect(within(pro).queryByLabelText('Afficher Awa dans le HUB')).not.toBeInTheDocument();
+    // Un compte en pause n'est pas proposé pour écrire.
+    expect(screen.getByRole('combobox', { name: /Où le HUB écrit/ })).not.toHaveTextContent('awa@gc.sn');
+    await userEvent.click(within(pro).getByRole('switch'));
+    expect(api.activerConnexion).toHaveBeenLastCalledWith('gc', 'C1', true);
   });
 
   it('retour de Google : la session confirme le ticket, une seule fois', async () => {
@@ -76,7 +124,7 @@ describe('AgendasConnectes', () => {
     const { rerender } = render(
       <AgendasConnectes slug="gc" resultat="confirmer" ticket="TICKET" onClose={vi.fn()} onChange={onChange} />,
     );
-    expect(await screen.findByText(/Google Agenda est connecté/)).toBeInTheDocument();
+    expect(await screen.findByText(/Compte Google relié/)).toBeInTheDocument();
     rerender(<AgendasConnectes slug="gc" resultat="confirmer" ticket="TICKET" onClose={vi.fn()} onChange={onChange} />);
     expect(api.confirmerGoogle).toHaveBeenCalledTimes(1);
     expect(api.confirmerGoogle).toHaveBeenCalledWith('gc', 'TICKET');
@@ -92,23 +140,18 @@ describe('AgendasConnectes', () => {
     api.getConnexions.mockResolvedValue({ disponibles: { google: true, apple: false }, connexions: [] });
     render(<AgendasConnectes slug="gc" resultat="confirmer" ticket="T" onClose={vi.fn()} onChange={vi.fn()} />);
     expect(await screen.findByText(/lancée depuis un autre compte/)).toBeInTheDocument();
-    expect(screen.queryByText(/Google Agenda est connecté/)).not.toBeInTheDocument();
-  });
-
-  it('un agenda partagé ne peut pas recevoir les réunions du HUB', async () => {
-    api.getConnexions.mockResolvedValue(CONNECTE);
-    render(<AgendasConnectes slug="gc" onClose={vi.fn()} onChange={vi.fn()} />);
-    expect(await screen.findByLabelText('Famille : agenda partagé, le HUB n’y écrit pas')).toBeDisabled();
-    expect(screen.getByLabelText('Le HUB écrit ses réunions dans Awa')).toBeEnabled();
+    expect(screen.queryByText(/Compte Google relié/)).not.toBeInTheDocument();
   });
 
   it('déconnecter : après confirmation seulement', async () => {
-    api.getConnexions.mockResolvedValue(CONNECTE);
+    const seul = { ...CONNECTE, connexions: [CONNECTE.connexions[0]] };
+    api.getConnexions.mockResolvedValue(seul);
     api.deconnecterAgenda.mockResolvedValue({ disponibles: { google: true, apple: false }, connexions: [] });
     render(<AgendasConnectes slug="gc" onClose={vi.fn()} onChange={vi.fn()} />);
     confirmer.mockResolvedValueOnce(false);
     await userEvent.click(await screen.findByRole('button', { name: 'Déconnecter' }));
     expect(api.deconnecterAgenda).not.toHaveBeenCalled();
+    expect(confirmer).toHaveBeenCalledWith(expect.objectContaining({ titre: 'Déconnecter awa@gc.sn ?' }));
     confirmer.mockResolvedValueOnce(true);
     await userEvent.click(screen.getByRole('button', { name: 'Déconnecter' }));
     expect(api.deconnecterAgenda).toHaveBeenCalledWith('gc', 'C1');
@@ -120,6 +163,7 @@ describe('AgendasConnectes', () => {
       ...CONNECTE,
       connexions: [
         { ...CONNECTE.connexions[0], erreur: 'L’accès à Google Agenda a été retiré : reconnectez le compte.' },
+        CONNECTE.connexions[1],
       ],
     });
     render(<AgendasConnectes slug="gc" onClose={vi.fn()} onChange={vi.fn()} />);
