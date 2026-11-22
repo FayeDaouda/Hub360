@@ -2775,6 +2775,7 @@ enum TypeInterventionHub {
   maintenance_activee // HUB fermé à tous, sauf l'Administrateur HUB
   maintenance_levee // HUB rouvert
   suppression // dossier CRM et/ou projet supprimés définitivement, avec tout ce qui en dépend
+  annuaire_perimetre // périmètre de l'annuaire changé (société / + direction / groupe)
 }
 
 model InterventionHub {

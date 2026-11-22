@@ -18,7 +18,7 @@ export type FicheContact = {
 // Membres de la société : même règle que l'annuaire du chat et le login
 // (rôle de la société ou transverse, hors holding_admin). Comptes actifs ou
 // invitation en attente ; un compte désactivé (départ) n'apparaît plus.
-const membreDe = (societeId: string): Prisma.UtilisateurWhereInput => ({
+export const membreDe = (societeId: string): Prisma.UtilisateurWhereInput => ({
   roles: {
     some: { OR: [{ societeId }, { societeId: null }], role: { nom: { not: ROLE_HOLDING_ADMIN }, supprimeLe: null } },
   },
@@ -27,12 +27,15 @@ const membreDe = (societeId: string): Prisma.UtilisateurWhereInput => ({
 
 const DOSSIER = { select: { poste: true, telephone: true, emailPro: true } } as const;
 
-const selectContact = (societeId: string) =>
+export const selectContact = (societeId: string) =>
   ({
     id: true,
     prenom: true,
     nom: true,
     email: true,
+    // Annuaire (22/11/2026) : le nom choisi par la personne et sa photo.
+    nomAffiche: true,
+    photoCle: true,
     roles: {
       where: { OR: [{ societeId }, { societeId: null }] },
       select: { role: { select: { nom: true } } },
@@ -51,9 +54,9 @@ const selectContact = (societeId: string) =>
     },
   }) satisfies Prisma.UtilisateurSelect;
 
-type LigneContact = Prisma.UtilisateurGetPayload<{ select: ReturnType<typeof selectContact> }>;
+export type LigneContact = Prisma.UtilisateurGetPayload<{ select: ReturnType<typeof selectContact> }>;
 
-function versFiche(u: LigneContact): FicheContact {
+export function versFiche(u: LigneContact): FicheContact {
   const collab = u.collaborations[0];
   // Dossier RH relié au compte directement, ou via la fiche d'équipe.
   const dossier = u.dossierPersonnel ?? collab?.dossierPersonnel ?? null;

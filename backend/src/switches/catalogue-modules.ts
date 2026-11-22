@@ -17,7 +17,7 @@ export const CATALOGUE_MODULES: FamilleModules[] = [
       { nom: 'Tableau de bord', statut: 'en_service', module: 'pilotage', note: 'Accueil et Pilotage' },
       { nom: 'Messagerie interne', statut: 'en_service', module: 'communication' },
       { nom: 'Documents partagés', statut: 'a_venir', module: 'documents', note: 'Case prête, pas encore d’écran' },
-      { nom: 'Annuaire', statut: 'en_partie', note: 'Fiche contact, recherche Ctrl+K' },
+      { nom: 'Annuaire', statut: 'en_service', note: 'Page Annuaire, fiche, périmètre réglable' },
       { nom: 'Mon espace RH', statut: 'en_service', note: 'Chacun ses propres données, hors matrice' },
       { nom: 'Agenda et réunions', statut: 'en_service', module: 'agenda' },
       { nom: 'Tâches et suivi d’actions', statut: 'en_service', module: 'projets', note: 'Mes tâches' },

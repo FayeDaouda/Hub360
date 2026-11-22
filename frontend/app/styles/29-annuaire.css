@@ -1,0 +1,537 @@
+/* --- Annuaire (22/11/2026) -------------------------------------------------
+   Page Annuaire (cartes ou liste, recherche, filtres), fiche d'un collègue
+   (panneau, feuille sur téléphone, fenêtre depuis Ctrl+K et la messagerie),
+   réglage du périmètre (Administration du HUB). */
+
+.annuaire {
+  display: grid;
+  gap: var(--e-16);
+  min-width: 0;
+}
+
+/* Barre : la recherche en tête, les filtres, puis le tri et l'affichage. */
+.annuaire-barre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-12);
+}
+.annuaire-recherche {
+  display: flex;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: var(--e-8);
+  min-height: 44px;
+  padding: 0 var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  box-shadow: var(--ombre-1);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.annuaire-recherche:focus-within {
+  border-color: var(--action);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--action) 22%, transparent);
+}
+.annuaire-recherche input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-14);
+  outline: none;
+}
+.annuaire-filtres,
+.annuaire-affichage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+}
+.annuaire-filtres .field-input {
+  width: auto;
+  min-height: 40px;
+  border-radius: 999px;
+}
+.annuaire-filtre-absents {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-8);
+  min-height: 40px;
+  padding: 0 var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-13);
+  font-weight: 500;
+  cursor: pointer;
+}
+.annuaire-filtre-absents.is-actif {
+  border-color: var(--action);
+  background: color-mix(in oklch, var(--action) 14%, var(--surface));
+}
+.annuaire-compte {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: var(--t-12);
+  font-weight: 700;
+  text-align: center;
+}
+.annuaire-vue button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 40px;
+}
+.annuaire-resume {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}
+.annuaire-detail {
+  color: var(--text-muted);
+  font-size: var(--t-12);
+}
+
+/* Cartes : une grille fluide ; liste : une ligne par personne. */
+.annuaire-liste {
+  display: grid;
+  gap: var(--e-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.annuaire-liste--cartes {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.annuaire-liste--liste {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+}
+.annuaire-carte {
+  position: relative;
+  min-width: 0;
+}
+.annuaire-carte--cartes {
+  display: grid;
+  gap: var(--e-12);
+  padding: var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+  box-shadow: var(--ombre-1);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.annuaire-carte--cartes:hover {
+  border-color: color-mix(in oklch, var(--action) 40%, var(--border));
+  box-shadow: var(--ombre-2);
+  transform: translateY(-1px);
+}
+.annuaire-carte--liste {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-16);
+  padding: var(--e-12) var(--e-16);
+}
+.annuaire-carte--liste + .annuaire-carte--liste {
+  border-top: 1px solid var(--border);
+}
+.annuaire-carte--liste:hover {
+  background: color-mix(in oklch, var(--surface-2) 55%, var(--surface));
+}
+.annuaire-carte-ouvrir {
+  display: flex;
+  align-items: center;
+  gap: var(--e-12);
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.annuaire-carte-ouvrir:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 4px;
+  border-radius: var(--r-10);
+}
+.annuaire-carte-texte {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.annuaire-carte-texte strong {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+  overflow: hidden;
+  font-size: var(--t-14);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.annuaire-carte-poste {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.annuaire-carte-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-4) var(--e-8);
+  margin-top: 2px;
+}
+.annuaire-carte-coordonnees {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--t-13);
+  font-variant-numeric: tabular-nums;
+}
+.annuaire-carte-coordonnees > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.annuaire-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px var(--e-8);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.annuaire-badge--moi {
+  background: color-mix(in oklch, var(--action) 16%, transparent);
+  color: color-mix(in oklch, var(--action) 82%, black);
+}
+:root[data-theme='dark'] .annuaire-badge--moi {
+  color: color-mix(in oklch, var(--action) 45%, white);
+}
+.annuaire-badge--absent {
+  background: color-mix(in oklch, var(--pill-attention) 16%, var(--surface));
+  color: color-mix(in srgb, var(--pill-attention), var(--pill-encre));
+}
+
+/* Actions directes : icônes rondes (cartes), libellées (fiche). */
+.annuaire-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-8);
+}
+.annuaire-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-8);
+  min-height: 40px;
+  padding: 0 var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-13);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+.annuaire-action:hover {
+  border-color: color-mix(in oklch, var(--action) 45%, var(--border));
+  background: color-mix(in oklch, var(--action) 8%, var(--surface));
+}
+.annuaire-action:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+.annuaire-action--icone {
+  width: 40px;
+  padding: 0;
+  color: var(--text-muted);
+}
+.annuaire-action--icone:hover {
+  color: var(--action);
+}
+
+/* Regroupement par cellule. */
+.annuaire-groupe {
+  display: grid;
+  gap: var(--e-12);
+}
+.annuaire-groupe h2 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-8);
+  margin: var(--e-8) 0 0;
+  font-size: var(--t-16);
+  font-weight: 600;
+}
+
+.annuaire-vide {
+  display: grid;
+  justify-items: center;
+  gap: var(--e-12);
+  padding: var(--e-48) var(--e-16);
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--r-14);
+  color: var(--text-muted);
+  text-align: center;
+}
+.annuaire-vide p {
+  margin: 0;
+}
+
+/* Fiche d'un collègue (panneau de droite ; feuille sur téléphone). */
+.annuaire-panneau {
+  width: min(28rem, 100vw);
+}
+.annuaire-panneau-tete {
+  display: flex;
+  justify-content: flex-end;
+}
+.annuaire-fiche {
+  display: grid;
+  gap: var(--e-24);
+}
+.annuaire-fiche-tete {
+  display: grid;
+  justify-items: center;
+  gap: var(--e-12);
+  text-align: center;
+}
+.annuaire-fiche-identite {
+  display: grid;
+  justify-items: center;
+  gap: var(--e-4);
+}
+.annuaire-fiche-identite h2 {
+  margin: 0;
+  font-size: var(--t-20);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.annuaire-fiche-poste {
+  color: var(--text-muted);
+  font-size: var(--t-14);
+}
+.annuaire-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--e-4) var(--e-8);
+  margin-top: var(--e-4);
+}
+.annuaire-fiche > .annuaire-actions {
+  justify-content: center;
+}
+.annuaire-fiche-section {
+  display: grid;
+  gap: var(--e-8);
+  padding-top: var(--e-16);
+  border-top: 1px solid var(--border);
+}
+.annuaire-fiche-section h3 {
+  margin: 0 0 var(--e-4);
+  color: var(--text-subtle);
+  font-size: var(--t-12);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.annuaire-fiche-ligne {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--e-12);
+  margin: 0;
+  font-size: var(--t-14);
+  overflow-wrap: anywhere;
+}
+.annuaire-fiche-ligne > svg {
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+.annuaire-fiche-ligne a {
+  color: var(--text);
+  text-decoration: none;
+}
+.annuaire-fiche-ligne a:hover {
+  color: var(--action);
+  text-decoration: underline;
+}
+.annuaire-fiche-cellule {
+  display: grid;
+  gap: 2px;
+  margin: var(--e-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.annuaire-fiche-cellule button {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--e-8);
+  border: none;
+  border-radius: var(--r-10);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-14);
+  text-align: left;
+  cursor: pointer;
+}
+.annuaire-fiche-cellule button:hover {
+  background: var(--surface-2);
+}
+
+/* Fenêtre de la fiche depuis Ctrl+K et la messagerie. */
+.fiche-contact .annuaire-panneau-tete {
+  padding: var(--e-8) var(--e-8) 0;
+}
+.fiche-contact .modal-body {
+  padding-top: 0;
+}
+.fiche-contact-annuaire {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: var(--e-8);
+  font-size: var(--t-13);
+}
+
+/* Administration du HUB › Annuaire : le périmètre. */
+.annuaire-reglage {
+  display: grid;
+  gap: var(--e-16);
+}
+.annuaire-reglage-choix {
+  display: grid;
+  gap: var(--e-8);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.annuaire-reglage-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--e-12);
+  padding: var(--e-12) var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 140ms ease;
+}
+.annuaire-reglage-option.is-choisi {
+  border-color: var(--action);
+  background: color-mix(in oklch, var(--action) 6%, var(--surface));
+}
+.annuaire-reglage-option input {
+  margin-top: 3px;
+}
+.annuaire-reglage-option > span {
+  display: grid;
+  gap: 2px;
+}
+.annuaire-reglage-option strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+}
+.annuaire-reglage-ok {
+  margin: 0;
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: color-mix(in oklch, var(--pill-succes) 14%, transparent);
+}
+
+/* Tablette : la liste perd la colonne des coordonnées. */
+@media (max-width: 900px) {
+  .annuaire-carte--liste {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .annuaire-carte--liste .annuaire-carte-coordonnees {
+    display: none;
+  }
+}
+/* Téléphone : recherche pleine largeur, filtres en ligne défilante,
+   cartes compactes, fiche en feuille. */
+@media (max-width: 640px) {
+  .annuaire-barre {
+    gap: var(--e-8);
+  }
+  .annuaire-recherche {
+    flex-basis: 100%;
+  }
+  .annuaire-filtres {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .annuaire-filtres > * {
+    flex-shrink: 0;
+  }
+  .annuaire-liste--cartes {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--e-8);
+  }
+  .annuaire-carte--cartes {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding: var(--e-12);
+  }
+  .annuaire-carte--cartes .annuaire-actions {
+    flex-wrap: nowrap;
+  }
+  /* Sur téléphone, la carte montre l'action la plus utile : appeler. */
+  .annuaire-carte--cartes .annuaire-action--icone:not([href^='tel:']) {
+    display: none;
+  }
+  .annuaire-action--icone {
+    width: 44px;
+    min-height: 44px;
+  }
+  .annuaire-panneau {
+    width: 100vw;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .annuaire-carte--cartes,
+  .annuaire-carte--cartes:hover {
+    transition: none;
+    transform: none;
+  }
+}
