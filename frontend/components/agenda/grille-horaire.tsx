@@ -189,6 +189,9 @@ export function GrilleHoraire({
     };
     const obs = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(plusTard);
     obs?.observe(document.body);
+    // La largeur des colonnes change aussi quand la colonne de gauche se
+    // replie, sans que la page change de taille.
+    obs?.observe(el.closest('.agenda-disposition') ?? el);
     window.addEventListener('resize', plusTard);
     return () => {
       cancelAnimationFrame(image);

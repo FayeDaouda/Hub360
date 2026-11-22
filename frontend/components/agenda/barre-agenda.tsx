@@ -125,7 +125,7 @@ export function BarreAgenda({
           type="button"
           className="agenda-icone-bouton agenda-bouton-colonne"
           aria-label="Colonne des agendas"
-          title="Afficher ou masquer la colonne des agendas"
+          title="Colonne des agendas"
           aria-expanded={colonneOuverte}
           onClick={onColonne}
         >

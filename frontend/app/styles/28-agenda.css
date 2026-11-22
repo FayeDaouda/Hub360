@@ -878,6 +878,17 @@
 :root[data-theme='dark'] .agenda-bloc.is-couleur-libre:not(.is-passe) {
   background: color-mix(in oklch, var(--ton) 40%, var(--surface));
 }
+/* Le survol se voit aussi sur un rendez-vous passé ou d'une couleur Google. */
+.agenda-bloc.is-passe:hover,
+.agenda-bloc.is-passe:focus-visible {
+  background: color-mix(in oklch, var(--ton) 16%, var(--surface));
+}
+:root[data-theme='dark'] .agenda-bloc.is-passe:hover,
+:root[data-theme='dark'] .agenda-bloc.is-passe:focus-visible,
+:root[data-theme='dark'] .agenda-bloc.is-couleur-libre:not(.is-passe):hover,
+:root[data-theme='dark'] .agenda-bloc.is-couleur-libre:not(.is-passe):focus-visible {
+  background: color-mix(in oklch, var(--ton) 52%, var(--surface));
+}
 /* Agenda d'un collègue superposé : hachuré, pour le distinguer du sien. */
 .agenda-bloc.is-calque {
   background-image: repeating-linear-gradient(
@@ -1176,6 +1187,9 @@
   display: grid;
   gap: var(--e-12);
   min-width: 0;
+  /* Le glissement d'une période ne fait jamais déborder la page (clip : pas
+     de conteneur de défilement, le collant est préservé). */
+  overflow-x: clip;
 }
 .agenda-cote {
   display: grid;
@@ -1365,7 +1379,7 @@
 :root[data-theme='dark'] .agenda-cote-vue.is-active {
   color: color-mix(in oklch, var(--action) 55%, white);
 }
-@media (max-width: 1100px) {
+@media (max-width: 1100.98px) {
   .agenda-disposition {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1991,8 +2005,8 @@
     height: 44px;
   }
   .agenda-mini-tete .btn-ghost {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
   .agenda-mini-deroulant {
     margin-inline: calc(-1 * var(--e-8));

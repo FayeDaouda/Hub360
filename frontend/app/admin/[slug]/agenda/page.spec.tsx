@@ -175,6 +175,21 @@ describe('Page Agenda', () => {
       // Pas de tiroir sur grand écran.
       expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
       expect(JSON.parse(localStorage.getItem('hub.agenda.gc.U1') ?? '{}')).toMatchObject({ colonneMasquee: true });
+      localStorage.clear();
+    });
+
+    it('ordinateur : une colonne repliée la dernière fois le reste au retour ; ignoré sous 1100 px', async () => {
+      localStorage.setItem('hub.agenda.gc.U1', JSON.stringify({ colonneMasquee: true }));
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(min-width: 1101px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      expect(document.querySelector('.agenda-disposition')).toHaveClass('is-colonne-masquee');
+      expect(screen.getByRole('button', { name: 'Colonne des agendas' })).toHaveAttribute('aria-expanded', 'false');
+      localStorage.clear();
     });
 
     it('sur tablette : le tiroir prend le focus, Échap le ferme et rend le focus au bouton', async () => {

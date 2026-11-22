@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useCallback, useEffect, useRef, useState, type TouchEvent } from 'react';
+import { use, useCallback, useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { MapPin } from 'lucide-react';
 import {
@@ -193,7 +193,8 @@ export default function AgendaPage(props: Props) {
   // (commodité ; un navigateur partagé ne mêle pas deux personnes).
   const moiId = agenda?.personne.id;
   const clePreferences = moiId ? `hub.agenda.${slug}.${moiId}` : null;
-  useEffect(() => {
+  // Avant l'affichage : une colonne repliée ne s'affiche pas une image d'abord.
+  useLayoutEffect(() => {
     if (!clePreferences) return;
     try {
       const p = JSON.parse(localStorage.getItem(clePreferences) ?? '{}') as {
@@ -267,11 +268,12 @@ export default function AgendaPage(props: Props) {
   const decaler = (sens: 1 | -1) => setAncre((a) => decalerAncre(vue, a, sens));
   // Changement de période : la nouvelle arrive en glissant du côté où l'on va
   // (état tiré du rendu précédent, motif React).
-  const [duVu, setDuVu] = useState(du);
+  // Une autre vue (même jour ou non) : sans glissement.
+  const [vu, setVu] = useState({ vue, du });
   const [sensVue, setSensVue] = useState<'suivant' | 'precedent' | 'fixe'>('fixe');
-  if (du !== duVu) {
-    setDuVu(du);
-    setSensVue(du > duVu ? 'suivant' : 'precedent');
+  if (vue !== vu.vue || du !== vu.du) {
+    setVu({ vue, du });
+    setSensVue(vue !== vu.vue ? 'fixe' : du > vu.du ? 'suivant' : 'precedent');
   }
   // Grand écran : plus de tiroir (la colonne est en place).
   useEffect(() => {
