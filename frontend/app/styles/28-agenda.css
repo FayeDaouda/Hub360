@@ -13,6 +13,8 @@
   --ag-weekend: rgba(18, 21, 42, 0.012);
   --ag-demi-heure: rgba(18, 21, 42, 0.045);
   --ag-maintenant: oklch(60% 0.22 25);
+  /* Pastille de l'heure actuelle : texte blanc lisible (AA). */
+  --ag-maintenant-pastille: oklch(50% 0.2 25);
 }
 :root[data-theme='dark'] {
   --ag-rdv: oklch(62% 0.14 232);
@@ -20,10 +22,11 @@
   --ag-absence: oklch(60% 0.05 270);
   --ag-demande: oklch(62% 0.2 25);
   --ag-externe: oklch(62% 0.14 155);
-  --ag-hors-heures: rgba(0, 0, 0, 0.14);
-  --ag-weekend: rgba(255, 255, 255, 0.018);
+  --ag-hors-heures: rgba(0, 0, 0, 0.18);
+  --ag-weekend: rgba(255, 255, 255, 0.04);
   --ag-demi-heure: rgba(255, 255, 255, 0.045);
   --ag-maintenant: oklch(66% 0.21 25);
+  --ag-maintenant-pastille: oklch(50% 0.2 25);
 }
 
 .agenda {
@@ -112,13 +115,32 @@
 .agenda-vues button {
   min-width: 4.5rem;
 }
-.agenda-bouton-colonne {
+/* Les vues : en boutons sur grand écran, dans un menu en dessous de 1240px
+   (la barre tient toujours sur une ligne). */
+.agenda-vues-menu {
+  gap: var(--e-4);
+  font-weight: 600;
+}
+.agenda-barre-droite > .menu:has(.agenda-vues-menu) {
   display: none;
 }
-@media (max-width: 1100px) {
-  .agenda-bouton-colonne {
-    display: inline-grid;
+@media (max-width: 1239px) {
+  .agenda-barre-droite > .menu:has(.agenda-vues-menu) {
+    display: inline-flex;
   }
+  .agenda-barre-droite > .agenda-vues {
+    display: none;
+  }
+  .agenda-barre {
+    flex-wrap: nowrap;
+  }
+}
+/* Ordinateur : la colonne de gauche se replie (plus de place pour la grille). */
+.agenda-disposition.is-colonne-masquee {
+  grid-template-columns: minmax(0, 1fr);
+}
+.agenda-disposition.is-colonne-masquee > .agenda-cote {
+  display: none;
 }
 
 /* Téléphone : ☰, le mois (ouvre le mini-calendrier), Aujourd'hui, ⋯. */
@@ -600,8 +622,10 @@
 .agenda-grille-cellule .agenda-puce {
   padding: 2px var(--e-8);
   border: none;
-  background: color-mix(in oklch, var(--ton) 85%, var(--surface));
-  color: #fff;
+  border-left: 3px solid var(--ton);
+  /* Même traitement que les blocs (contraste AA dans les deux thèmes). */
+  background: color-mix(in oklch, var(--ton) 18%, var(--surface));
+  color: color-mix(in oklch, var(--ton) 60%, black);
   font: inherit;
   font-size: var(--t-12);
   font-weight: 600;
@@ -609,7 +633,14 @@
   cursor: pointer;
 }
 .agenda-grille-cellule .agenda-puce:hover {
-  background: var(--ton);
+  background: color-mix(in oklch, var(--ton) 28%, var(--surface));
+}
+:root[data-theme='dark'] .agenda-grille-cellule .agenda-puce {
+  background: color-mix(in oklch, var(--ton) 32%, var(--surface));
+  color: var(--text);
+}
+:root[data-theme='dark'] .agenda-grille-cellule .agenda-puce:hover {
+  background: color-mix(in oklch, var(--ton) 44%, var(--surface));
 }
 .agenda-grille-corps {
   position: relative;
@@ -639,7 +670,7 @@
   right: 4px;
   padding: 1px 5px;
   border-radius: var(--r-6);
-  background: var(--ag-maintenant);
+  background: var(--ag-maintenant-pastille);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -806,6 +837,8 @@
 }
 .agenda-bloc-heure-courte {
   flex-shrink: 0;
+  /* La virgule colle au titre (l'écart vient du gap du parent). */
+  margin-left: -3px;
 }
 /* Bloc étroit (rendez-vous qui se chevauchent, téléphone) : le titre
    d'abord, l'heure de la ligne courte s'efface. */
@@ -814,17 +847,36 @@
     display: none;
   }
 }
+@container (max-width: 110px) {
+  .agenda-bloc-fin {
+    display: none;
+  }
+}
 /* Moins de 50 minutes : une ligne, « Titre, 15:30 ». */
 .agenda-bloc.is-court {
   justify-content: center;
   padding-block: 0;
 }
-/* Passé : en retrait, comme Google Agenda. */
+/* Passé : en retrait, comme Google Agenda — le fond s'efface, le texte reste
+   lisible (AA ; pas d'opacité sur le bloc entier). */
 .agenda-bloc.is-passe {
-  opacity: 0.68;
+  border-left-color: color-mix(in oklch, var(--ton) 55%, var(--surface));
+  background: color-mix(in oklch, var(--ton) 8%, var(--surface));
+  color: var(--text-muted);
 }
-.agenda-bloc.is-passe:hover {
+:root[data-theme='dark'] .agenda-bloc.is-passe {
+  background: color-mix(in oklch, var(--ton) 22%, var(--surface));
+  color: var(--text-muted);
+}
+.agenda-bloc.is-passe .agenda-bloc-heures,
+.agenda-bloc.is-passe .agenda-bloc-lieu,
+.agenda-bloc.is-passe .agenda-bloc-heure-courte {
   opacity: 1;
+}
+/* Couleur d'un agenda Google (claire, parfois jaune) : aplat plus sombre en
+   mode sombre, pour garder le texte blanc lisible. */
+:root[data-theme='dark'] .agenda-bloc.is-couleur-libre:not(.is-passe) {
+  background: color-mix(in oklch, var(--ton) 40%, var(--surface));
 }
 /* Agenda d'un collègue superposé : hachuré, pour le distinguer du sien. */
 .agenda-bloc.is-calque {
@@ -930,11 +982,6 @@
   }
 }
 /* Récurrence (16/11/2026) : répétition, règle sur mesure, choix de portée. */
-.agenda-bloc-repete {
-  display: inline;
-  margin-right: 3px;
-  vertical-align: -1px;
-}
 .agenda-repetition,
 .agenda-sur-mesure {
   display: grid;
@@ -1132,9 +1179,15 @@
 }
 .agenda-cote {
   display: grid;
+  align-content: start;
   gap: var(--e-24);
   position: sticky;
   top: var(--e-16);
+  /* Hauteur bornée par la grille (grille-horaire.tsx) : elle défile seule. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-right: var(--e-4);
 }
 .agenda-mini {
   display: grid;
@@ -1193,7 +1246,6 @@
 }
 .agenda-mini-jour.is-hors-mois {
   color: var(--text-subtle);
-  opacity: 0.7;
 }
 .agenda-mini-jour.is-periode {
   border-radius: 0;
@@ -1307,7 +1359,7 @@
 }
 .agenda-cote-vue.is-active {
   background: color-mix(in oklch, var(--action) 16%, transparent);
-  color: var(--action);
+  color: color-mix(in oklch, var(--action) 82%, black);
   font-weight: 600;
 }
 :root[data-theme='dark'] .agenda-cote-vue.is-active {
@@ -1350,6 +1402,8 @@
 }
 .agenda-tiroir .agenda-cote {
   position: static;
+  max-height: none;
+  overflow: visible;
 }
 .agenda-tiroir .agenda-cote-liste {
   max-height: none;
@@ -1936,6 +1990,13 @@
     width: 44px;
     height: 44px;
   }
+  .agenda-mini-tete .btn-ghost {
+    width: 40px;
+    height: 40px;
+  }
+  .agenda-mini-deroulant {
+    margin-inline: calc(-1 * var(--e-8));
+  }
 }
 
 /* Agendas connectés, plusieurs comptes (18/11/2026) : une carte par compte
@@ -2097,4 +2158,35 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* Changement de période (18/11/2026) : la nouvelle glisse du côté où l'on va. */
+.agenda-vue {
+  display: grid;
+  gap: var(--e-12);
+  min-width: 0;
+}
+.agenda-vue--suivant {
+  animation: agenda-vue-suivant 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.agenda-vue--precedent {
+  animation: agenda-vue-precedent 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes agenda-vue-suivant {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes agenda-vue-precedent {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agenda-vue--suivant,
+  .agenda-vue--precedent {
+    animation: none;
+  }
 }

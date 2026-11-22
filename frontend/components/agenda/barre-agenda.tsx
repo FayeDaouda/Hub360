@@ -53,10 +53,11 @@ export function BarreAgenda({
   onConnectes: () => void;
 }) {
   const [precedent, suivant] = LIBELLES_FLECHES[vue];
+  const vuesOrdinateur = VUES.filter((v) => !VUES_TELEPHONE.includes(v.cle));
   const actions: ElementMenu[] = [
     {
       cle: 'abonnement',
-      libelle: 'Ajouter à mon agenda',
+      libelle: 'Afficher dans Google, Apple ou Outlook',
       icone: <CalendarPlus size={16} />,
       onChoisir: onAbonnement,
     },
@@ -123,7 +124,8 @@ export function BarreAgenda({
         <button
           type="button"
           className="agenda-icone-bouton agenda-bouton-colonne"
-          aria-label="Agendas"
+          aria-label="Colonne des agendas"
+          title="Afficher ou masquer la colonne des agendas"
           aria-expanded={colonneOuverte}
           onClick={onColonne}
         >
@@ -157,8 +159,25 @@ export function BarreAgenda({
         </h2>
       </div>
       <div className="agenda-barre-droite">
+        {/* Écran moyen : les vues dans un menu, pour que la barre tienne sur une ligne. */}
+        <Menu
+          libelle={`Vue : ${vuesOrdinateur.find((v) => v.cle === vue)?.libelle ?? ''}`}
+          className="btn-ghost agenda-vues-menu"
+          declencheur={
+            <>
+              {vuesOrdinateur.find((v) => v.cle === vue)?.libelle}
+              <ChevronDown size={16} aria-hidden />
+            </>
+          }
+          elements={vuesOrdinateur.map((v) => ({
+            cle: v.cle,
+            libelle: v.libelle,
+            coche: vue === v.cle,
+            onChoisir: () => onVue(v.cle),
+          }))}
+        />
         <div className="vue-toggle agenda-vues" role="radiogroup" aria-label="Vue">
-          {VUES.filter((v) => !VUES_TELEPHONE.includes(v.cle)).map((v) => (
+          {vuesOrdinateur.map((v) => (
             <button
               key={v.cle}
               type="button"
@@ -185,7 +204,7 @@ export function BarreAgenda({
 // Le bouton flottant du téléphone : créer, au-dessus de la navigation du bas.
 export function BoutonCreerFlottant({ onCreer }: { onCreer: () => void }) {
   return (
-    <button type="button" className="agenda-fab" aria-label="Nouveau rendez-vous" onClick={onCreer}>
+    <button type="button" className="agenda-fab" aria-label="Créer un rendez-vous" onClick={onCreer}>
       <Plus size={26} aria-hidden />
     </button>
   );

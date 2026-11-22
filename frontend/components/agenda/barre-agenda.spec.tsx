@@ -39,10 +39,21 @@ describe('BarreAgenda', () => {
     expect(p.onCreer).toHaveBeenCalled();
   });
 
+  it('écran moyen : les mêmes vues aussi dans un menu « Semaine ▾ » (la feuille de style choisit lequel montrer)', async () => {
+    const p = props();
+    render(<BarreAgenda {...p} />);
+    const menu = screen.getByRole('button', { name: 'Vue : Semaine' });
+    await userEvent.click(menu);
+    expect(screen.getByRole('menuitemradio', { name: 'Semaine' })).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Planning' }));
+    expect(p.onVue).toHaveBeenCalledWith('planning');
+  });
+
   it('« ⋯ » : lien d’abonnement et agendas connectés', async () => {
     const p = props();
     render(<BarreAgenda {...p} />);
     await userEvent.click(screen.getByRole('button', { name: 'Plus d’options' }));
+    expect(screen.getByRole('menuitem', { name: 'Afficher dans Google, Apple ou Outlook' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('menuitem', { name: 'Agendas connectés' }));
     expect(p.onConnectes).toHaveBeenCalled();
   });

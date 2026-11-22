@@ -65,7 +65,7 @@ export function ColonneAgenda({
   const visibles = personnes.filter((p) => p.nom.toLowerCase().includes(filtre.trim().toLowerCase()));
 
   return (
-    <div className="agenda-cote" id="agenda-colonne">
+    <div className="agenda-cote">
       {vue && onVue && (
         <nav className="agenda-cote-vues" aria-label="Vue">
           {VUES.map((v) => (

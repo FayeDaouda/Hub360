@@ -38,14 +38,15 @@ export function Menu({
 
   useEffect(() => {
     if (!ouvert) return;
-    const dehors = (e: MouseEvent) => {
+    const dehors = (e: PointerEvent) => {
       if (!boite.current?.contains(e.target as Node)) setOuvert(false);
     };
-    document.addEventListener('mousedown', dehors);
+    // pointerdown : un toucher à côté (téléphone) le ferme aussi.
+    document.addEventListener('pointerdown', dehors);
     // Le choix coché (sinon le premier) reçoit le focus à l'ouverture.
     const items = [...(liste.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [])];
     (items.find((x) => x.getAttribute('aria-checked') === 'true') ?? items[0])?.focus();
-    return () => document.removeEventListener('mousedown', dehors);
+    return () => document.removeEventListener('pointerdown', dehors);
   }, [ouvert]);
 
   function fermer() {

@@ -148,7 +148,7 @@ describe('Page Agenda', () => {
       // Le mois en titre (sans menu déroulant), pas de flèches ; Créer flotte au pouce.
       expect(screen.getByRole('heading', { name: 'Novembre 2026' })).toBeInTheDocument();
       expect(document.querySelector('.agenda-barre .agenda-fleches')).toBeNull();
-      expect(screen.getByRole('button', { name: 'Nouveau rendez-vous' })).toBeInTheDocument();
+      expect(document.querySelector('.agenda-fab')).toHaveAccessibleName('Créer un rendez-vous');
       // Les vues, dans le tiroir : Planning charge les 30 jours.
       await userEvent.click(screen.getByRole('button', { name: 'Vues et agendas' }));
       const tiroir = await screen.findByRole('dialog', { name: 'Vues et agendas' });
@@ -156,6 +156,55 @@ describe('Page Agenda', () => {
       await userEvent.click(within(tiroir).getByRole('button', { name: 'Planning' }));
       await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-13', '2026-12-12'));
       expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
+    });
+
+    it('ordinateur : la colonne se replie d’un clic, et le choix est gardé', async () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(min-width: 1101px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      localStorage.clear();
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      const bouton = screen.getByRole('button', { name: 'Colonne des agendas' });
+      expect(bouton).toHaveAttribute('aria-expanded', 'true');
+      await userEvent.click(bouton);
+      expect(bouton).toHaveAttribute('aria-expanded', 'false');
+      expect(document.querySelector('.agenda-disposition')).toHaveClass('is-colonne-masquee');
+      // Pas de tiroir sur grand écran.
+      expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem('hub.agenda.gc.U1') ?? '{}')).toMatchObject({ colonneMasquee: true });
+    });
+
+    it('sur tablette : le tiroir prend le focus, Échap le ferme et rend le focus au bouton', async () => {
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      const bouton = screen.getByRole('button', { name: 'Colonne des agendas' });
+      await userEvent.click(bouton);
+      const tiroir = await screen.findByRole('dialog', { name: 'Vues et agendas' });
+      expect(within(tiroir).getByRole('button', { name: 'Fermer' })).toHaveFocus();
+      await userEvent.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
+      expect(bouton).toHaveFocus();
+    });
+
+    it('sur téléphone, le mini-calendrier du titre se ferme à Échap', async () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(max-width: 640px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      await monter();
+      await screen.findByRole('group', { name: 'Choisir un jour' });
+      // En « Mois et jour », le titre n'ouvre rien : on passe en 3 jours.
+      await userEvent.click(screen.getByRole('button', { name: 'Vues et agendas' }));
+      await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '3 jours' }));
+      const titre = await screen.findByRole('button', { name: /Novembre 2026/ });
+      await userEvent.click(titre);
+      expect(document.getElementById('agenda-mini-deroulant')).toBeInTheDocument();
+      await userEvent.keyboard('{Escape}');
+      expect(document.getElementById('agenda-mini-deroulant')).toBeNull();
     });
 
     it('sur téléphone, glisser le doigt vers la gauche avance d’un mois', async () => {

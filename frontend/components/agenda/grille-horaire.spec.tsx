@@ -195,6 +195,11 @@ describe('GrilleHoraire', () => {
       expect(c.gauche + c.largeur).toBeCloseTo(100, 5);
     });
 
+    it('colonnes étroites : côte à côte, sans débord', () => {
+      expect(largeurBloc(0, 2, 1)).toEqual({ gauche: 0, largeur: 50 });
+      expect(largeurBloc(1, 2, 1)).toEqual({ gauche: 50, largeur: 50 });
+    });
+
     it('7 h, ou le premier rendez-vous s’il est plus tôt ; l’heure actuelle si elle est hors de vue', () => {
       const visibles = 12 * 60; // 12 heures à l'écran
       expect(defilementInitial(null, null, visibles)).toBe(6.5 * 60);

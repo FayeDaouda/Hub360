@@ -103,7 +103,7 @@ export function AbonnementAgendaModal({ slug, onClose }: { slug: string; onClose
     <Modal onClose={onClose} busy={envoi} portal labelledBy="abonnement-titre">
       <header className="modal-header">
         <h2 id="abonnement-titre">
-          <CalendarPlus size={18} aria-hidden /> Ajouter à mon agenda
+          <CalendarPlus size={18} aria-hidden /> Afficher dans Google, Apple ou Outlook
         </h2>
         <CloseButton onClick={onClose} disabled={envoi} />
       </header>

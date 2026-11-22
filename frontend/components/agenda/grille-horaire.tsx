@@ -53,14 +53,16 @@ const MARGE_MIN = 30;
 // Un rendez-vous de moins de 50 minutes tient sur une ligne : « Titre, 15:30 ».
 const COURT_MIN = 50;
 // Chevauchements (comme Google Agenda) : chaque rendez-vous déborde sur la
-// colonne suivante, celui qui commence après passe devant.
+// colonne suivante, celui qui commence après passe devant. Colonne étroite
+// (semaine sur un petit écran, téléphone) : côte à côte, sans débord.
 const DEBORD = 1.7;
+const COLONNE_ETROITE_PX = 140;
 
 // Où se place un rendez-vous parmi ceux qu'il chevauche, en % de la colonne.
-export function largeurBloc(colonne: number, colonnes: number): { gauche: number; largeur: number } {
+export function largeurBloc(colonne: number, colonnes: number, debord = DEBORD): { gauche: number; largeur: number } {
   const part = 100 / colonnes;
   const gauche = colonne * part;
-  const largeur = colonne === colonnes - 1 ? part : Math.min(100 - gauche, part * DEBORD);
+  const largeur = colonne === colonnes - 1 ? part : Math.min(100 - gauche, part * debord);
   return { gauche, largeur };
 }
 
@@ -123,6 +125,8 @@ export function GrilleHoraire({
   const colonnes = useRef<(HTMLDivElement | null)[]>([]);
   const [glisse, setGlisse] = useState<Glisse | null>(null);
   const [trace, setTrace] = useState<Trace | null>(null);
+  // Colonnes étroites : les rendez-vous qui se chevauchent, côte à côte.
+  const [serre, setSerre] = useState(false);
   // Un tracé se termine aussi par un « click » : ne pas créer une 2e fois.
   const vientDeTracer = useRef(false);
   // Un glisser se termine par un « click » du navigateur : ne pas ouvrir la fiche.
@@ -152,24 +156,48 @@ export function GrilleHoraire({
   useLayoutEffect(() => {
     const el = corps.current;
     if (!el) return;
+    // Le bas utilisable : le haut de la navigation du bas (téléphone) ou de
+    // l'écran, moins la marge basse de la page (sinon elle déborde d'autant).
     const ajuster = () => {
-      const haut = el.getBoundingClientRect().top + window.scrollY;
+      const main = el.closest('main');
+      const marge = Math.max(16, main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0);
       const navBas = [...document.querySelectorAll('nav')]
         .filter((n) => getComputedStyle(n).position === 'fixed')
         .map((n) => n.getBoundingClientRect())
         .filter((r) => r.height > 0 && r.top > window.innerHeight / 2)
         .reduce((min, r) => Math.min(min, r.top), window.innerHeight);
-      el.style.height = `${Math.max(320, Math.round(navBas - haut - 16))}px`;
+      const bas = navBas - marge;
+      const largeurColonne = colonnes.current[0]?.getBoundingClientRect().width ?? 0;
+      setSerre(largeurColonne > 0 && largeurColonne < COLONNE_ETROITE_PX);
+      const hauteur = `${Math.max(320, Math.round(bas - (el.getBoundingClientRect().top + window.scrollY)))}px`;
+      if (el.style.height !== hauteur) el.style.height = hauteur;
+      // La colonne de gauche (ordinateur) s'arrête au même endroit et défile seule.
+      const cote = el.closest('.agenda-disposition')?.querySelector<HTMLElement>(':scope > .agenda-cote');
+      if (cote) {
+        const max = `${Math.max(320, Math.round(bas - (cote.getBoundingClientRect().top + window.scrollY)))}px`;
+        if (cote.style.maxHeight !== max) cote.style.maxHeight = max;
+      }
     };
     ajuster();
     // Ce qui pousse la grille (demandes à décider, mini-calendrier) la
-    // réajuste aussi ; sans ResizeObserver, le redimensionnement suffit.
-    const obs = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(ajuster);
+    // réajuste aussi (à l'image suivante : jamais de boucle d'observation) ;
+    // sans ResizeObserver, le redimensionnement suffit.
+    let image = 0;
+    const plusTard = () => {
+      cancelAnimationFrame(image);
+      image = requestAnimationFrame(ajuster);
+    };
+    const obs = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(plusTard);
     obs?.observe(document.body);
-    window.addEventListener('resize', ajuster);
+    window.addEventListener('resize', plusTard);
     return () => {
+      cancelAnimationFrame(image);
       obs?.disconnect();
-      window.removeEventListener('resize', ajuster);
+      window.removeEventListener('resize', plusTard);
+      // Hors de la grille (Mois, Planning…), la colonne retrouve sa hauteur.
+      el.closest('.agenda-disposition')
+        ?.querySelector<HTMLElement>(':scope > .agenda-cote')
+        ?.style.removeProperty('max-height');
     };
   }, []);
 
@@ -181,15 +209,21 @@ export function GrilleHoraire({
   // Des rendez-vous de ces jours-là (pas ceux de la période d'avant, encore
   // affichés le temps de la lecture).
   const charges = elements.some((e) => jours.includes(e.jour));
-  const defile = useRef<string | null>(null);
+  const defile = useRef<{ cle: string; pose: number } | null>(null);
   useEffect(() => {
     const el = corps.current;
     if (!el) return;
     const cle = `${cleJours}|${charges}`;
-    if (defile.current === cle || (defile.current?.startsWith(`${cleJours}|true`) ?? false)) return;
-    defile.current = cle;
+    const avant = defile.current;
+    if (avant && (avant.cle === cle || avant.cle === `${cleJours}|true`)) return;
+    // Défilée à la main entre-temps (lecture lente) : on ne la fait pas sauter.
+    if (avant?.cle.startsWith(`${cleJours}|`) && Math.abs(el.scrollTop - avant.pose) > 2) {
+      defile.current = { cle, pose: el.scrollTop };
+      return;
+    }
     const visibles = (el.clientHeight / HEURE_PX) * 60;
     el.scrollTop = px(defilementInitial(premierHoraire, avecAujourdhui ? maintenant : null, visibles));
+    defile.current = { cle, pose: el.scrollTop };
     // Au changement de période (et à l'arrivée de ses rendez-vous) seulement.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleJours, charges]);
@@ -364,6 +398,7 @@ export function GrilleHoraire({
               .join(' ')}
             onClick={() => onJour?.(j)}
             disabled={!onJour}
+            aria-label={onJour ? `${formatWeekdayDayMonth(j)} : afficher la journée` : formatWeekdayDayMonth(j)}
             aria-current={j === aujourdhui ? 'date' : undefined}
           >
             <span>{formatWeekdayShort(j)}</span>
@@ -464,7 +499,7 @@ export function GrilleHoraire({
               />
             )}
             {placerJour(horaires(j), j).map((p) => {
-              const { gauche, largeur } = largeurBloc(p.colonne, p.colonnes);
+              const { gauche, largeur } = largeurBloc(p.colonne, p.colonnes, serre ? 1 : DEBORD);
               const duree = p.fin - p.debut;
               const decline = p.e.maReponse === 'non' && !p.e.calque;
               const heures = `${formatTime(p.e.debut!)} – ${formatTime(p.e.fin!)}`;
@@ -480,6 +515,8 @@ export function GrilleHoraire({
                     duree >= 55 && 'is-heure',
                     p.e.fin! < new Date().toISOString() && 'is-passe',
                     p.e.calque && 'is-calque',
+                    // Couleur de l'agenda d'origine (Google) : un aplat plus sombre en mode sombre.
+                    p.e.couleur && !p.e.calque && 'is-couleur-libre',
                     glissable(p.e) && 'is-glissable',
                     glisse?.bouge && glisse.e.id === p.e.id && 'is-glisse',
                     // Déclinée : visible, mais en contour (comme Google Agenda).
@@ -503,9 +540,17 @@ export function GrilleHoraire({
                     {p.e.serieId && <Repeat size={11} aria-hidden className="agenda-bloc-icone" />}
                     {p.e.lienVisio && <Video size={12} aria-hidden className="agenda-bloc-icone" />}
                     <strong>{titreAffiche(p.e)}</strong>
-                    {duree < COURT_MIN && <span className="agenda-bloc-heure-courte">, {formatTime(p.e.debut!)}</span>}
+                    {duree < COURT_MIN && (
+                      <span className="agenda-bloc-heure-courte">{`, ${formatTime(p.e.debut!)}`}</span>
+                    )}
                   </span>
-                  {duree >= COURT_MIN && <span className="agenda-bloc-heures">{heures}</span>}
+                  {duree >= COURT_MIN && (
+                    <span className="agenda-bloc-heures">
+                      {formatTime(p.e.debut!)}
+                      {/* Bloc étroit : le début seulement (voir la feuille de style). */}
+                      <span className="agenda-bloc-fin"> – {formatTime(p.e.fin!)}</span>
+                    </span>
+                  )}
                   {/* Le lieu, s'il reste une ligne (1 h 15 et plus). */}
                   {duree >= 75 && p.e.lieu && <span className="agenda-bloc-lieu">{p.e.lieu}</span>}
                   {glissable(p.e) && <span className="agenda-bloc-poignee" aria-hidden />}
