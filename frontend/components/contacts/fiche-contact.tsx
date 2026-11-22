@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { BookUser } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { ouvrirConversation, ouvrirDirect } from '@/lib/chat';
+import { niveauSuffisant } from '@/lib/auth';
 import { getFicheContact, type FicheContact } from '@/lib/contacts';
+import { useSessionCourante } from '@/lib/layout-contexte';
 import { FicheCollegue } from '@/components/annuaire/fiche-collegue';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/feedback';
@@ -24,6 +26,9 @@ export function FicheContactModal({
   utilisateurId: string;
   onClose: () => void;
 }) {
+  const session = useSessionCourante();
+  // Écrire demande l'écriture dans la messagerie (comme le serveur).
+  const peutEcrire = niveauSuffisant(session, 'communication', 'ecriture');
   const [fiche, setFiche] = useState<FicheContact | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -53,10 +58,12 @@ export function FicheContactModal({
         {!fiche && !erreur && <Skeleton />}
         {fiche && (
           <>
-            <FicheCollegue p={fiche} titreId="fiche-contact-titre" onEcrire={ecrire} />
+            <FicheCollegue p={fiche} titreId="fiche-contact-titre" onEcrire={peutEcrire ? ecrire : undefined} />
+            {/* La fiche se ferme : l'annuaire ouvre la même, sans deux dialogues l'un sur l'autre. */}
             <Link
               className="lien-inline fiche-contact-annuaire"
               href={`/admin/${slug}/annuaire?personne=${utilisateurId}`}
+              onClick={onClose}
             >
               <BookUser size={15} aria-hidden /> Ouvrir dans l’annuaire
             </Link>

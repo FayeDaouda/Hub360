@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { filtrer, lienEmail, lienTelephone, membresDeSaCellule, nomDe, parCellule, type CollegueAnnuaire } from './annuaire';
+import {
+  filtrer,
+  lienEmail,
+  lienTelephone,
+  membresDeSaCellule,
+  nomDe,
+  parCellule,
+  type CollegueAnnuaire,
+} from './annuaire';
 
 const c = (
   x: Partial<CollegueAnnuaire> & Pick<CollegueAnnuaire, 'utilisateurId' | 'prenom' | 'nom'>,

@@ -10,8 +10,10 @@ export type FicheContact = {
   cellule: string | null;
   chef: string | null; // chef d’équipe de sa cellule (null s'il l'est lui-même)
   estChef: boolean;
-  telephone: string | null;
+  telephone: string | null; // téléphone professionnel (annuaire)
   email: string;
+  nomAffiche: string | null;
+  photoUrl: string | null;
 };
 
 export const getFicheContact = (slug: string, utilisateurId: string) =>

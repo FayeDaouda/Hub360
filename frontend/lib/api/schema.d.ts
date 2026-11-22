@@ -6180,6 +6180,7 @@ export interface components {
             numeroPiece?: string;
             telephone?: string;
             emailPro?: string;
+            telephonePro?: string;
             contactUrgence?: string;
             /** @enum {string} */
             modePaiement?: "orange_money" | "virement" | "wave";

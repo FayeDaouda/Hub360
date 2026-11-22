@@ -17873,6 +17873,10 @@
             "type": "string",
             "maxLength": 160
           },
+          "telephonePro": {
+            "type": "string",
+            "pattern": "^\\+?[\\d\\s().-]{6,25}$"
+          },
           "contactUrgence": {
             "type": "string",
             "maxLength": 200

@@ -55,7 +55,7 @@ export function AnnuairePanel({ slug }: { slug: string }) {
   return (
     <section className="groupe-panel glass-panel annuaire-reglage" aria-label="Annuaire">
       <fieldset className="annuaire-reglage-choix" disabled={envoi}>
-        <legend className="field-label">Qui apparaît dans l’annuaire</legend>
+        <legend className="field-label">Ce que voient les salariés de cette société</legend>
         {PERIMETRES.map((p) => (
           <label key={p.cle} className={`annuaire-reglage-option${choix === p.cle ? ' is-choisi' : ''}`}>
             <input

@@ -57,7 +57,7 @@ export const GROUPES_CONSOLE: GroupeSections[] = [
         libelle: 'Annuaire',
         icone: BookUser,
         description: (societe) =>
-          `Qui apparaît dans l’annuaire de ${societe} : la société seulement, avec la direction du groupe, ou tout le groupe. Seuls les champs d’annuaire sortent d’une société. Chaque changement exige un motif et entre au journal d’audit.`,
+          `Ce que voient les salariés de ${societe} dans leur annuaire : leur société, plus la direction du groupe, ou tout le groupe. Seuls les champs d’annuaire (dont le téléphone professionnel) sont montrés. Chaque changement exige un motif et entre au journal d’audit.`,
       },
     ],
   },

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ETAPE, hasRight, ROLES_DIRECTION_GROUPE, todayIso } from '@hub/domain';
-import { cheminPhoto } from '../auth/profil';
 import { membreDe, selectContact, versFiche, type LigneContact } from '../contacts/contacts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { runInGroupScope } from '../tenancy/tenant-context';
@@ -95,12 +94,16 @@ export class AnnuaireService {
             }),
           );
 
-    const lignes: { u: LigneContact; societe: Societe }[] = [];
-    for (const u of await this.membres(ici.id, null)) lignes.push({ u, societe: ici });
-    for (const s of autres) {
-      const roles = perimetre === 'groupe' ? null : ROLES_DIRECTION_GROUPE;
-      for (const u of await runInGroupScope(() => this.membres(s.id, roles))) lignes.push({ u, societe: s });
-    }
+    // Les sociétés lues en parallèle (la sienne, puis les autres).
+    const roles = perimetre === 'groupe' ? null : ROLES_DIRECTION_GROUPE;
+    const [siens, ailleurs] = await Promise.all([
+      this.membres(ici.id, null),
+      Promise.all(autres.map((s) => runInGroupScope(() => this.membres(s.id, roles)))),
+    ]);
+    const lignes: { u: LigneContact; societe: Societe }[] = [
+      ...siens.map((u) => ({ u, societe: ici })),
+      ...autres.flatMap((s, i) => ailleurs[i].map((u) => ({ u, societe: s }))),
+    ];
     // Une personne de plusieurs sociétés (rôle transverse) n'apparaît qu'une
     // fois : dans la société de la session d'abord.
     const vus = new Set<string>();
@@ -112,8 +115,6 @@ export class AnnuaireService {
     );
     const membres: MembreAnnuaireDto[] = uniques.map(({ u, societe }) => ({
       ...versFiche(u),
-      nomAffiche: u.nomAffiche,
-      photoUrl: cheminPhoto(u.photoCle),
       societe: { slug: societe.slug, nom: societe.nom },
       memeSociete: societe.id === a.societeId,
       absentJusquau: absences.get(u.id) ?? null,
@@ -122,7 +123,12 @@ export class AnnuaireService {
 
     return {
       perimetre,
-      societes: [ici, ...autres].map(({ slug, nom }) => ({ slug, nom })),
+      // Seulement les sociétés qui ont quelqu'un dans l'annuaire (« direction » :
+      // une société sans dirigeant n'apparaît pas dans le filtre).
+      societes: [ici, ...autres.filter((s) => membres.some((m) => m.societe.slug === s.slug))].map(({ slug, nom }) => ({
+        slug,
+        nom,
+      })),
       membres,
       peutVoirAgendas: hasRight(a.permissions, ETAPE.agendaAutres, 'lecture'),
     };
@@ -156,8 +162,9 @@ export class AnnuaireService {
   // Absences validées par la RH qui couvrent aujourd'hui : la date de fin
   // seulement (jamais le motif). Dossiers de toutes les sociétés de
   // l'annuaire : lecture transverse déclarée (la RH est commune, ADR 0001 §5).
-  // `groupe` : d'autres sociétés sont dans l'annuaire (lecture transverse
-  // déclarée) ; sinon, la lecture reste dans la société de la session.
+  // `groupe` : d'autres sociétés sont dans l'annuaire, lecture transverse
+  // déclarée. (Les absences n'ont pas de société propre : la lecture est de
+  // toute façon bornée aux comptes de l'annuaire.)
   private async absences(ids: string[], groupe: boolean): Promise<Map<string, string>> {
     if (!ids.length) return new Map();
     const jour = todayIso();

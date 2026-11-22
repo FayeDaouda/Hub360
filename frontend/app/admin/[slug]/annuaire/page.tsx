@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LayoutGrid, List, Search, UserX } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import {
@@ -14,6 +15,7 @@ import {
   type CollegueAnnuaire,
   type FiltresAnnuaire,
 } from '@/lib/annuaire';
+import { niveauSuffisant } from '@/lib/auth';
 import { ouvrirConversation, ouvrirDirect } from '@/lib/chat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { CarteCollegue } from '@/components/annuaire/carte-collegue';
@@ -50,16 +52,19 @@ export default function AnnuairePage(props: Props) {
       .then(setAnnuaire)
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Annuaire indisponible.'));
   }, [slug]);
-  // « ?personne=… » : la fiche ouverte d'emblée (puis retirée de l'adresse).
+  // « ?personne=… » : la fiche ouverte (aussi quand on y revient alors que
+  // la page est déjà affichée), puis le paramètre quitte l'adresse.
+  const parametres = useSearchParams();
+  const router = useRouter();
+  const personne = parametres.get('personne');
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const id = url.searchParams.get('personne');
-    if (!id) return;
+    if (!personne) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOuvert(id);
-    url.searchParams.delete('personne');
-    window.history.replaceState(null, '', url.toString());
-  }, []);
+    setOuvert(personne);
+    router.replace(`/admin/${slug}/annuaire`, { scroll: false });
+  }, [personne, router, slug]);
+  // Écrire demande l'écriture dans la messagerie (comme le serveur).
+  const peutEcrire = niveauSuffisant(session, 'communication', 'ecriture');
 
   const membres = useMemo(() => annuaire?.membres ?? [], [annuaire]);
   const visibles = useMemo(() => filtrer(membres, filtres), [membres, filtres]);
@@ -83,7 +88,7 @@ export default function AnnuairePage(props: Props) {
     }
   }
   const actions = (c: CollegueAnnuaire) => ({
-    onEcrire: c.memeSociete && c.utilisateurId !== moiId ? () => ecrire(c) : undefined,
+    onEcrire: peutEcrire && c.memeSociete && c.utilisateurId !== moiId ? () => ecrire(c) : undefined,
     agendaHref:
       annuaire?.peutVoirAgendas && c.memeSociete && c.utilisateurId !== moiId
         ? `/admin/${slug}/agenda?collegue=${c.utilisateurId}`

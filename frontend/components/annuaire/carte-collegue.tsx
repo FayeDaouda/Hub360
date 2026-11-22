@@ -28,7 +28,7 @@ export function CarteCollegue({
   const nom = nomDe(c);
   return (
     <li className={`annuaire-carte annuaire-carte--${vue}${c.absentJusquau ? ' is-absent' : ''}`}>
-      <button type="button" className="annuaire-carte-ouvrir" onClick={onOuvrir} aria-label={`Fiche de ${nom}`}>
+      <button type="button" className="annuaire-carte-ouvrir" onClick={onOuvrir} title={`Fiche de ${nom}`}>
         <PersonAvatar
           name={nom}
           photo={c.photoUrl}

@@ -109,7 +109,9 @@ describe('Annuaire', () => {
     expect(a.membres.map((m) => m.utilisateurId)).toEqual(expect.arrayContaining([ids.cfo, ids.salarie]));
     // Le compte parti (invitation coupée) n'y est pas.
     expect(a.membres.map((m) => m.utilisateurId)).not.toContain(idParti);
-    expect(a.societes.map((s) => s.slug)).toEqual([SLUG, AUTRE.slug]);
+    // La sienne d'abord ; d'autres sociétés créées par d'autres suites peuvent suivre.
+    expect(a.societes[0].slug).toBe(SLUG);
+    expect(a.societes.map((s) => s.slug)).toContain(AUTRE.slug);
   });
 
   it('le réglage d’une société ne vaut que pour elle', async () => {

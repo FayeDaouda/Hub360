@@ -14,7 +14,11 @@ const ligne = (id: string, prenom: string, nom: string, x: Record<string, unknow
   nomAffiche: null,
   photoCle: null,
   roles: [{ role: { nom: 'Salarié' } }],
-  dossierPersonnel: { poste: 'Architecte', telephone: '+221 77 000 00 00', emailPro: `${prenom.toLowerCase()}@gc.sn` },
+  dossierPersonnel: {
+    poste: 'Architecte',
+    telephonePro: '+221 77 000 00 00',
+    emailPro: `${prenom.toLowerCase()}@gc.sn`,
+  },
   collaborations: [],
   ...x,
 });
@@ -94,6 +98,11 @@ describe('AnnuaireService', () => {
     // La plus longue des absences qui couvrent aujourd'hui, jamais le motif.
     expect(awa.absentJusquau).toBe('2026-11-28');
     expect(prisma.demandeAbsence.findMany.mock.calls[0][0].select).not.toHaveProperty('type');
+    // Le téléphone professionnel seulement : le personnel n'est même pas lu.
+    const select = JSON.stringify(prisma.utilisateur.findMany.mock.calls[0][0].select);
+    expect(select).toContain('"telephonePro":true');
+    expect(select).not.toContain('"telephone":true');
+    expect(awa.telephone).toBe('+221 77 000 00 00');
   });
 
   it('société + direction : seulement la direction des autres sociétés ; une personne de plusieurs sociétés une seule fois', async () => {
