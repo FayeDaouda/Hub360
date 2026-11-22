@@ -1310,11 +1310,11 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+/* Pas de défilement propre : la colonne défile d'un bloc (un second
+   défilement coupait un nom sous le champ de recherche, 22/11/2026). */
 .agenda-cote-liste {
   display: grid;
   gap: 2px;
-  max-height: 260px;
-  overflow-y: auto;
 }
 .agenda-cote-choix {
   display: flex;
@@ -1418,9 +1418,6 @@
   position: static;
   max-height: none;
   overflow: visible;
-}
-.agenda-tiroir .agenda-cote-liste {
-  max-height: none;
 }
 .agenda-tiroir-tete {
   display: flex;
