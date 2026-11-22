@@ -14,6 +14,7 @@ describe('Annuaire', () => {
   let app: INestApplication;
   let prisma: PrismaClient;
   let ids: { cfo: string; salarie: string };
+  let idParti: string;
 
   beforeAll(async () => {
     app = await demarrer();
@@ -33,6 +34,21 @@ describe('Annuaire', () => {
       cfo: await creer('cfo.annuaire@hub.group', 'Directrice', cfo.id),
       salarie: await creer('salarie.annuaire@hub.group', 'Employe', salarie.id),
     };
+    // Une invitation jamais activée, puis coupée par un départ (archivage RH :
+    // actif false, mot de passe toujours vide) : elle ne doit plus apparaître.
+    const parti = await prisma.utilisateur.create({
+      data: {
+        email: 'parti.annuaire@hub.group',
+        prenom: 'Parti',
+        nom: 'Annuaire',
+        actif: false,
+        desactiveLe: new Date(),
+      },
+    });
+    await prisma.utilisateurSocieteRole.create({
+      data: { utilisateurId: parti.id, societeId: societe.id, roleId: salarie.id },
+    });
+    idParti = parti.id;
   });
 
   afterAll(async () => {
@@ -65,6 +81,7 @@ describe('Annuaire', () => {
     await api(app, salarie).put('/annuaire/perimetre', { perimetre: 'groupe', motif: 'Essai' }).expect(403);
     const cio = await connecter(app, COMPTES.cio);
     await api(app, cio).put('/annuaire/perimetre', { perimetre: 'groupe' }).expect(400); // motif obligatoire
+    await api(app, cio).put('/annuaire/perimetre', { perimetre: 'groupe', motif: '   a  ' }).expect(400); // espaces retirés
     await api(app, cio).put('/annuaire/perimetre', { perimetre: 'autre', motif: 'Essai' }).expect(400);
     await api(app, cio)
       .put('/annuaire/perimetre', { perimetre: 'societe_direction', motif: 'Contacts de direction' })
@@ -90,6 +107,8 @@ describe('Annuaire', () => {
     await api(app, cio).put('/annuaire/perimetre', { perimetre: 'groupe', motif: 'Tout le groupe' }).expect(200);
     a = await lister(salarie);
     expect(a.membres.map((m) => m.utilisateurId)).toEqual(expect.arrayContaining([ids.cfo, ids.salarie]));
+    // Le compte parti (invitation coupée) n'y est pas.
+    expect(a.membres.map((m) => m.utilisateurId)).not.toContain(idParti);
     expect(a.societes.map((s) => s.slug)).toEqual([SLUG, AUTRE.slug]);
   });
 

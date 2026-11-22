@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsIn, IsString, MaxLength, MinLength } from 'class-validator';
 
 // Annuaire (22/11/2026). Le périmètre, réglé société par société par le CIO
@@ -46,5 +47,10 @@ export class PerimetreAnnuaireDto {
 export class ReglerPerimetreDto {
   @IsIn(PERIMETRES_ANNUAIRE) perimetre!: PerimetreAnnuaire;
   // Comme les interrupteurs : chaque changement est motivé et entre au journal.
-  @IsString() @MinLength(3) @MaxLength(500) motif!: string;
+  // Espaces retirés avant la vérification : un motif « a » ne passe pas.
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(3)
+  @MaxLength(500)
+  motif!: string;
 }

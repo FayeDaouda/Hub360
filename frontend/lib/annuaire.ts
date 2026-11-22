@@ -60,6 +60,14 @@ export const reglerPerimetreAnnuaire = (slug: string, perimetre: PerimetreAnnuai
     body: { perimetre, motif },
   });
 
+// Liens d'appel et d'e-mail (audit 22/11/2026) : seulement pour une valeur
+// qui a la forme attendue — un champ libre ne glisse jamais de copie cachée
+// (« ?bcc=… ») ni rien d'autre dans le lien.
+export const lienTelephone = (t: string | null | undefined) =>
+  t && /^\+?[\d\s().-]{6,25}$/.test(t) ? `tel:${t.replace(/[^\d+]/g, '')}` : null;
+export const lienEmail = (e: string | null | undefined) =>
+  e && /^[^\s@?&#<>"'/\\]+@[^\s@?&#<>"'/\\]+\.[^\s@?&#<>"'/\\]+$/.test(e) ? `mailto:${e}` : null;
+
 // Le nom choisi par la personne, sinon son nom officiel.
 export const nomDe = (c: Pick<CollegueAnnuaire, 'prenom' | 'nom' | 'nomAffiche'>) =>
   c.nomAffiche?.trim() || `${c.prenom} ${c.nom}`.trim();

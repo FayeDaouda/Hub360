@@ -128,8 +128,10 @@ describe('AnnuaireService', () => {
 
   it('régler : la valeur et une intervention au journal (de quoi à quoi, motif) ; rien si inchangé', async () => {
     const { s, prisma } = monter();
-    prisma.$transaction.mockImplementation((ops: unknown[]) => Promise.all(ops));
+    // Transaction interactive sérialisable : la valeur d'avant y est relue.
+    prisma.$transaction.mockImplementation((f: (tx: unknown) => unknown) => f(prisma));
     expect(await s.regler('S1', 'groupe', 'Ouverture au groupe', 'U9')).toEqual({ perimetre: 'groupe' });
+    expect(prisma.$transaction.mock.calls[0][1]).toEqual({ isolationLevel: 'Serializable' });
     expect(prisma.reglageSociete.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ create: expect.objectContaining({ valeur: 'groupe', majParId: 'U9' }) }),
     );

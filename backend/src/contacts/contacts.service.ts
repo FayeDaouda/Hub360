@@ -17,12 +17,14 @@ export type FicheContact = {
 
 // Membres de la société : même règle que l'annuaire du chat et le login
 // (rôle de la société ou transverse, hors holding_admin). Comptes actifs ou
-// invitation en attente ; un compte désactivé (départ) n'apparaît plus.
+// invitation en attente ; un compte désactivé (départ) n'apparaît plus —
+// y compris une invitation jamais activée puis coupée par un départ
+// (audit annuaire, 22/11/2026 : le mot de passe reste vide dans ce cas).
 export const membreDe = (societeId: string): Prisma.UtilisateurWhereInput => ({
   roles: {
     some: { OR: [{ societeId }, { societeId: null }], role: { nom: { not: ROLE_HOLDING_ADMIN }, supprimeLe: null } },
   },
-  OR: [{ actif: true }, { motDePasseHash: null }],
+  OR: [{ actif: true }, { motDePasseHash: null, desactiveLe: null }],
 });
 
 const DOSSIER = { select: { poste: true, telephone: true, emailPro: true } } as const;

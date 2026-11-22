@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { ETAPE, hasRight, ROLES_DIRECTION_GROUPE, todayIso } from '@hub/domain';
 import { cheminPhoto } from '../auth/profil';
 import { membreDe, selectContact, versFiche, type LigneContact } from '../contacts/contacts.service';
@@ -20,6 +20,12 @@ const LIBELLES: Record<PerimetreAnnuaire, string> = {
   groupe: 'tout le groupe',
 };
 
+// Une valeur inconnue (ou absente) vaut « la société seulement ».
+const lirePerimetre = (v: unknown): PerimetreAnnuaire =>
+  typeof v === 'string' && (PERIMETRES_ANNUAIRE as readonly string[]).includes(v)
+    ? (v as PerimetreAnnuaire)
+    : 'societe';
+
 export type ActeurAnnuaire = { userId: string; societeId: string; permissions?: Record<string, string> };
 type Societe = SocieteAnnuaireDto & { id: string };
 
@@ -37,34 +43,37 @@ export class AnnuaireService {
     const l = await this.prisma.reglageSociete.findUnique({
       where: { societeId_cle: { societeId, cle: CLE_PERIMETRE } },
     });
-    const v = l?.valeur;
-    return typeof v === 'string' && (PERIMETRES_ANNUAIRE as readonly string[]).includes(v)
-      ? (v as PerimetreAnnuaire)
-      : 'societe';
+    return lirePerimetre(l?.valeur);
   }
 
   // Le périmètre change : la valeur, et une intervention au journal d'audit
   // (qui, quand, de quoi à quoi, pourquoi), dans la même transaction.
   async regler(societeId: string, perimetre: PerimetreAnnuaire, motif: string, parId: string) {
-    const avant = await this.perimetre(societeId);
-    if (avant === perimetre) return { perimetre };
-    await this.prisma.$transaction([
-      this.prisma.reglageSociete.upsert({
-        where: { societeId_cle: { societeId, cle: CLE_PERIMETRE } },
-        create: { societeId, cle: CLE_PERIMETRE, valeur: perimetre, majParId: parId },
-        update: { valeur: perimetre, majParId: parId },
-      }),
-      this.prisma.interventionHub.create({
-        data: {
-          societeId,
-          parId,
-          type: 'annuaire_perimetre',
-          cible: CLE_PERIMETRE,
-          detail: `Annuaire : ${LIBELLES[avant]} → ${LIBELLES[perimetre]}`,
-          motif,
-        },
-      }),
-    ]);
+    // Valeur d'avant relue dans la transaction (sérialisable) : deux réglages
+    // simultanés ne laissent jamais une trace « de X à Y » fausse.
+    await this.prisma.$transaction(
+      async (tx) => {
+        const l = await tx.reglageSociete.findUnique({ where: { societeId_cle: { societeId, cle: CLE_PERIMETRE } } });
+        const avant = lirePerimetre(l?.valeur);
+        if (avant === perimetre) return;
+        await tx.reglageSociete.upsert({
+          where: { societeId_cle: { societeId, cle: CLE_PERIMETRE } },
+          create: { societeId, cle: CLE_PERIMETRE, valeur: perimetre, majParId: parId },
+          update: { valeur: perimetre, majParId: parId },
+        });
+        await tx.interventionHub.create({
+          data: {
+            societeId,
+            parId,
+            type: 'annuaire_perimetre',
+            cible: CLE_PERIMETRE,
+            detail: `Annuaire : ${LIBELLES[avant]} → ${LIBELLES[perimetre]}`,
+            motif,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     return { perimetre };
   }
 
@@ -97,7 +106,10 @@ export class AnnuaireService {
     const vus = new Set<string>();
     const uniques = lignes.filter(({ u }) => !vus.has(u.id) && vus.add(u.id));
 
-    const absences = await this.absences(uniques.map(({ u }) => u.id));
+    const absences = await this.absences(
+      uniques.map(({ u }) => u.id),
+      perimetre !== 'societe',
+    );
     const membres: MembreAnnuaireDto[] = uniques.map(({ u, societe }) => ({
       ...versFiche(u),
       nomAffiche: u.nomAffiche,
@@ -144,10 +156,12 @@ export class AnnuaireService {
   // Absences validées par la RH qui couvrent aujourd'hui : la date de fin
   // seulement (jamais le motif). Dossiers de toutes les sociétés de
   // l'annuaire : lecture transverse déclarée (la RH est commune, ADR 0001 §5).
-  private async absences(ids: string[]): Promise<Map<string, string>> {
+  // `groupe` : d'autres sociétés sont dans l'annuaire (lecture transverse
+  // déclarée) ; sinon, la lecture reste dans la société de la session.
+  private async absences(ids: string[], groupe: boolean): Promise<Map<string, string>> {
     if (!ids.length) return new Map();
     const jour = todayIso();
-    const lignes = await runInGroupScope(() =>
+    const lire = () =>
       this.prisma.demandeAbsence.findMany({
         where: {
           statut: 'validee',
@@ -162,8 +176,8 @@ export class AnnuaireService {
           dateFin: true,
           dossier: { select: { utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } },
         },
-      }),
-    );
+      });
+    const lignes = groupe ? await runInGroupScope(lire) : await lire();
     const parId = new Map<string, string>();
     for (const l of lignes) {
       const id = l.dossier.utilisateurId ?? l.dossier.collaborateur?.utilisateurId;

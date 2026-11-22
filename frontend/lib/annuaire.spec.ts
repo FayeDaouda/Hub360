@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filtrer, membresDeSaCellule, nomDe, parCellule, type CollegueAnnuaire } from './annuaire';
+import { filtrer, lienEmail, lienTelephone, membresDeSaCellule, nomDe, parCellule, type CollegueAnnuaire } from './annuaire';
 
 const c = (
   x: Partial<CollegueAnnuaire> & Pick<CollegueAnnuaire, 'utilisateurId' | 'prenom' | 'nom'>,
@@ -75,5 +75,15 @@ describe('annuaire', () => {
   it('membres de sa cellule : même cellule et même société, sans la personne', () => {
     expect(membresDeSaCellule(TOUS, LEA).map((m) => m.utilisateurId)).toEqual(['U2']);
     expect(membresDeSaCellule(TOUS, AWA)).toEqual([]);
+  });
+
+  it('liens d’appel et d’e-mail : seulement pour une valeur de la forme attendue', () => {
+    expect(lienTelephone('+221 77 123 45 67')).toBe('tel:+221771234567');
+    expect(lienTelephone('77-123-45-67 (bureau)')).toBeNull();
+    expect(lienTelephone('javascript:alert(1)')).toBeNull();
+    expect(lienEmail('lea@gc.sn')).toBe('mailto:lea@gc.sn');
+    expect(lienEmail('x@gc.sn?bcc=tiers@ext.com')).toBeNull();
+    expect(lienEmail('pas une adresse')).toBeNull();
+    expect(lienEmail(null)).toBeNull();
   });
 });

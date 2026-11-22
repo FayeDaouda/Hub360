@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { CalendarDays, Mail, MessageCircle, Phone } from 'lucide-react';
+import { lienEmail, lienTelephone } from '@/lib/annuaire';
 
 // Les actions directes sur un collègue (annuaire, fiche, 22/11/2026) :
 // écrire (messagerie de la société), appeler, écrire un e-mail, voir son
@@ -23,6 +24,8 @@ export function ActionsCollegue({
 }) {
   const classe = compact ? 'annuaire-action annuaire-action--icone' : 'annuaire-action';
   const libelle = (texte: string) => (compact ? <span className="sr-only">{texte}</span> : <span>{texte}</span>);
+  const tel = lienTelephone(telephone);
+  const mail = lienEmail(email);
   return (
     <div className="annuaire-actions" role="group" aria-label={`Contacter ${nom}`}>
       {onEcrire && (
@@ -31,16 +34,18 @@ export function ActionsCollegue({
           {libelle('Écrire')}
         </button>
       )}
-      {telephone && (
-        <a className={classe} href={`tel:${telephone.replace(/\s+/g, '')}`} title={`Appeler ${nom}`}>
+      {tel && (
+        <a className={classe} href={tel} title={`Appeler ${nom}`}>
           <Phone size={16} aria-hidden />
           {libelle('Appeler')}
         </a>
       )}
-      <a className={classe} href={`mailto:${email}`} title={`Écrire un e-mail à ${nom}`}>
-        <Mail size={16} aria-hidden />
-        {libelle('E-mail')}
-      </a>
+      {mail && (
+        <a className={classe} href={mail} title={`Écrire un e-mail à ${nom}`}>
+          <Mail size={16} aria-hidden />
+          {libelle('E-mail')}
+        </a>
+      )}
       {agendaHref && (
         <Link className={classe} href={agendaHref} title={`Voir l’agenda de ${nom}`}>
           <CalendarDays size={16} aria-hidden />

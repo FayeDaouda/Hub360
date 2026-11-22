@@ -2,6 +2,7 @@
 
 import { Building2, Mail, Phone, Users } from 'lucide-react';
 import { formatDayLongMonth } from '@hub/domain';
+import { lienEmail, lienTelephone } from '@/lib/annuaire';
 import { PersonAvatar } from '@/components/ui/avatar';
 import { ActionsCollegue } from './actions-collegue';
 
@@ -44,6 +45,8 @@ export function FicheCollegue({
 }) {
   const nom = p.nomAffiche?.trim() || `${p.prenom} ${p.nom}`.trim();
   const officiel = `${p.prenom} ${p.nom}`.trim();
+  const tel = lienTelephone(p.telephone);
+  const mail = lienEmail(p.email);
   return (
     <div className="annuaire-fiche">
       <header className="annuaire-fiche-tete">
@@ -78,15 +81,17 @@ export function FicheCollegue({
         <h3>Coordonnées</h3>
         <p className="annuaire-fiche-ligne">
           <Phone size={16} aria-hidden />
-          {p.telephone ? (
-            <a href={`tel:${p.telephone.replace(/\s+/g, '')}`}>{p.telephone}</a>
+          {p.telephone && tel ? (
+            <a href={tel}>{p.telephone}</a>
+          ) : p.telephone ? (
+            <span>{p.telephone}</span>
           ) : (
             <span className="annuaire-detail">Téléphone non renseigné</span>
           )}
         </p>
         <p className="annuaire-fiche-ligne">
           <Mail size={16} aria-hidden />
-          <a href={`mailto:${p.email}`}>{p.email}</a>
+          {mail ? <a href={mail}>{p.email}</a> : <span>{p.email}</span>}
         </p>
         {p.societe && (
           <p className="annuaire-fiche-ligne">
