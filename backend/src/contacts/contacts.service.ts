@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { cheminPhoto } from '../auth/profil';
 import { PrismaService } from '../prisma/prisma.service';
 import { ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
 
@@ -11,28 +12,38 @@ export type FicheContact = {
   cellule: string | null;
   chef: string | null; // chef d’équipe de sa cellule (null s'il l'est lui-même, ou sans cellule)
   estChef: boolean;
-  telephone: string | null;
+  telephone: string | null; // téléphone professionnel (annuaire)
   email: string;
+  // Nom choisi par la personne et photo : la fiche est la même partout.
+  nomAffiche: string | null;
+  photoUrl: string | null;
 };
 
 // Membres de la société : même règle que l'annuaire du chat et le login
 // (rôle de la société ou transverse, hors holding_admin). Comptes actifs ou
-// invitation en attente ; un compte désactivé (départ) n'apparaît plus.
-const membreDe = (societeId: string): Prisma.UtilisateurWhereInput => ({
+// invitation en attente ; un compte désactivé (départ) n'apparaît plus —
+// y compris une invitation jamais activée puis coupée par un départ
+// (audit annuaire, 22/11/2026 : le mot de passe reste vide dans ce cas).
+export const membreDe = (societeId: string): Prisma.UtilisateurWhereInput => ({
   roles: {
     some: { OR: [{ societeId }, { societeId: null }], role: { nom: { not: ROLE_HOLDING_ADMIN }, supprimeLe: null } },
   },
-  OR: [{ actif: true }, { motDePasseHash: null }],
+  OR: [{ actif: true }, { motDePasseHash: null, desactiveLe: null }],
 });
 
-const DOSSIER = { select: { poste: true, telephone: true, emailPro: true } } as const;
+// Le téléphone professionnel seulement (décision du 22/11/2026) : le
+// téléphone personnel du dossier ne sort jamais vers les collègues.
+const DOSSIER = { select: { poste: true, telephonePro: true, emailPro: true } } as const;
 
-const selectContact = (societeId: string) =>
+export const selectContact = (societeId: string) =>
   ({
     id: true,
     prenom: true,
     nom: true,
     email: true,
+    // Annuaire (22/11/2026) : le nom choisi par la personne et sa photo.
+    nomAffiche: true,
+    photoCle: true,
     roles: {
       where: { OR: [{ societeId }, { societeId: null }] },
       select: { role: { select: { nom: true } } },
@@ -51,9 +62,9 @@ const selectContact = (societeId: string) =>
     },
   }) satisfies Prisma.UtilisateurSelect;
 
-type LigneContact = Prisma.UtilisateurGetPayload<{ select: ReturnType<typeof selectContact> }>;
+export type LigneContact = Prisma.UtilisateurGetPayload<{ select: ReturnType<typeof selectContact> }>;
 
-function versFiche(u: LigneContact): FicheContact {
+export function versFiche(u: LigneContact): FicheContact {
   const collab = u.collaborations[0];
   // Dossier RH relié au compte directement, ou via la fiche d'équipe.
   const dossier = u.dossierPersonnel ?? collab?.dossierPersonnel ?? null;
@@ -68,7 +79,9 @@ function versFiche(u: LigneContact): FicheContact {
     cellule: collab?.cellule?.nom ?? null,
     chef: chef && !estChef ? `${chef.prenom} ${chef.nom}`.trim() : null,
     estChef,
-    telephone: dossier?.telephone.trim() || null,
+    telephone: dossier?.telephonePro.trim() || null,
+    nomAffiche: u.nomAffiche,
+    photoUrl: cheminPhoto(u.photoCle),
     email: dossier?.emailPro.trim() || u.email,
   };
 }

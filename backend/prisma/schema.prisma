@@ -2118,6 +2118,9 @@ model DossierPersonnel {
   numeroPiece                String               @default("") @map("numero_piece") // CNI ou passeport
   telephone                  String               @default("")
   emailPro                   String               @default("") @map("email_pro")
+  // Annuaire (22/11/2026, décision du user) : seul téléphone montré aux
+  // collègues — jamais le personnel (`telephone`). Saisi par la RH.
+  telephonePro               String               @default("") @map("telephone_pro")
   contactUrgence             String               @default("") @map("contact_urgence")
   // Saisis par le salarié dans « Mon espace › Mes informations » (maquette du
   // boss), enregistrés immédiatement.
@@ -2775,6 +2778,7 @@ enum TypeInterventionHub {
   maintenance_activee // HUB fermé à tous, sauf l'Administrateur HUB
   maintenance_levee // HUB rouvert
   suppression // dossier CRM et/ou projet supprimés définitivement, avec tout ce qui en dépend
+  annuaire_perimetre // périmètre de l'annuaire changé (société / + direction / groupe)
 }
 
 model InterventionHub {

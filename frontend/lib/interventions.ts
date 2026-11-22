@@ -39,7 +39,8 @@ export type EtatInterventions = {
       | 'module_reactive'
       | 'maintenance_activee'
       | 'maintenance_levee'
-      | 'suppression';
+      | 'suppression'
+      | 'annuaire_perimetre';
     detail: string;
     motif: string;
     par: string | null;

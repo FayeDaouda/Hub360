@@ -44,6 +44,7 @@ const ACTIONS_INTERVENTION: Record<TypeInterventionHub, string> = {
   cellules_projet: 'Cellules du projet modifiées',
   reouverture_dossier: 'Dossier perdu rouvert',
   module_desactive: 'Module désactivé',
+  annuaire_perimetre: 'Périmètre de l’annuaire',
   module_reactive: 'Module réactivé',
   maintenance_activee: 'Maintenance du HUB activée',
   maintenance_levee: 'Maintenance du HUB levée',

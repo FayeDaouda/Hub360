@@ -41,6 +41,8 @@ export class DossierPersonnelDto {
   @IsOptional() @IsString() @MaxLength(40) numeroPiece?: string;
   @IsOptional() @IsString() @MaxLength(40) telephone?: string;
   @IsOptional() @IsString() @MaxLength(160) emailPro?: string;
+  // Le téléphone montré dans l'annuaire (22/11/2026) : un numéro, sans plus.
+  @IsOptional() @ValidateIf((_, v) => v !== '') @Matches(/^\+?[\d\s().-]{6,25}$/) telephonePro?: string;
   @IsOptional() @IsString() @MaxLength(200) contactUrgence?: string;
   @IsOptional() @IsEnum(ModePaiementSalaire) modePaiement?: ModePaiementSalaire;
   @IsOptional() @IsString() @MaxLength(80) coordonneesPaiement?: string;

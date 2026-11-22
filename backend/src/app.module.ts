@@ -33,6 +33,7 @@ import { SignalementsModule } from './signalements/signalements.module';
 import { AuditModule } from './audit/audit.module';
 import { RechercheModule } from './recherche/recherche.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { AnnuaireModule } from './annuaire/annuaire.module';
 import { ReglagesModule } from './reglages/reglages.module';
 import { PilotageModule } from './pilotage/pilotage.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
@@ -77,6 +78,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     ReglagesModule,
     RechercheModule,
     ContactsModule,
+    AnnuaireModule,
     SignalementsModule,
     AuditModule,
     InterventionsModule,

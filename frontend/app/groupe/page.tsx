@@ -17,6 +17,7 @@ import { JournalAudit } from '@/components/pilotage/journal-audit';
 import { DefilementCoque } from '@/lib/defilement';
 import { DeblocagesPanel } from '@/components/groupe/deblocages-panel';
 import { ModulesPanel } from '@/components/groupe/modules-panel';
+import { AnnuairePanel } from '@/components/groupe/annuaire-panel';
 import { NavigationConsole, NavigationConsoleMobile } from '@/components/groupe/console-navigation';
 import { definitionSection, sectionDepuisParametre } from '@/components/groupe/console-sections';
 import { AvisDroitsBandeau } from '@/components/avis-droits-bandeau';
@@ -150,6 +151,7 @@ function ConsoleAdministration() {
           {section === 'comptes' && <ComptesRolesPanel moiId={session.utilisateur.id} />}
           {section === 'droits' && <RolesPanel key={slug} slug={slug} />}
           {section === 'modules' && <ModulesPanel slug={slug} societe={session.societe.nom} />}
+          {section === 'annuaire' && <AnnuairePanel key={slug} slug={slug} />}
           {section === 'journal' && <JournalAudit slug={slug} entete={false} />}
           {section === 'deblocages' && <DeblocagesPanel key={slug} slug={slug} />}
         </main>

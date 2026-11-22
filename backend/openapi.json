@@ -10772,6 +10772,104 @@
         ]
       }
     },
+    "/api/societes/{slug}/annuaire/collegues": {
+      "get": {
+        "operationId": "AnnuaireController_lister",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnuaireDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Annuaire"
+        ]
+      }
+    },
+    "/api/societes/{slug}/annuaire/perimetre": {
+      "get": {
+        "operationId": "PerimetreAnnuaireController_lire",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerimetreAnnuaireDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PerimetreAnnuaire"
+        ]
+      },
+      "put": {
+        "operationId": "PerimetreAnnuaireController_regler",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReglerPerimetreDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerimetreAnnuaireDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PerimetreAnnuaire"
+        ]
+      }
+    },
     "/api/societes/{slug}/signalements": {
       "post": {
         "operationId": "SignalementsController_creer",
@@ -17775,6 +17873,10 @@
             "type": "string",
             "maxLength": 160
           },
+          "telephonePro": {
+            "type": "string",
+            "pattern": "^\\+?[\\d\\s().-]{6,25}$"
+          },
           "contactUrgence": {
             "type": "string",
             "maxLength": 200
@@ -19401,6 +19503,163 @@
         "required": [
           "mode",
           "nom"
+        ]
+      },
+      "SocieteAnnuaireDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "nom"
+        ]
+      },
+      "MembreAnnuaireDto": {
+        "type": "object",
+        "properties": {
+          "utilisateurId": {
+            "type": "string"
+          },
+          "prenom": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "nomAffiche": {
+            "type": "string",
+            "nullable": true
+          },
+          "photoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "poste": {
+            "type": "string",
+            "nullable": true
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          },
+          "chef": {
+            "type": "string",
+            "nullable": true
+          },
+          "estChef": {
+            "type": "boolean"
+          },
+          "telephone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string"
+          },
+          "societe": {
+            "$ref": "#/components/schemas/SocieteAnnuaireDto"
+          },
+          "memeSociete": {
+            "type": "boolean"
+          },
+          "absentJusquau": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "utilisateurId",
+          "prenom",
+          "nom",
+          "nomAffiche",
+          "photoUrl",
+          "poste",
+          "cellule",
+          "chef",
+          "estChef",
+          "telephone",
+          "email",
+          "societe",
+          "memeSociete",
+          "absentJusquau"
+        ]
+      },
+      "AnnuaireDto": {
+        "type": "object",
+        "properties": {
+          "perimetre": {
+            "type": "string",
+            "enum": [
+              "groupe",
+              "societe",
+              "societe_direction"
+            ]
+          },
+          "societes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SocieteAnnuaireDto"
+            }
+          },
+          "membres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MembreAnnuaireDto"
+            }
+          },
+          "peutVoirAgendas": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "perimetre",
+          "societes",
+          "membres",
+          "peutVoirAgendas"
+        ]
+      },
+      "PerimetreAnnuaireDto": {
+        "type": "object",
+        "properties": {
+          "perimetre": {
+            "enum": [
+              "groupe",
+              "societe",
+              "societe_direction"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "perimetre"
+        ]
+      },
+      "ReglerPerimetreDto": {
+        "type": "object",
+        "properties": {
+          "perimetre": {
+            "type": "string",
+            "enum": [
+              "groupe",
+              "societe",
+              "societe_direction"
+            ]
+          },
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "perimetre",
+          "motif"
         ]
       },
       "CreerSignalementDto": {

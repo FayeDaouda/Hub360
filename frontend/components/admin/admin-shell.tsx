@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  BookUser,
   BriefcaseBusiness,
   CalendarDays,
   ChevronLeft,
@@ -71,6 +72,8 @@ const NAV: NavItem[] = [
   { cle: 'agenda', libelle: 'Agenda', icone: CalendarDays, chemin: 'agenda' },
   { cle: 'annonces', libelle: 'Annonces', icone: Megaphone, chemin: 'annonces' },
   { cle: 'recrutement', libelle: 'Recrutement', icone: BriefcaseBusiness, chemin: 'recrutement' },
+  // Annuaire (22/11/2026) : tout le back-office.
+  { cle: 'annuaire', libelle: 'Annuaire', icone: BookUser, chemin: 'annuaire' },
 ];
 
 // Dérive l'entrée de nav active depuis l'URL — un seul point de vérité (avant

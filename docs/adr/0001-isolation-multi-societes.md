@@ -67,6 +67,13 @@ partagé par toutes les sociétés.
    explicite « vue groupe » en lecture, avec journal des accès, viendra avec
    cette décision. La connexion et la gestion des comptes
    (`AuthController`) sont en périmètre système.
+   **Annuaire (22/11/2026)** : lecture transverse déclarée
+   (`runInGroupScope`) des seuls champs d'annuaire des autres sociétés
+   (`selectContact` : nom, nom affiché, photo, poste, cellule, téléphone et
+   e-mail pro) et de la date de fin d'une absence du jour, seulement quand
+   le périmètre réglé pour la société par le CIO ou l'Administrateur HUB
+   l'ouvre (journal d'audit). La liste des champs renvoyés est figée par des
+   tests (unitaire et e2e) : tout champ ajouté doit les modifier.
 6. **Preuve par les tests.** Tests unitaires de l'extension ; tests e2e
    d'API avec une seconde société (lectures, écritures et listes refusées,
    relation vers une donnée de l'autre société refusée, refus hors contexte,
