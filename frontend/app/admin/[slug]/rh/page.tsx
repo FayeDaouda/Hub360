@@ -469,7 +469,8 @@ export default function RhPage(props: Props) {
                   { titre: 'Contrat', valeur: (d) => LIBELLE_CONTRAT[d.typeContrat] },
                   { titre: 'Fin de contrat', valeur: (d) => (d.typeContrat !== 'cdi' ? dateExport(d.dateFin) : null) },
                   { titre: 'Entrée', valeur: (d) => dateExport(d.dateEntree) },
-                  { titre: 'Téléphone', valeur: (d) => d.telephone },
+                  { titre: 'Téléphone personnel', valeur: (d) => d.telephone },
+                  { titre: 'Téléphone pro', valeur: (d) => d.telephonePro },
                   { titre: 'E-mail pro', valeur: (d) => d.emailPro },
                   { titre: 'Dossier complet (%)', valeur: (d) => d.completude.pourcentage },
                   { titre: 'Archivé le', valeur: (d) => dateExport(d.archiveLe) },
@@ -563,6 +564,7 @@ const CHAMPS_VIDES: MajDossier = {
   numeroPiece: '',
   telephone: '',
   emailPro: '',
+  telephonePro: '',
   contactUrgence: '',
   modePaiement: 'virement',
   coordonneesPaiement: '',
@@ -913,7 +915,9 @@ function FicheDossier({
             </div>
           )}
           <div className="rh-grille">
-            {champ('telephone', 'Téléphone', { type: 'tel' })}
+            {champ('telephone', 'Téléphone personnel', { type: 'tel' })}
+            {/* Annuaire (22/11/2026) : seul ce numéro est montré aux collègues. */}
+            {champ('telephonePro', 'Téléphone professionnel (annuaire)', { type: 'tel', placeholder: '+221 …' })}
             {champ('emailPro', 'E-mail professionnel', { type: 'email', placeholder: 'prenom.nom@…' })}
             {champ('contactUrgence', 'Contact d’urgence')}
             <Field label="Paiement du salaire">

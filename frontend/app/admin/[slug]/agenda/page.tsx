@@ -209,6 +209,16 @@ export default function AgendaPage(props: Props) {
     } catch {
       // Stockage indisponible : réglages par défaut.
     }
+    // « Voir son agenda » depuis l'annuaire (22/11/2026) : ?collegue=… le
+    // superpose pour cette visite (seul un collègue actuel s'affiche, comme
+    // toujours), puis le paramètre quitte l'adresse.
+    const url = new URL(window.location.href);
+    const demande = url.searchParams.get('collegue');
+    if (demande) {
+      setCollegues((c) => [demande, ...c.filter((x) => x !== demande)].slice(0, CALQUES_MAX));
+      url.searchParams.delete('collegue');
+      window.history.replaceState(null, '', url.toString());
+    }
   }, [clePreferences]);
   function preferences(m: ElementAgenda['type'][], c: string[], masquee = colonneMasquee) {
     setMasques(m);

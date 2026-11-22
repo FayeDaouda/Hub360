@@ -1436,6 +1436,7 @@ export type ChampsDossierPersonnel = {
   numeroPiece: string;
   telephone: string;
   emailPro: string;
+  telephonePro: string; // seul téléphone de l'annuaire (22/11/2026)
   contactUrgence: string;
   modePaiement: ModePaiementSalaire;
   coordonneesPaiement: string;

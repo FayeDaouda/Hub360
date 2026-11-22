@@ -4484,6 +4484,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/annuaire/collegues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AnnuaireController_lister"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/annuaire/perimetre": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PerimetreAnnuaireController_lire"];
+        put: operations["PerimetreAnnuaireController_regler"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/signalements": {
         parameters: {
             query?: never;
@@ -6292,6 +6324,7 @@ export interface components {
             numeroPiece?: string;
             telephone?: string;
             emailPro?: string;
+            telephonePro?: string;
             contactUrgence?: string;
             /** @enum {string} */
             modePaiement?: "orange_money" | "virement" | "wave";
@@ -6726,6 +6759,42 @@ export interface components {
             mode: "bouton" | "trace";
             nom: string;
             signatureTrace?: string;
+        };
+        SocieteAnnuaireDto: {
+            slug: string;
+            nom: string;
+        };
+        MembreAnnuaireDto: {
+            utilisateurId: string;
+            prenom: string;
+            nom: string;
+            nomAffiche: string | null;
+            photoUrl: string | null;
+            poste: string | null;
+            cellule: string | null;
+            chef: string | null;
+            estChef: boolean;
+            telephone: string | null;
+            email: string;
+            societe: components["schemas"]["SocieteAnnuaireDto"];
+            memeSociete: boolean;
+            absentJusquau: string | null;
+        };
+        AnnuaireDto: {
+            /** @enum {string} */
+            perimetre: "groupe" | "societe" | "societe_direction";
+            societes: components["schemas"]["SocieteAnnuaireDto"][];
+            membres: components["schemas"]["MembreAnnuaireDto"][];
+            peutVoirAgendas: boolean;
+        };
+        PerimetreAnnuaireDto: {
+            /** @enum {string} */
+            perimetre: "groupe" | "societe" | "societe_direction";
+        };
+        ReglerPerimetreDto: {
+            /** @enum {string} */
+            perimetre: "groupe" | "societe" | "societe_direction";
+            motif: string;
         };
         CreerSignalementDto: {
             description: string;
@@ -13933,6 +14002,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    AnnuaireController_lister: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnuaireDto"];
+                };
+            };
+        };
+    };
+    PerimetreAnnuaireController_lire: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerimetreAnnuaireDto"];
+                };
+            };
+        };
+    };
+    PerimetreAnnuaireController_regler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReglerPerimetreDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerimetreAnnuaireDto"];
                 };
             };
         };
