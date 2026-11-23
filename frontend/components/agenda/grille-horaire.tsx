@@ -12,6 +12,7 @@ import {
 } from '@hub/domain';
 import type { ElementAgenda } from '@/lib/agenda';
 import type { Rect } from '@/lib/agenda-placement';
+import { initialesDe } from '@/lib/profil';
 import { creneauClique, MINUTES_JOUR, placerJour } from '@/lib/agenda-grille';
 import { creneauDe, deplacer, instants, memeCreneau, redimensionner, type Creneau } from '@/lib/agenda-glisser';
 
@@ -23,8 +24,35 @@ export const styleCalque = (e: ElementAgenda) =>
     : e.couleur && /^#[0-9a-f]{6}$/i.test(e.couleur)
       ? { ['--ton' as string]: e.couleur }
       : undefined;
+// Une réunion qu'on a déclinée : visible, mais effacée (sa propre réponse).
+export const estDeclinee = (e: ElementAgenda) => e.maReponse === 'non' && !e.calque;
 export const titreAffiche = (e: ElementAgenda) =>
   e.calque && e.type !== 'rendez_vous' ? `${e.calque.nom} · ${e.titre}` : e.titre;
+
+// Le bas utilisable d'une vue (grille, Mois) : le haut de la navigation du
+// bas (téléphone) ou de l'écran, moins la marge basse de la page (sinon elle
+// déborde d'autant).
+export function basUtilisable(el: HTMLElement): number {
+  const main = el.closest('main');
+  const marge = Math.max(16, main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0);
+  const navBas = [...document.querySelectorAll('nav')]
+    .filter((n) => getComputedStyle(n).position === 'fixed')
+    .map((n) => n.getBoundingClientRect())
+    .filter((r) => r.height > 0 && r.top > window.innerHeight / 2)
+    .reduce((min, r) => Math.min(min, r.top), window.innerHeight);
+  return navBas - marge;
+}
+
+// Initiales du collègue dont l'agenda est superposé, dans sa couleur (U4,
+// 23/11/2026) : à qui est ce rendez-vous, d'un coup d'œil.
+export function InitialesCalque({ e }: { e: ElementAgenda }) {
+  if (!e.calque) return null;
+  return (
+    <span className="agenda-initiales" style={{ ['--ton' as string]: `var(--${e.calque.couleur})` }} aria-hidden>
+      {initialesDe(e.calque.nom)}
+    </span>
+  );
+}
 
 // Glisser commencé : rien ne bouge avant 4 px (un simple clic ouvre la fiche).
 const SEUIL_PX = 4;
@@ -156,17 +184,8 @@ export function GrilleHoraire({
   useLayoutEffect(() => {
     const el = corps.current;
     if (!el) return;
-    // Le bas utilisable : le haut de la navigation du bas (téléphone) ou de
-    // l'écran, moins la marge basse de la page (sinon elle déborde d'autant).
     const ajuster = () => {
-      const main = el.closest('main');
-      const marge = Math.max(16, main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0);
-      const navBas = [...document.querySelectorAll('nav')]
-        .filter((n) => getComputedStyle(n).position === 'fixed')
-        .map((n) => n.getBoundingClientRect())
-        .filter((r) => r.height > 0 && r.top > window.innerHeight / 2)
-        .reduce((min, r) => Math.min(min, r.top), window.innerHeight);
-      const bas = navBas - marge;
+      const bas = basUtilisable(el);
       const largeurColonne = colonnes.current[0]?.getBoundingClientRect().width ?? 0;
       setSerre(largeurColonne > 0 && largeurColonne < COLONNE_ETROITE_PX);
       const hauteur = `${Math.max(320, Math.round(bas - (el.getBoundingClientRect().top + window.scrollY)))}px`;
@@ -423,7 +442,9 @@ export function GrilleHoraire({
                   style={styleCalque(e)}
                   onClick={(ev) => onOuvrir(e, rect(ev.currentTarget.getBoundingClientRect()))}
                   title={titreAffiche(e)}
+                  aria-label={e.calque ? `${e.calque.nom} : ${e.titre}` : undefined}
                 >
+                  <InitialesCalque e={e} />
                   {titreAffiche(e)}
                 </button>
               ))}
@@ -540,6 +561,7 @@ export function GrilleHoraire({
                   aria-label={`${p.e.calque ? `${p.e.calque.nom} : ` : ''}${p.e.titre}${decline ? ' (déclinée)' : ''}${p.e.serieId ? ' (répétée)' : ''}, ${formatWeekdayDayMonth(j)}, ${heures}${p.e.lieu ? `, ${p.e.lieu}` : ''}`}
                 >
                   <span className="agenda-bloc-titre">
+                    <InitialesCalque e={p.e} />
                     {p.e.serieId && <Repeat size={11} aria-hidden className="agenda-bloc-icone" />}
                     {p.e.lienVisio && <Video size={12} aria-hidden className="agenda-bloc-icone" />}
                     <strong>{titreAffiche(p.e)}</strong>
