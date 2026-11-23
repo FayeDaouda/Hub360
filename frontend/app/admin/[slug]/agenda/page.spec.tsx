@@ -114,10 +114,14 @@ describe('Page Agenda', () => {
 
       await userEvent.click(screen.getByRole('radio', { name: 'Planning' }));
       await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11'));
-      // En liste : le rendez-vous et ses actions, sans passer par la fiche.
+      // Planning épuré (U4) : une ligne sans bouton ; elle ouvre la fiche, qui
+      // porte les actions.
       const ligne = (await screen.findByText('Point chantier')).closest('li')!;
-      expect(within(ligne).getByRole('button', { name: 'Modifier' })).toBeInTheDocument();
-      expect(within(ligne).getByRole('button', { name: 'Annuler' })).toBeInTheDocument();
+      expect(within(ligne).getAllByRole('button')).toHaveLength(1);
+      expect(within(ligne).queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument();
+      await userEvent.click(within(ligne).getByRole('button'));
+      const fiche = await screen.findByRole('dialog');
+      expect(within(fiche).getByRole('button', { name: 'Modifier' })).toBeInTheDocument();
     });
 
     it('« Semaine suivante » charge la semaine d’après', async () => {

@@ -4,7 +4,8 @@ import { CalendarPlus, Repeat, Video } from 'lucide-react';
 import { addDays, formatTime, formatWeekdayDayMonth } from '@hub/domain';
 import type { ElementAgenda } from '@/lib/agenda';
 import type { Rect } from '@/lib/agenda-placement';
-import { styleCalque, titreAffiche, TONS } from './grille-horaire';
+import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
+import { InitialesCalque, styleCalque, titreAffiche, TONS } from './grille-horaire';
 
 const JOURS_COURTS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 // Points sous un jour : trois au plus (un par élément, par ordre d'heure).
@@ -20,9 +21,10 @@ export function elementsDuJour(elements: ElementAgenda[], jour: string): Element
 }
 
 // Ce qui s'affiche sous le titre d'une ligne : le lieu, sinon les invités,
-// sinon le détail (échéance, absence).
-function sousTitre(e: ElementAgenda): string | null {
+// sinon le détail (échéance, absence) ; une demande d'absence, son type.
+export function sousTitre(e: ElementAgenda): string | null {
   if (e.calque) return `Agenda de ${e.calque.nom}`;
+  if (e.demande) return `${LIBELLE_TYPE_ABSENCE[e.demande.type]} · ${e.demande.jours} j · à décider`;
   if (e.lieu) return e.lieu;
   if (e.invites.length) return `Avec ${e.invites.join(', ')}`;
   return e.detail;
@@ -143,6 +145,7 @@ export function VueMoisJour({
                     <span className="agenda-moisjour-barre" aria-hidden />
                     <span className="agenda-moisjour-texte">
                       <strong>
+                        <InitialesCalque e={e} />
                         {e.serieId && <Repeat size={12} aria-hidden />}
                         {e.lienVisio && <Video size={13} aria-hidden />}
                         {titreAffiche(e)}

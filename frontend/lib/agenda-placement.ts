@@ -3,6 +3,8 @@
 // sinon à gauche, sinon centrée ; toujours entière à l'écran. Pur, testé.
 
 export type Rect = { top: number; left: number; right: number; bottom: number };
+// Le rectangle d'un élément cliqué (l'ancre d'une fenêtre).
+export const rectDe = (r: DOMRect): Rect => ({ top: r.top, left: r.left, right: r.right, bottom: r.bottom });
 export type Taille = { largeur: number; hauteur: number };
 
 export const MARGE_PX = 12;

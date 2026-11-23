@@ -2,7 +2,6 @@
 
 import { use, useCallback, useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { MapPin } from 'lucide-react';
 import {
   addDays,
   addMonths,
@@ -44,15 +43,16 @@ import { TiroirAgenda } from '@/components/agenda/tiroir-agenda';
 import { CALQUES_MAX, ColonneAgenda, COULEURS_CALQUES, MiniCalendrier } from '@/components/agenda/colonne-agenda';
 import { CreationRapide, type Creneau } from '@/components/agenda/creation-rapide';
 import { FicheElement, LIBELLES } from '@/components/agenda/fiche-element';
+import { VueMois } from '@/components/agenda/vue-mois';
 import { VueMoisJour } from '@/components/agenda/vue-mois-jour';
+import { VuePlanning } from '@/components/agenda/vue-planning';
 import { useChoixPortee } from '@/components/agenda/choix-portee';
 import { useConfirmer } from '@/components/confirmation';
-import { GrilleHoraire, styleCalque, titreAffiche, TONS } from '@/components/agenda/grille-horaire';
+import { GrilleHoraire, TONS } from '@/components/agenda/grille-horaire';
 import { RendezVousFormulaire, valeursVides, type ValeursRendezVous } from '@/components/agenda/rendez-vous-formulaire';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/feedback';
-import { Pill } from '@/components/ui/pill';
 
 type Props = { params: Promise<{ slug: string }> };
 // Formulaire ouvert : création (pré-remplie d'un créneau) ou modification.
@@ -67,8 +67,6 @@ type ADecider = NonNullable<ElementAgenda['demande']> & { nom: string };
 const TYPES = Object.fromEntries(
   (Object.keys(LIBELLES) as ElementAgenda['type'][]).map((t) => [t, { libelle: LIBELLES[t], tone: TONS[t] }]),
 ) as Record<ElementAgenda['type'], { libelle: string; tone: (typeof TONS)[ElementAgenda['type']] }>;
-// Une réunion qu'on a déclinée : visible, mais effacée (sa propre réponse).
-const decline = (e: ElementAgenda) => e.maReponse === 'non' && !e.calque;
 // Vue Année : la pastille d'un jour prend la couleur de son élément le plus pressant.
 const PRIORITE: ElementAgenda['type'][] = ['demande', 'echeance', 'rendez_vous', 'externe', 'conge'];
 // Téléphone (18/11/2026) : barre compacte, tiroir, 3 jours par défaut.
@@ -503,7 +501,6 @@ export default function AgendaPage(props: Props) {
         ).values(),
       ]
     : [];
-  const actions = { onAnnuler: annuler, onDecider: setADecider, onModifier: modifier };
 
   return (
     <div className="agenda">
@@ -617,14 +614,25 @@ export default function AgendaPage(props: Props) {
                 onCreer={(j) => creer(j)}
               />
             ) : vue === 'planning' ? (
-              <VuePlanning du={du} aujourdhui={aujourdhui} elements={elements} actions={actions} />
+              <VuePlanning
+                du={du}
+                aujourdhui={aujourdhui}
+                elements={elements}
+                peutCreer={peutCreer}
+                onOuvrir={ouvrirFiche}
+                onCreer={creerMaintenant}
+              />
             ) : vue === 'mois' ? (
               <VueMois
                 du={du}
                 mois={ancre.slice(0, 7)}
                 aujourdhui={aujourdhui}
                 elements={elements}
+                etroit={etroit}
+                peutCreer={peutCreer}
                 onJour={(j) => ouvrir('jour', j)}
+                onOuvrir={ouvrirFiche}
+                onCreer={(j, position) => creer(j, '09:00', '10:00', position)}
               />
             ) : (
               <VueAnnee
@@ -768,178 +776,6 @@ export default function AgendaPage(props: Props) {
             }}
           />
         ))}
-    </div>
-  );
-}
-
-type Actions = {
-  onAnnuler: (e: ElementAgenda) => void;
-  onDecider: (d: ADecider) => void;
-  onModifier: (e: ElementAgenda) => void;
-};
-
-function Element({ e, onAnnuler, onDecider, onModifier }: { e: ElementAgenda } & Actions) {
-  // Comme depuis la fiche : on confirme avant d'annuler.
-  const confirmer = useConfirmer();
-  async function annulerApresConfirmation(x: ElementAgenda) {
-    // Une série : la page demande la portée (elle tient lieu de confirmation).
-    if (x.serieId) return onAnnuler(x);
-    const ok = await confirmer({
-      titre: 'Annuler ce rendez-vous ?',
-      message: x.invites.length
-        ? 'Les invités sont prévenus, dans le HUB et par e-mail : la réunion disparaît de leur agenda.'
-        : 'Il disparaît de votre agenda.',
-      confirmer: 'Annuler le rendez-vous',
-      annuler: 'Garder',
-      danger: true,
-    });
-    if (ok) onAnnuler(x);
-  }
-  return (
-    <li className={`agenda-element agenda-element--${e.type}${decline(e) ? ' is-decline' : ''}`}>
-      {e.calque && (
-        <span className="agenda-detail">
-          <span className="agenda-cote-pastille" style={styleCalque(e)} aria-hidden /> Agenda de {e.calque.nom}
-        </span>
-      )}
-      <span className="agenda-element-tete">
-        <Pill tone={TYPES[e.type].tone}>{TYPES[e.type].libelle}</Pill>
-        {e.debut && e.fin && (
-          <span className="agenda-heure">
-            {formatTime(e.debut)} – {formatTime(e.fin)}
-          </span>
-        )}
-      </span>
-      <strong>{e.titre}</strong>
-      {e.demande && (
-        <span className="agenda-detail">
-          {LIBELLE_TYPE_ABSENCE[e.demande.type]} · {e.demande.jours} j
-        </span>
-      )}
-      {e.lieu && (
-        <span className="agenda-detail">
-          <MapPin size={13} aria-hidden /> {e.lieu}
-        </span>
-      )}
-      {e.detail && <span className="agenda-detail">{e.detail}</span>}
-      {e.invites.length > 0 && (
-        <span className="agenda-detail">
-          Avec {e.invites.join(', ')}
-          {e.organisateur ? ` · organisé par ${e.organisateur}` : ''}
-        </span>
-      )}
-      {(e.modifiable || e.annulable) && (
-        <span className="agenda-element-actions">
-          {e.modifiable && (
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onModifier(e)}>
-              Modifier
-            </button>
-          )}
-          {e.annulable && (
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => annulerApresConfirmation(e)}>
-              Annuler
-            </button>
-          )}
-        </span>
-      )}
-      {e.demande && (
-        <button
-          type="button"
-          className="btn-primary btn-primary--sm"
-          onClick={() => onDecider({ ...e.demande!, nom: e.titre })}
-        >
-          Décider
-        </button>
-      )}
-    </li>
-  );
-}
-
-// Planning (12/11/2026) : les 30 jours à partir de `du`, les jours chargés
-// seulement, en liste — la vue du téléphone.
-function VuePlanning({
-  du,
-  aujourdhui,
-  elements,
-  actions,
-}: {
-  du: string;
-  aujourdhui: string;
-  elements: ElementAgenda[];
-  actions: Actions;
-}) {
-  const jours = [...new Set(elements.map((e) => e.jour))].filter((j) => j >= du).sort();
-  if (!jours.length) return <p className="agenda-vide">Rien de prévu sur ces 30 jours.</p>;
-  return (
-    <div className="agenda-planning">
-      {jours.map((j) => (
-        <section key={j} className={`agenda-jour${j === aujourdhui ? ' is-aujourdhui' : ''}`}>
-          <h3>{formatWeekdayDayMonth(j)}</h3>
-          <ul>
-            {elements
-              .filter((e) => e.jour === j)
-              .map((e) => (
-                <Element key={e.id} e={e} {...actions} />
-              ))}
-          </ul>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-// Mois : 6 semaines du lundi au dimanche ; 3 éléments par jour au plus, puis
-// « +n ». Un jour ouvre sa vue Jour.
-function VueMois({
-  du,
-  mois,
-  aujourdhui,
-  elements,
-  onJour,
-}: {
-  du: string;
-  mois: string;
-  aujourdhui: string;
-  elements: ElementAgenda[];
-  onJour: (jour: string) => void;
-}) {
-  return (
-    <div className="agenda-mois">
-      {JOURS_COURTS.map((j, i) => (
-        <span key={i} className="agenda-mois-entete" aria-hidden>
-          {j}
-        </span>
-      ))}
-      {Array.from({ length: 42 }, (_, i) => addDays(du, i)).map((j) => {
-        const du_jour = elements.filter((e) => e.jour === j);
-        const classes = [
-          'agenda-mois-jour',
-          j.slice(0, 7) !== mois && 'is-hors-mois',
-          j === aujourdhui && 'is-aujourdhui',
-        ].filter(Boolean);
-        return (
-          <button
-            key={j}
-            type="button"
-            className={classes.join(' ')}
-            onClick={() => onJour(j)}
-            aria-label={`${formatWeekdayDayMonth(j)} · ${du_jour.length} élément${du_jour.length > 1 ? 's' : ''}`}
-          >
-            <span className="agenda-mois-numero">{Number(j.slice(8))}</span>
-            {du_jour.slice(0, 3).map((e) => (
-              <span
-                key={e.id}
-                className={`agenda-puce agenda-puce--${TYPES[e.type].tone}${decline(e) ? ' is-decline' : ''}`}
-                style={styleCalque(e)}
-              >
-                {e.debut ? `${formatTime(e.debut)} ` : ''}
-                {titreAffiche(e)}
-              </span>
-            ))}
-            {du_jour.length > 3 && <span className="agenda-plus">+{du_jour.length - 3}</span>}
-          </button>
-        );
-      })}
     </div>
   );
 }
