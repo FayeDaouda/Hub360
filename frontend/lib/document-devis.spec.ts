@@ -50,11 +50,15 @@ const devis = (champs: Partial<Devis> = {}): Devis => ({
       prixUnitaire: 2_000,
       tauxTva: 18,
       montantHt: 1_000_000,
+      montantHtRemise: 1_000_000,
       montantTva: 180_000,
       montantTtc: 1_180_000,
       ordre: 0,
     },
   ],
+  remisePct: null,
+  montantBrutHt: 1_000_000,
+  montantRemise: 0,
   montantHt: 1_000_000,
   montantTva: 180_000,
   montantTtc: 1_180_000,
@@ -94,6 +98,7 @@ function ancienDocumentDepuisDevis(d: Devis, societe: Societe): DocumentFacturat
     clientNom: d.client.nom,
     objet: d.objet,
     lignes: d.lignes,
+    remise: null,
     montantHt: d.montantHt,
     montantTva: d.montantTva,
     montantTtc: d.montantTtc,
@@ -198,5 +203,17 @@ describe('documentApercuOffre (aperçu du CFO avant envoi)', () => {
     expect(doc.clientNom).toBe('Daouda Faye Sow');
     expect(doc.lignes).toBe(d.lignes);
     expect(doc.montantTtc).toBe(1_180_000);
+  });
+});
+
+// Remise de l'offre (09/11/2026) : sous-total brut, remise, HT remisé.
+describe('documentDevis · remise', () => {
+  it('porte la remise quand l’offre en a une, rien sinon', () => {
+    expect(documentDevis(devis(), SOCIETE).remise).toBeNull();
+    const remisee = devis({ remisePct: 10, montantBrutHt: 1_000_000, montantRemise: 100_000, montantHt: 900_000 });
+    expect(documentDevis(remisee, SOCIETE)).toMatchObject({
+      remise: { pct: 10, montant: 100_000, brutHt: 1_000_000 },
+      montantHt: 900_000,
+    });
   });
 });

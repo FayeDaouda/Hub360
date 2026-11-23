@@ -5,7 +5,18 @@
 
 import { TYPES_BIEN, type TypeBien } from './types';
 
-export type Usage = 'residentiel' | 'commercial' | 'mixte' | 'bureau';
+// Type de projet (09/11/2026) : il fixe la liste des usages proposés ;
+// « Mixte » se décrit à la main. Un seul usage.
+export type TypeProjet =
+  | 'residentiel'
+  | 'commercial'
+  | 'industriel'
+  | 'institutionnel'
+  | 'culturel'
+  | 'religieux'
+  | 'transport'
+  | 'agricole'
+  | 'mixte';
 // Local commercial et équipement (09/11/2026) : décrits niveau par niveau,
 // comme l'immeuble ; seule la villa a sa propre branche.
 export type Forme = 'villa' | 'immeuble' | 'local_commercial' | 'equipement';
@@ -16,10 +27,14 @@ export type UsageNiveau = 'logements' | 'commerce' | 'bureaux' | 'parking';
 export type LigneComposition = { de: number; a: number; usage: UsageNiveau | null; typologie: string; nb: number };
 
 export type FicheProgramme = {
-  usage: Usage | null;
+  typeProjet: TypeProjet | null;
+  // Clé de USAGES_PAR_TYPE[typeProjet], ou texte libre pour « Mixte ».
+  usage: string | null;
   forme: Forme | null;
   gabarit: number; // 0 = RDC (plain-pied), n = R+n
   sousSols: number;
+  // Mezzanine (09/11/2026) : décrite, ne compte pas comme planche.
+  mezzanine: boolean;
   toitureTerrasse: boolean;
   typologieVilla: TypologieVilla | null;
   suiteParentale: boolean;
@@ -29,10 +44,12 @@ export type FicheProgramme = {
 };
 
 export const FICHE_VIDE: FicheProgramme = {
+  typeProjet: null,
   usage: null,
   forme: null,
   gabarit: 0,
   sousSols: 0,
+  mezzanine: false,
   toitureTerrasse: false,
   typologieVilla: null,
   suiteParentale: false,
@@ -41,12 +58,58 @@ export const FICHE_VIDE: FicheProgramme = {
   commodites: [],
 };
 
-export const USAGES: Record<Usage, string> = {
+export const TYPES_PROJET: Record<TypeProjet, string> = {
   residentiel: 'Résidentiel',
   commercial: 'Commercial',
+  industriel: 'Industriel',
+  institutionnel: 'Institutionnel / public',
+  culturel: 'Culturel et de loisirs',
+  religieux: 'Religieux',
+  transport: 'Transport',
+  agricole: 'Agricole',
   mixte: 'Mixte',
-  bureau: 'Bureau',
 };
+// Usages proposés selon le type (même liste que le serveur, clés identiques).
+export const USAGES_PAR_TYPE: Record<Exclude<TypeProjet, 'mixte'>, Record<string, string>> = {
+  residentiel: {
+    maisons_individuelles: 'Maisons individuelles',
+    logements_collectifs: 'Logements collectifs',
+    immeubles_habitation: 'Immeubles d’habitation',
+    residences: 'Résidences',
+  },
+  commercial: {
+    bureaux: 'Bureaux',
+    commerces: 'Commerces',
+    centres_commerciaux: 'Centres commerciaux',
+    hotels: 'Hôtels',
+    restaurants: 'Restaurants',
+  },
+  industriel: {
+    usines: 'Usines',
+    entrepots: 'Entrepôts',
+    ateliers: 'Ateliers',
+    centres_logistiques: 'Centres logistiques',
+  },
+  institutionnel: {
+    ecoles: 'Écoles',
+    universites: 'Universités',
+    hopitaux: 'Hôpitaux',
+    administrations: 'Administrations',
+    tribunaux: 'Tribunaux',
+  },
+  culturel: {
+    musees: 'Musées',
+    theatres: 'Théâtres',
+    bibliotheques: 'Bibliothèques',
+    stades: 'Stades',
+    salles_sport: 'Salles de sport',
+  },
+  religieux: { eglises: 'Églises', mosquees: 'Mosquées', temples: 'Temples', synagogues: 'Synagogues' },
+  transport: { gares: 'Gares', aeroports: 'Aéroports', ports: 'Ports', parkings: 'Parkings' },
+  agricole: { hangars: 'Hangars', etables: 'Étables', serres: 'Serres', silos: 'Silos' },
+};
+// Usage d'un projet mixte, écrit à la main (même plafond que le serveur).
+export const USAGE_LIBRE_MAX = 120;
 export const FORMES: Record<Forme, string> = {
   villa: 'Villa',
   immeuble: 'Immeuble',
@@ -146,8 +209,9 @@ export const COMMODITES: { groupe: string; items: [string, string][] }[] = [
   {
     groupe: 'Confort et connectivité',
     items: [
-      ['pre_climatisation', 'Pré-installation climatisation'],
-      ['climatisation_centralisee', 'Climatisation centralisée'],
+      // Une seule entrée depuis le 09/11/2026 (pré-installation et
+      // centralisée fusionnées, migration 20261109200000).
+      ['climatisation', 'Climatisation'],
       ['fibre', 'Fibre optique'],
       ['antenne_tv', 'Antenne TV collective'],
       ['domotique', 'Domotique'],
@@ -215,19 +279,25 @@ export function totaux(f: FicheProgramme): { libelle: string; n: number }[] {
 
 const ligneComplete = (l: LigneComposition) => !!l.usage && (l.usage !== 'logements' || !!l.typologie.trim());
 
-// Programme décrit (mêmes règles que le serveur) : usage, forme, puis la
-// typologie de la villa ou, pour les autres formes, une composition complète.
-export function programmeComplet(f: FicheProgramme): boolean {
-  if (!f.usage || !f.forme) return false;
+// Bâtiment décrit (mêmes règles que le serveur) : forme, puis la typologie de
+// la villa ou, pour les autres formes, une composition complète. Lui seul
+// fixe les planches (le prix) : jamais le type de projet ni l'usage.
+export function batimentDecrit(f: FicheProgramme): boolean {
+  if (!f.forme) return false;
   if (f.forme === 'villa') return !!f.typologieVilla;
   const c = controleComposition(f);
   return f.composition.length > 0 && f.composition.every(ligneComplete) && !c.nonDecrits.length && !c.enDouble.length;
+}
+
+// Programme décrit : type de projet et usage, puis le bâtiment.
+export function programmeComplet(f: FicheProgramme): boolean {
+  return !!f.typeProjet && !!f.usage?.trim() && batimentDecrit(f);
 }
 
 // Planches déduites (hypothèse de travail, cf. backend) : villa = RDC +
 // étages + sous-sols ; autres formes = lignes de composition ; null sinon.
 export function planchesCalculees(f: FicheProgramme): number | null {
   if (f.forme === 'villa') return f.gabarit + 1 + f.sousSols;
-  if (avecComposition(f.forme) && programmeComplet(f)) return f.composition.length;
+  if (avecComposition(f.forme) && batimentDecrit(f)) return f.composition.length;
   return null;
 }

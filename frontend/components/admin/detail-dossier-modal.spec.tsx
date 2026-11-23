@@ -18,6 +18,8 @@ vi.setConfig({ testTimeout: 30_000 });
 // Bouton principal rendu par la doublure d'« Offre & contrat » : c'est lui que
 // le pied reprend. `null` = aucune action principale.
 const doublure = vi.hoisted(() => ({
+  lien: false as boolean, // action principale = lien (« Créer une offre »)
+  clicLien: (() => undefined) as () => void,
   principal: null as string | null,
   principalDesactive: false,
 }));
@@ -36,12 +38,25 @@ vi.mock('./cycle-dossier', () => ({ CycleDossier: () => <p>Cycle du dossier</p> 
 vi.mock('./offre-dossier', () => ({
   OffreDossier: () =>
     doublure.principal ? (
-      <button type="button" className="btn-primary" data-action-principale="" disabled={doublure.principalDesactive}>
-        {doublure.principal}
-      </button>
+      doublure.lien ? (
+        <a
+          href="#creer-offre"
+          data-action-principale=""
+          onClick={(e) => {
+            e.preventDefault();
+            doublure.clicLien();
+          }}
+        >
+          {doublure.principal}
+        </a>
+      ) : (
+        <button type="button" className="btn-primary" data-action-principale="" disabled={doublure.principalDesactive}>
+          {doublure.principal}
+        </button>
+      )
     ) : null,
 }));
-vi.mock('./contrat-dossier', () => ({ ContratDossier: () => null }));
+vi.mock('./contrat-dossier', () => ({ ContratDossier: () => <p>Bloc contrat</p> }));
 vi.mock('@/features/projects/project-teams', () => ({
   ProjectTeams: ({ canEdit }: { canEdit: boolean }) => <p>Équipes {canEdit ? 'modifiables' : 'en lecture'}</p>,
 }));
@@ -57,6 +72,7 @@ vi.mock('./caracteristiques-projet', () => ({
 }));
 
 const historiqueMock = vi.mocked(getHistorique);
+const DROITS_PAR_DEFAUT = ['finances_devis', 'crm.soumission', 'crm.dossiers', 'projets'];
 const niveauMock = vi.mocked(niveauSuffisant);
 
 // jsdom : ni scrollIntoView ni matchMedia.
@@ -102,7 +118,7 @@ const projetComplet = (champs: Partial<Projet> = {}): Projet => ({
   surfaceTerrain: 450,
   client: { id: 'cli-1', nom: 'Daouda Faye Sow', type: 'particulier' },
   standing: 'moyen',
-  gamme: 'local',
+  gamme: 'economique',
   programme: 'Villa R+1, 4 chambres',
   ficheProgramme: null,
   statut: 'nouveau_projet',
@@ -211,9 +227,13 @@ describe('DetailDossierModal', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(MAINTENANT);
     historiqueMock.mockResolvedValue([]);
-    niveauMock.mockReturnValue(false);
+    // Profil par défaut proche du Dir. GC : offres, soumission, dossiers CRM,
+    // projets ; le reste (équipes, apporteur…) refusé sauf précision du test.
+    niveauMock.mockImplementation((_s, module) => DROITS_PAR_DEFAUT.includes(module));
     doublure.principal = null;
     doublure.principalDesactive = false;
+    doublure.lien = false;
+    doublure.clicLien = () => undefined;
   });
 
   afterEach(() => {
@@ -1019,5 +1039,60 @@ describe('DetailDossierModal', () => {
         `/admin/${SLUG}/facturation?nouvelle=p-1`,
       );
     });
+  });
+});
+
+// Onglet « Offre & contrat » selon la matrice (10/11/2026).
+describe('DetailDossierModal · offre & contrat selon les droits', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(MAINTENANT);
+    historiqueMock.mockResolvedValue([]);
+    niveauMock.mockImplementation((_s, module) => DROITS_PAR_DEFAUT.includes(module));
+    doublure.principal = null;
+    doublure.lien = false;
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const sansOffre = (champs: Partial<Projet> = {}) => {
+    const p = projetComplet(champs) as Projet & { offre?: unknown };
+    delete p.offre; // le serveur omet l'offre sans lecture des offres
+    return p as Projet;
+  };
+
+  it('COO (dossiers + soumission, sans les offres) : pas de bloc contrat, étape « soumettre dès qu’elle est prête »', async () => {
+    niveauMock.mockImplementation((_s, module) => ['crm.dossiers', 'crm.soumission'].includes(module));
+    rendre(sansOffre(), { peutPreparerOffre: false, peutFacturer: false });
+    await historiqueCharge();
+    expect(screen.queryByText('Bloc contrat')).not.toBeInTheDocument();
+    expect(
+      within(pied()!).getByText('Soumettre l’offre à la validation du CFO dès qu’elle est prête'),
+    ).toBeInTheDocument();
+    expect(within(pied()!).queryByText(/Créer l’offre/)).not.toBeInTheDocument();
+  });
+
+  it('rôle sans aucun droit sur l’offre, le cycle ni la facturation : pas d’onglet « Offre & contrat »', async () => {
+    niveauMock.mockReturnValue(false);
+    rendre(sansOffre(), { peutPreparerOffre: false, peutFacturer: false });
+    await historiqueCharge();
+    expect(onglets().queryByRole('link', { name: 'Offre & contrat' })).not.toBeInTheDocument();
+    expect(within(pied()!).getByText('Offre en préparation, puis soumission au CFO')).toBeInTheDocument();
+  });
+
+  it('lecture des offres : bloc contrat affiché', async () => {
+    rendre(projetComplet());
+    await historiqueCharge();
+    expect(screen.getByText('Bloc contrat')).toBeInTheDocument();
+  });
+
+  it('action principale en lien (« Créer une offre ») : un clic du pied l’ouvre directement', async () => {
+    const clic = vi.fn();
+    doublure.principal = 'Créer une offre';
+    doublure.lien = true;
+    doublure.clicLien = clic;
+    const { user } = rendre(projetComplet());
+    await historiqueCharge();
+    await user.click(within(pied()!).getByRole('button', { name: 'Créer une offre' }));
+    expect(clic).toHaveBeenCalledTimes(1);
   });
 });

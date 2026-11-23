@@ -67,8 +67,11 @@ export type AvisSecurite = {
     | 'mot_de_passe_reinitialise'
     | 'double_facteur_active'
     | 'double_facteur_reinitialise'
-    | 'compte_verrouille';
+    | 'compte_verrouille'
+    | 'agenda_connecte';
   le: Date;
+  // Ce qui a changé, nommé dans l'avis (ex. le compte Google relié).
+  detail?: string;
   // Compte verrouillé (lot C) : fin du verrouillage.
   jusquau?: Date;
 };
@@ -106,6 +109,30 @@ export type CandidatEmail = {
   | { type: 'reponse'; retenu: boolean }
 );
 
+// Invitation à une réunion de l'Agenda (12/11/2026), aux collègues invités :
+// l'e-mail porte le calendrier (REQUEST à l'envoi, CANCEL à l'annulation),
+// que Gmail, Outlook et Apple ajoutent à l'agenda de la personne, avec
+// « Oui / Non » ; la réponse part à l'organisateur.
+export type InvitationAgendaEmail = {
+  email: string;
+  prenom: string;
+  societeNom: string;
+  methode: 'REQUEST' | 'CANCEL';
+  titre: string;
+  debut: Date;
+  fin: Date;
+  lieu: string | null;
+  lienVisio?: string | null; // https (validé à la saisie)
+  organisateurNom: string;
+  lien: string; // l'Agenda dans le HUB
+  ics: string;
+};
+
+// Les e-mails partent-ils vraiment (transport SMTP configuré) ? Même règle
+// que le choix du transport au démarrage (email.module.ts).
+export const emailsReels = (env: NodeJS.ProcessEnv = process.env) =>
+  (env.EMAIL_TRANSPORT || 'log').toLowerCase() === 'smtp' && !!env.SMTP_HOST;
+
 export abstract class EmailService {
   // Ne lève jamais : un échec de transport renvoie `{ envoye: false }` pour que
   // l'appelant garde son repli (afficher le lien à recopier) et que la réponse
@@ -118,4 +145,5 @@ export abstract class EmailService {
   abstract envoyerAlerte(a: AlerteEmail): Promise<{ envoye: boolean }>;
   abstract envoyerAvisSecurite(a: AvisSecurite): Promise<{ envoye: boolean }>;
   abstract envoyerCandidat(c: CandidatEmail): Promise<{ envoye: boolean }>;
+  abstract envoyerInvitationAgenda(i: InvitationAgendaEmail): Promise<{ envoye: boolean }>;
 }

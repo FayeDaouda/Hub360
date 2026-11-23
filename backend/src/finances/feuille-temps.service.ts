@@ -78,7 +78,9 @@ export class FeuilleTempsService {
     const parts = (offre?.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
     const delais = (offre?.delaisEcheancier as Record<string, number> | null) ?? {};
     const echeances =
-      offre && accord ? echeancierOffre(lignesOffreDepuisDevis(offre.lignes), parts, delais).filter((e) => e.cle) : [];
+      offre && accord
+        ? echeancierOffre(lignesOffreDepuisDevis(offre.lignes, offre.remisePct), parts, delais).filter((e) => e.cle)
+        : [];
     const facturation = echeances.map((e) => {
       const f = factures.find((x) => x.devisEcheancierId === offre!.id && x.cleEcheance === e.cle);
       const facturee = f && f.statut !== 'brouillon' ? jour(f.emiseLe) : null;
@@ -108,7 +110,9 @@ export class FeuilleTempsService {
     // Temps imputé : tâches assignées du projet ouvert (gabarit).
     const temps = dossier.projet ? await this.tempsProjet(societeId, dossier.projet.id, aujourdhui) : null;
     const heuresPrevues = dossier.projet?.budgetHeures ?? null;
-    const montantHt = offre ? lignesOffreDepuisDevis(offre.lignes).reduce((s, l) => s + l.montantHt, 0) : 0;
+    const montantHt = offre
+      ? lignesOffreDepuisDevis(offre.lignes, offre.remisePct).reduce((s, l) => s + l.montantHt, 0)
+      : 0;
 
     return {
       dossier: {

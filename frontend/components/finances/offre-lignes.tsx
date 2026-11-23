@@ -181,7 +181,10 @@ export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }:
                     min="0"
                     className="field-input"
                     value={l.prixUnitaire}
-                    placeholder={p ? 'Forfait' : ''}
+                    // CO0 / SU0 (09/11/2026) : le prix saisi suit l'unité du produit.
+                    placeholder={
+                      p ? (p.unite === 'm2' ? 'Tarif au m²' : p.unite === 'mois' ? 'Prix par mois' : 'Forfait') : ''
+                    }
                     aria-label="Prix unitaire"
                     disabled={!p}
                     onChange={(e) => maj(i, { prixUnitaire: e.target.value })}

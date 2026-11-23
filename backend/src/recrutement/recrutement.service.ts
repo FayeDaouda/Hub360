@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ETAPE, formatTime, formatWeekdayDayMonth, hasRight } from '@hub/domain';
+import { InvitationsAgendaService } from '../agenda/invitations.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -42,6 +43,7 @@ export class RecrutementService {
     private notifications: NotificationsService,
     private dossiers: DossiersPersonnelService,
     private email: EmailService,
+    private invitations: InvitationsAgendaService,
   ) {}
 
   async vue(a: Acteur) {
@@ -408,13 +410,16 @@ export class RecrutementService {
       select: { utilisateurId: true },
     });
     const invites = [...new Set(membres.map((m) => m.utilisateurId))];
-    const rdv = await this.prisma.$transaction(async (tx) => {
-      if (c.rendezVousId) {
-        await tx.rendezVous.updateMany({
-          where: { id: c.rendezVousId, annuleLe: null },
-          data: { annuleLe: new Date() },
-        });
-      }
+    // L'ancien entretien n'est annulé (et ses invités prévenus) que s'il était
+    // encore prévu et à venir : ni un entretien passé, ni un déjà annulé.
+    const maintenant = new Date();
+    const { rdv, ancienAnnule } = await this.prisma.$transaction(async (tx) => {
+      const ancien = c.rendezVousId
+        ? await tx.rendezVous.updateMany({
+            where: { id: c.rendezVousId, annuleLe: null, debut: { gt: maintenant } },
+            data: { annuleLe: maintenant, sequence: { increment: 1 } },
+          })
+        : { count: 0 };
       const r = await tx.rendezVous.create({
         data: {
           societeId: a.societeId,
@@ -423,6 +428,7 @@ export class RecrutementService {
           fin: new Date(dto.fin),
           lieu: dto.lieu?.trim() || null,
           description: 'Recrutement',
+          finSerie: new Date(dto.fin), // un rendez-vous unique
           organisateurId: a.userId,
           invites: { create: invites.map((utilisateurId) => ({ utilisateurId })) },
         },
@@ -431,7 +437,7 @@ export class RecrutementService {
         where: { id },
         data: { rendezVousId: r.id, ...(c.etape === 'candidature' && { etape: 'entretien' }) },
       });
-      return r;
+      return { rdv: r, ancienAnnule: ancien.count > 0 };
     });
     await this.notifications.envoyer({
       societeId: a.societeId,
@@ -440,6 +446,10 @@ export class RecrutementService {
       destinataireIds: invites,
       parId: a.userId,
     });
+    // Dans l'agenda personnel des invités : l'ancien créneau retiré, le
+    // nouveau proposé.
+    if (c.rendezVousId && ancienAnnule) await this.invitations.envoyer(c.rendezVousId, 'CANCEL');
+    await this.invitations.envoyer(rdv.id, 'REQUEST');
     if (dto.prevenirCandidat) {
       await this.ecrireAuCandidat(a, c, { type: 'convocation', debut: dto.debut, fin: dto.fin, lieu: rdv.lieu });
     }

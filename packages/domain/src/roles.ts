@@ -34,6 +34,18 @@ export const ROLE_HUB_ADMIN = 'Administrateur HUB (transverse)';
 // décision du 08/11/2026. Le CIO n'en fait pas partie.
 export const ADMINISTRATION_ROLES: readonly string[] = [ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN, ROLE_HUB_ADMIN];
 export const isAdministrationRole = (name: string): boolean => ADMINISTRATION_ROLES.includes(name);
+// Direction du groupe (annuaire, 22/11/2026) : les rôles qu'on affiche aux
+// autres sociétés quand le périmètre « société + direction du groupe » est
+// réglé. Les rôles « (transverse) » y sont de toute façon déjà.
+export const ROLES_DIRECTION_GROUPE: readonly string[] = [
+  ROLE_CEO,
+  ROLE_CTO,
+  ROLE_CIO,
+  ROLE_CFO,
+  ROLE_COO,
+  ROLE_DIR_GC,
+];
+
 export const ROLES_ENDOSSABLES = [
   ROLE_CEO,
   ROLE_CTO,

@@ -77,7 +77,10 @@ const HISTORIQUE: Record<TypeHistorique, { libelle: string; ton: PillTone }> = {
   maintenance_activee: { libelle: 'Maintenance activée', ton: 'neutre' },
   maintenance_levee: { libelle: 'Maintenance levée', ton: 'neutre' },
   suppression: { libelle: 'Supprimé définitivement', ton: 'risque' },
+  annuaire_perimetre: { libelle: 'Périmètre de l’annuaire', ton: 'neutre' },
 };
+// Un type ajouté côté serveur sans libellé ici : affiché tel quel, jamais une erreur.
+const INCONNU = { libelle: 'Intervention', ton: 'neutre' as PillTone };
 const RECENT: Record<UnblockKind, { libelle: string; ton: PillTone }> = {
   onboard: HISTORIQUE.onboard_sans_signature,
   ouverture: HISTORIQUE.ouverture_projet,
@@ -432,11 +435,11 @@ export function DeblocagesPanel({ slug }: { slug: string }) {
           </h2>
           <ol className="deb-historique">
             {vu.historique.map((h) => (
-              <li key={h.id} className={`deb-evenement deb-evenement--${HISTORIQUE[h.type].ton}`}>
+              <li key={h.id} className={`deb-evenement deb-evenement--${(HISTORIQUE[h.type] ?? INCONNU).ton}`}>
                 <span className="deb-point" aria-hidden />
                 <div>
                   <p className="deb-evenement-titre">
-                    <strong>{HISTORIQUE[h.type].libelle}</strong>
+                    <strong>{(HISTORIQUE[h.type] ?? INCONNU).libelle}</strong>
                     {h.detail && <span className="deb-note"> · {h.detail}</span>}
                   </p>
                   {h.motif && <p className="deb-motif">Motif : « {h.motif} »</p>}

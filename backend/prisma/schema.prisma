@@ -83,7 +83,13 @@ model Societe {
   signalements      Signalement[]
   journalDroits     JournalDroit[]
 
-  rendezVous RendezVous[]
+  rendezVous           RendezVous[]
+  abonnementsAgenda    AbonnementAgenda[]
+  connexionsAgenda     ConnexionAgenda[]
+  agendasExternes      AgendaExterne[]
+  evenementsExternes   EvenementExterne[]
+  liensExportAgenda    LienExportAgenda[]
+  etatsConnexionAgenda EtatConnexionAgenda[]
 
   annonces Annonce[]
 
@@ -151,6 +157,8 @@ model Utilisateur {
   abonnementsPush          AbonnementPush[]
   // Préférences de notification (catégories, heures calmes) — @hub/domain.
   preferencesNotifications Json?                    @map("preferences_notifications")
+  abonnementsAgenda        AbonnementAgenda[]
+  connexionsAgenda         ConnexionAgenda[]
   canauxDmP2               Canal[]                  @relation("CanalDmP2")
   lecturesCanal            LectureCanal[]
   dossiersCrees            DossierCrm[]             @relation("DossierCreePar")
@@ -311,6 +319,10 @@ enum NotificationType {
   own_rights_changed // aux titulaires d'un rôle : leurs droits viennent de changer (matrice, 31/10/2026)
   rdv_invitation // Agenda (01/11/2026) : vous êtes invité à une réunion
   rdv_annule // Agenda : une réunion où vous étiez invité est annulée
+  rdv_modifie // Agenda : une réunion où vous êtes invité change (12/11/2026)
+  rdv_reponse // Agenda : un invité répond (Oui, Non, Peut-être) à votre réunion
+  rdv_rappel // Agenda : votre rendez-vous commence bientôt
+  agenda_deconnecte // synchronisation Google arrêtée par le HUB (16/11/2026)
   annonce_importante // Annonces (01/11/2026) : une annonce importante à lire
   annonce_a_valider // Annonces : une annonce attend sa validation avant publication
   poste_a_approuver // Recrutement (01/11/2026) : ouverture d'un poste à approuver
@@ -709,10 +721,12 @@ enum Standing {
   grand // tout inclus
 }
 
+// Standing et gamme (10/11/2026) : même échelle économique / moyen / grand.
+// Standing = potentiel de l'ouvrage en commodités ; gamme = en finitions.
 enum Gamme {
-  local
-  importe
-  sur_mesure_importe
+  economique
+  moyen
+  grand
 }
 
 enum TypeClient {
@@ -1956,6 +1970,10 @@ model Devis {
   // échéance (clé de facturation-offre.ts) — saisis sur le brouillon, figés ensuite.
   delaisEcheancier    Json?       @map("delais_echeancier")
   derniereRelanceLe   DateTime?   @map("derniere_relance_le")
+  // Remise sur toute l'offre (09/11/2026) : 5, 10, 15, 20 ou 25 % du HT de
+  // chaque ligne, avant TVA ; null = aucune. Saisie sur le brouillon, figée
+  // ensuite ; l'échéancier et les factures de l'Onboard suivent le remisé.
+  remisePct           Int?        @map("remise_pct")
 
   societe            Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
   projet             Projet?       @relation(fields: [projetId], references: [id], onDelete: SetNull)
@@ -2107,6 +2125,9 @@ model DossierPersonnel {
   numeroPiece                String               @default("") @map("numero_piece") // CNI ou passeport
   telephone                  String               @default("")
   emailPro                   String               @default("") @map("email_pro")
+  // Annuaire (22/11/2026, décision du user) : seul téléphone montré aux
+  // collègues — jamais le personnel (`telephone`). Saisi par la RH.
+  telephonePro               String               @default("") @map("telephone_pro")
   contactUrgence             String               @default("") @map("contact_urgence")
   // Saisis par le salarié dans « Mon espace › Mes informations » (maquette du
   // boss), enregistrés immédiatement.
@@ -2764,6 +2785,7 @@ enum TypeInterventionHub {
   maintenance_activee // HUB fermé à tous, sauf l'Administrateur HUB
   maintenance_levee // HUB rouvert
   suppression // dossier CRM et/ou projet supprimés définitivement, avec tout ce qui en dépend
+  annuaire_perimetre // périmètre de l'annuaire changé (société / + direction / groupe)
 }
 
 model InterventionHub {
@@ -3014,24 +3036,239 @@ model RendezVous {
   description    String?
   organisateurId String    @map("organisateur_id") // compte, sans clé (comme parId)
   annuleLe       DateTime? @map("annule_le")
+  // Version envoyée aux agendas des invités (iCalendar) : +1 à chaque
+  // modification et à l'annulation (12/11/2026).
+  sequence       Int       @default(0)
+  // Lien de visioconférence (Meet, Zoom, Teams), https seulement.
+  lienVisio      String?   @map("lien_visio")
+  // Rappel avant le début, en minutes (10, 30, 60 ou 1440), pour
+  // l'organisateur et les invités qui n'ont pas décliné ; envoyé une fois.
+  rappelMinutes  Int?      @map("rappel_minutes")
+  rappelEnvoyeLe DateTime? @map("rappel_envoye_le")
+  // Récurrence (16/11/2026) : règle RRULE (sous-ensemble de @hub/domain,
+  // recurrence.ts) ; null : un rendez-vous unique. `debut`/`fin` sont alors
+  // ceux de la première occurrence.
+  regle          String?
+  // Fin de la dernière occurrence (null : série sans fin) : seuls les
+  // rendez-vous qui touchent encore une période sont relus.
+  finSerie       DateTime? @map("fin_serie")
   createdAt      DateTime  @default(now()) @map("created_at")
 
-  societe Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  invites InviteRendezVous[]
+  societe            Societe               @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  invites            InviteRendezVous[]
+  exceptions         ExceptionRendezVous[]
+  rappelsOccurrences RappelOccurrence[]
 
   @@index([societeId, debut])
+  @@index([societeId, finSerie])
   @@map("rendez_vous")
 }
 
+// Réponse d'un invité (12/11/2026) : sans réponse tant qu'il n'a rien dit.
+enum ReponseInvitation {
+  oui
+  non
+  peut_etre
+}
+
 model InviteRendezVous {
-  rendezVousId  String @map("rendez_vous_id")
-  utilisateurId String @map("utilisateur_id")
+  rendezVousId  String             @map("rendez_vous_id")
+  utilisateurId String             @map("utilisateur_id")
+  reponse       ReponseInvitation?
+  reponduLe     DateTime?          @map("repondu_le")
 
   rendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
 
   @@id([rendezVousId, utilisateurId])
   @@index([utilisateurId])
   @@map("invites_rendez_vous")
+}
+
+// Une occurrence d'une série modifiée ou annulée seule (16/11/2026) :
+// `occurrence` = son début d'origine (ce que dit la règle) ; les champs
+// renseignés remplacent ceux de la série pour cette seule date.
+model ExceptionRendezVous {
+  id           String    @id @default(uuid())
+  rendezVousId String    @map("rendez_vous_id")
+  occurrence   DateTime
+  annulee      Boolean   @default(false)
+  titre        String?
+  debut        DateTime?
+  fin          DateTime?
+  lieu         String?
+  description  String?
+  lienVisio    String?   @map("lien_visio")
+  creeLe       DateTime  @default(now()) @map("cree_le")
+
+  rendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+
+  @@unique([rendezVousId, occurrence])
+  @@map("exceptions_rendez_vous")
+}
+
+// Rappel envoyé pour une occurrence d'une série (une ligne = une prise :
+// la clé unique empêche deux tournées d'envoyer le même rappel).
+model RappelOccurrence {
+  rendezVousId String   @map("rendez_vous_id")
+  occurrence   DateTime
+  envoyeLe     DateTime @default(now()) @map("envoye_le")
+
+  rendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+
+  @@id([rendezVousId, occurrence])
+  @@map("rappels_occurrences")
+}
+
+// Synchronisation de l'Agenda avec Google et Apple (16/11/2026).
+enum FournisseurAgenda {
+  google
+  apple
+}
+
+// Un agenda externe connecté par une personne, dans une société : l'accès
+// (jeton de rafraîchissement Google, mot de passe pour application Apple)
+// est chiffré (agenda/synchro/chiffrement.ts), jamais renvoyé à l'écran.
+model ConnexionAgenda {
+  id                String            @id @default(uuid())
+  societeId         String            @map("societe_id")
+  utilisateurId     String            @map("utilisateur_id")
+  fournisseur       FournisseurAgenda
+  compte            String // adresse du compte externe (affichée ; elle peut changer)
+  // Identifiant stable du compte chez le fournisseur (Google : « sub »).
+  idCompte          String            @map("id_compte")
+  accesChiffre      String            @map("acces_chiffre")
+  derniereSynchroLe DateTime?         @map("derniere_synchro_le")
+  erreur            String? // dernière erreur, en clair, pour la personne
+  creeLe            DateTime          @default(now()) @map("cree_le")
+  // Dernière autorisation donnée par la personne : une coupure de ses
+  // sessions postérieure (« déconnecter partout », mot de passe) l'annule.
+  autoriseLe        DateTime          @default(now()) @map("autorise_le")
+  // Synchronisation en cours depuis (verrou par connexion : jamais deux à la fois).
+  synchroDepuis     DateTime?         @map("synchro_depuis")
+  // En pause (18/11/2026) : plus de synchronisation, ses rendez-vous quittent
+  // le HUB ; la connexion reste (réactivée d'un geste).
+  active            Boolean           @default(true)
+
+  societe     Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur        @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  agendas     AgendaExterne[]
+  liens       LienExportAgenda[]
+
+  // Plusieurs comptes par personne (18/11/2026) : un par compte (pas par
+  // adresse, qui peut être renommée).
+  @@unique([societeId, utilisateurId, fournisseur, idCompte])
+  @@map("connexions_agenda")
+}
+
+// Les agendas d'un compte externe : ceux que la personne importe dans le HUB,
+// et celui où le HUB écrit ses réunions (un seul).
+model AgendaExterne {
+  id           String   @id @default(uuid())
+  societeId    String   @map("societe_id")
+  connexionId  String   @map("connexion_id")
+  idExterne    String   @map("id_externe") // identifiant Google, adresse CalDAV
+  nom          String
+  couleur      String?
+  importe      Boolean  @default(false)
+  cible        Boolean  @default(false) // le HUB y écrit ses réunions
+  // Agenda dont la personne est propriétaire : seul possible comme cible
+  // (jamais un agenda partagé avec des tiers).
+  proprietaire Boolean  @default(false)
+  majLe        DateTime @default(now()) @updatedAt @map("maj_le")
+
+  societe    Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  connexion  ConnexionAgenda    @relation(fields: [connexionId], references: [id], onDelete: Cascade)
+  evenements EvenementExterne[]
+
+  @@unique([connexionId, idExterne])
+  @@map("agendas_externes")
+}
+
+// Un rendez-vous personnel importé (une occurrence par ligne) : son titre
+// n'est montré qu'à la personne elle-même ; ses collègues et les
+// disponibilités ne voient qu'« occupé » (décision du 16/11/2026).
+model EvenementExterne {
+  id        String   @id @default(uuid())
+  societeId String   @map("societe_id")
+  agendaId  String   @map("agenda_id")
+  idExterne String   @map("id_externe")
+  titre     String
+  lieu      String?
+  debut     DateTime
+  fin       DateTime
+  journee   Boolean  @default(false)
+  majLe     DateTime @default(now()) @updatedAt @map("maj_le")
+
+  societe Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  agenda  AgendaExterne @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+
+  @@unique([agendaId, idExterne])
+  @@index([societeId, debut])
+  @@map("evenements_externes")
+}
+
+// Une réunion du HUB écrite dans l'agenda externe d'une personne : `cle` =
+// le rendez-vous, ou « rendez-vous:début d'origine » pour une occurrence ;
+// `empreinte` = son contenu tel qu'écrit (pour voir ce qui a changé, d'un
+// côté ou de l'autre).
+model LienExportAgenda {
+  societeId    String    @map("societe_id")
+  connexionId  String    @map("connexion_id")
+  cle          String
+  rendezVousId String    @map("rendez_vous_id")
+  occurrence   DateTime?
+  agendaId     String    @map("agenda_id") // idExterne de l'agenda cible
+  idExterne    String    @map("id_externe")
+  empreinte    String
+  majLe        DateTime  @default(now()) @updatedAt @map("maj_le")
+
+  societe   Societe         @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  connexion ConnexionAgenda @relation(fields: [connexionId], references: [id], onDelete: Cascade)
+
+  @@id([connexionId, cle])
+  @@map("liens_export_agenda")
+}
+
+// Une connexion Google en cours (le temps d'autoriser chez Google) : l'état
+// renvoyé par Google (seule son empreinte est gardée) et le vérificateur
+// PKCE ; dix minutes au plus.
+model EtatConnexionAgenda {
+  id            String   @id @default(uuid())
+  societeId     String   @map("societe_id")
+  utilisateurId String   @map("utilisateur_id")
+  etatHash      String   @unique @map("etat_hash")
+  verificateur  String
+  expireLe      DateTime @map("expire_le")
+  // Au retour de Google : le code reçu (chiffré) et un ticket que la session
+  // HUB de la personne doit confirmer — la connexion n'est créée qu'alors.
+  codeChiffre   String?  @map("code_chiffre")
+  ticketHash    String?  @unique @map("ticket_hash")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@map("etats_connexion_agenda")
+}
+
+// Abonnement à son agenda depuis Google Agenda, Apple Calendrier ou Outlook
+// (12/11/2026) : un lien secret par personne et par société, relu par son
+// agenda. Seule l'empreinte SHA-256 du jeton est gardée ; régénérer remplace
+// l'empreinte, et l'ancien lien cesse de fonctionner.
+model AbonnementAgenda {
+  id             String    @id @default(uuid())
+  societeId      String    @map("societe_id")
+  utilisateurId  String    @map("utilisateur_id")
+  jetonHash      String    @unique @map("jeton_hash")
+  creeLe         DateTime  @default(now()) @map("cree_le")
+  // Dernière relecture par l'agenda de la personne (au plus une écriture
+  // toutes les 10 minutes) : lui montre que l'abonnement fonctionne.
+  dernierAccesLe DateTime? @map("dernier_acces_le")
+
+  societe     Societe     @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, utilisateurId])
+  @@index([utilisateurId])
+  @@map("abonnements_agenda")
 }
 
 // Annonces (lot 12, 01/11/2026) : à une société, à tout le groupe, ou à une

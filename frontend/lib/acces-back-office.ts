@@ -53,6 +53,7 @@ export const ORDRE_SECTIONS = [
   'agenda',
   'annonces',
   'recrutement',
+  'annuaire',
 ];
 const CHEMINS: Record<string, string> = {
   'mes-taches': 'mes-taches',
@@ -67,6 +68,7 @@ const CHEMINS: Record<string, string> = {
   agenda: 'agenda',
   annonces: 'annonces',
   recrutement: 'recrutement',
+  annuaire: 'annuaire',
   parametres: 'reglages',
 };
 
@@ -113,6 +115,9 @@ export function sectionAccessible(session: Session, cle: string): boolean {
   // Mon espace (RH lot 5) : chacun le sien, hors matrice — le serveur ne
   // sert que le dossier du compte connecté.
   if (cle === 'mon-espace') return true;
+  // Annuaire (22/11/2026) : tout compte du back-office, hors matrice — le
+  // serveur ne sert que les champs d'annuaire, dans le périmètre réglé.
+  if (cle === 'annuaire') return true;
   // Paramètres (matrice des rôles, gabarits, localités, contrats) : pouvoir
   // d'admin plateforme hors matrice — le CIO et l'Administrateur HUB, en plus
   // de l'admin société.

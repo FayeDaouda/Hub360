@@ -17,7 +17,7 @@ import {
   type TransitionDossier,
 } from '@/lib/types';
 import { ETAPE, formatDate, formatNumber, formatTime } from '@hub/domain';
-import { CLASSE_STATUT, type ActionCrm } from '@/lib/cycle-crm';
+import { CLASSE_STATUT, actionsPossibles, type ActionCrm } from '@/lib/cycle-crm';
 import { completudeFiche, getHistorique, libelleCategorie, type OffreEmise } from '@/lib/crm';
 import { DELAI_CFO_MS, DELAI_FICHE_MS } from '@/lib/couleurs-etat';
 import { CycleDossier } from './cycle-dossier';
@@ -139,6 +139,13 @@ export function DetailDossierModal({
   // l'administration).
   const session = useSessionCourante();
   const peutAffecterEquipes = niveauSuffisant(session, ETAPE.equipeProjets, 'ecriture');
+  // Onglet « Offre & contrat » selon la matrice (10/11/2026) — relu à chaque
+  // changement de session : un droit retiré ou accordé se voit sans recharger.
+  const voitOffres = niveauSuffisant(session, ETAPE.financesOffres, 'lecture'); // offre et contrat
+  const peutSoumettre = niveauSuffisant(session, ETAPE.crmSoumission, 'ecriture');
+  const voitEquipes =
+    projet.statut === 'onboard' && !!projet.projetId && niveauSuffisant(session, ETAPE.projets, 'lecture');
+
   // Lien public émis (validation DAF / relance) : le clair n'existe qu'une
   // fois, affiché jusqu'à fermeture.
   const [lienEmis, setLienEmis] = useState<OffreEmise | null>(null);
@@ -207,6 +214,13 @@ export function DetailDossierModal({
   const completude = completudeFiche(projet);
   // Lead archivé : fiche consultable seulement, plus aucune action.
   const archive = projet.archive;
+  const ongletOffre =
+    !archive &&
+    (actionsPossibles(projet.statut, session).length > 0 ||
+      'offre' in projet ||
+      voitOffres ||
+      peutFacturer ||
+      voitEquipes);
   // Fiche à compléter tant qu'elle n'est pas verrouillée (maquette) ; sinon
   // la liste de ses neuf champs, en lecture.
   const editable = peutEcrire && !archive && projet.statut === 'nouveau_projet';
@@ -251,9 +265,9 @@ export function DetailDossierModal({
     {
       libelle: 'Standing',
       valeur: projet.standing ? STANDINGS[projet.standing] : manquant(),
-      aide: 'Ce que le bâtiment offre',
+      aide: 'Potentiel en commodités',
     },
-    { libelle: 'Gamme', valeur: projet.gamme ? GAMMES[projet.gamme] : manquant(), aide: 'Avec quoi on le finit' },
+    { libelle: 'Gamme', valeur: projet.gamme ? GAMMES[projet.gamme] : manquant(), aide: 'Potentiel en finitions' },
     {
       libelle: 'Programme',
       valeur: projet.programme.trim() || manquant('Fiche Programme à remplir'),
@@ -270,7 +284,7 @@ export function DetailDossierModal({
         !archive && projet.statut === 'nouveau_projet' ? completude.total - completude.faits || undefined : undefined,
     },
     ...('apporteur' in projet ? [{ id: 'apporteur' as const, libelle: 'Apporteur' }] : []),
-    ...(!archive ? [{ id: 'offre' as const, libelle: 'Offre & contrat' }] : []),
+    ...(ongletOffre ? [{ id: 'offre' as const, libelle: 'Offre & contrat' }] : []),
     { id: 'historique', libelle: 'Historique' },
   ];
 
@@ -367,7 +381,8 @@ export function DetailDossierModal({
       attributeFilter: ['disabled', 'class', 'data-action-principale'],
     });
     return () => obs.disconnect();
-  }, [projet, archive]);
+    // ongletOffre : la zone apparaît ou disparaît avec les droits (matrice).
+  }, [projet, archive, ongletOffre]);
 
   // Section active disparue (archivage : plus d'« Offre & contrat ») : Fiche.
   if (!sections.some((x) => x.id === sectionActive)) setSectionActive('fiche');
@@ -458,22 +473,38 @@ export function DetailDossierModal({
   // --- Pied : la prochaine étape et son action ---------------------------
   const manquants = completude.total - completude.faits;
   const ficheIncomplete = projet.statut === 'nouveau_projet' && manquants > 0;
+  // Prochaine étape selon les droits de la matrice (10/11/2026) : on ne
+  // propose à quelqu'un que ce qu'il peut faire ; sinon, où en est le dossier.
+  const etapeNouveauProjet = (): string => {
+    if (ficheIncomplete) {
+      const champs = `${manquants} champ${manquants > 1 ? 's' : ''}`;
+      return peutEcrire ? `Compléter ${champs} de la fiche pour créer l’offre` : `Fiche à compléter (${champs})`;
+    }
+    const offreVisible = 'offre' in projet;
+    if (offreVisible && projet.offre) {
+      return peutSoumettre ? 'Soumettre l’offre à la validation du CFO' : 'Offre prête : soumission au CFO à venir';
+    }
+    if (peutPreparerOffre) return 'Créer l’offre, puis la soumettre à la validation du CFO';
+    return peutSoumettre
+      ? 'Soumettre l’offre à la validation du CFO dès qu’elle est prête'
+      : 'Offre en préparation, puis soumission au CFO';
+  };
   const prochaine = archive
     ? null
     : projet.statut === 'nouveau_projet'
-      ? ficheIncomplete
-        ? `Compléter ${manquants} champ${manquants > 1 ? 's' : ''} de la fiche pour créer l’offre`
-        : projet.offre
-          ? 'Soumettre l’offre à la validation du CFO'
-          : 'Créer l’offre, puis la soumettre à la validation du CFO'
+      ? etapeNouveauProjet()
       : projet.statut === 'en_validation'
         ? 'Validation de l’offre par le CFO'
         : projet.statut === 'offre_envoyee'
           ? projet.offreExpiree
-            ? 'Offre expirée sans réponse : refaire une offre ou déclarer le dossier perdu'
+            ? peutEcrire
+              ? 'Offre expirée sans réponse : refaire une offre ou déclarer le dossier perdu'
+              : 'Offre expirée sans réponse'
             : 'Réponse du client à l’offre'
           : projet.statut === 'onboard'
-            ? 'Contrat et équipes du projet'
+            ? voitOffres || voitEquipes
+              ? 'Contrat et équipes du projet'
+              : 'Client acquis : projet ouvert'
             : 'Cycle clos';
 
   return (
@@ -738,7 +769,7 @@ export function DetailDossierModal({
           </div>
         )}
 
-        {!archive && (
+        {ongletOffre && (
           <div id={idSection('offre')} className="fiche-dossier-bloc" tabIndex={-1}>
             <section className="fiche-crm-section fiche-crm-actions" aria-labelledby="fiche-offre-titre">
               <h3 id="fiche-offre-titre" className="fiche-crm-titre">
@@ -761,9 +792,12 @@ export function DetailDossierModal({
                 lienEmis={lienEmis}
                 onLienEmis={setLienEmis}
               />
-              <ContratDossier slug={slug} projet={projet} peutPreparer={peutPreparerOffre} onMaj={onMaj} />
+              {/* Contrat : lecture des offres (même droit que le serveur). */}
+              {voitOffres && (
+                <ContratDossier slug={slug} projet={projet} peutPreparer={peutPreparerOffre} onMaj={onMaj} />
+              )}
               {/* Onboard : le Dir. GC affecte le projet à une équipe (29/10/2026). */}
-              {projet.statut === 'onboard' && projet.projetId && (
+              {voitEquipes && projet.projetId && (
                 <section className="offre-dossier" aria-label="Équipes du projet">
                   <ProjectTeams slug={slug} projectId={projet.projetId} canEdit={peutAffecterEquipes} />
                 </section>
@@ -864,7 +898,17 @@ export function DetailDossierModal({
             <strong>{prochaine}</strong>
           </div>
           {principal ? (
-            <button type="button" className="btn-primary" onClick={() => aller('offre', boutonPrincipal())}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                // Un lien (« Créer une offre », « Voir l'offre… ») s'ouvre en un
+                // clic ; une action à confirmer mène à sa section (10/11/2026).
+                const cible = boutonPrincipal();
+                if (cible instanceof HTMLAnchorElement) cible.click();
+                else aller('offre', cible);
+              }}
+            >
               {principal} <ArrowRight size={16} aria-hidden />
             </button>
           ) : ficheIncomplete && editable ? (

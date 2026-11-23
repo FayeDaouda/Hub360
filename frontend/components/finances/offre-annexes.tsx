@@ -3,6 +3,7 @@
 import { CGV_PAR_SOCIETE } from '@/lib/cgv';
 import { formatAmount, formatNumber } from '@hub/domain';
 import { TAUX_TVA_DEFAUT, type EcheanceOffre, type Societe } from '@/lib/types';
+import type { RemiseDocument } from '@/lib/document-devis';
 
 // Règles reprises dans les conditions particulières (CGV art. 12 à 14) et le
 // délai de paiement de chaque facture.
@@ -15,6 +16,7 @@ const pourcent = (n: number) => `${formatNumber(n)} %`;
 type Props = {
   societe: Societe;
   totaux: { ht: number; tva: number; ttc: number };
+  remise?: RemiseDocument | null; // remise de l'offre (09/11/2026)
   echeancier: EcheanceOffre[];
   delais: Record<string, string>;
   onDelai: (cle: string, valeur: string) => void;
@@ -23,7 +25,7 @@ type Props = {
 // Fin du document d'offre (maquette Finances) : totaux, 3 · échéancier (seul
 // le délai prévisionnel se saisit), note de bas de page, 4 · conditions
 // particulières, Annexe 2 · CGV.
-export function OffreAnnexes({ societe, totaux, echeancier, delais, onDelai }: Props) {
+export function OffreAnnexes({ societe, totaux, remise = null, echeancier, delais, onDelai }: Props) {
   const cgv = CGV_PAR_SOCIETE[societe.slug];
   const totalEcheancier = echeancier.reduce((s, e) => s + e.montantTtc, 0);
   const resume = resumeEcheancier(echeancier);
@@ -32,6 +34,18 @@ export function OffreAnnexes({ societe, totaux, echeancier, delais, onDelai }: P
   return (
     <>
       <div className="offre-totaux">
+        {remise && (
+          <>
+            <p>
+              <span>Sous-total HT</span>
+              <strong>{formatAmount(remise.brutHt)}</strong>
+            </p>
+            <p>
+              <span>Remise {remise.pct} %</span>
+              <strong>− {formatAmount(remise.montant)}</strong>
+            </p>
+          </>
+        )}
         <p>
           <span>Total HT</span>
           <strong>{formatAmount(totaux.ht)}</strong>

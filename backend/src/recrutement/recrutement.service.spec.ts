@@ -4,7 +4,13 @@ import { RecrutementService } from './recrutement.service';
 describe('RecrutementService · effacement à 12 mois', () => {
   it('efface les candidatures refusées depuis plus de 12 mois, et elles seules', async () => {
     const deleteMany = jest.fn().mockResolvedValue({ count: 2 });
-    const s = new RecrutementService({ candidature: { deleteMany } } as never, {} as never, {} as never, {} as never);
+    const s = new RecrutementService(
+      { candidature: { deleteMany } } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
     await s.purger(new Date('2026-11-02T03:30:00Z'));
     expect(deleteMany).toHaveBeenCalledWith({
       where: { etape: 'refusee', decideLe: { lt: new Date('2025-11-02T03:30:00Z') } },
@@ -22,7 +28,10 @@ describe('RecrutementService · côté RH', () => {
   });
   const monter = () => {
     const tx = {
-      rendezVous: { updateMany: jest.fn(), create: jest.fn().mockResolvedValue({ id: 'RDV2', lieu: 'Salle A' }) },
+      rendezVous: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        create: jest.fn().mockResolvedValue({ id: 'RDV2', lieu: 'Salle A' }),
+      },
       candidature: { update: jest.fn() },
     };
     const prisma = {
@@ -49,8 +58,16 @@ describe('RecrutementService · côté RH', () => {
     const notifications = { envoyer: jest.fn() };
     const dossiers = { creer: jest.fn().mockResolvedValue({ id: 'D1' }) };
     const email = { envoyerCandidat: jest.fn().mockResolvedValue({ envoye: true }) };
+    const invitations = { envoyer: jest.fn().mockResolvedValue(1) };
     return {
-      s: new RecrutementService(prisma as never, notifications as never, dossiers as never, email as never),
+      s: new RecrutementService(
+        prisma as never,
+        notifications as never,
+        dossiers as never,
+        email as never,
+        invitations as never,
+      ),
+      invitations,
       prisma,
       tx,
       notifications,
@@ -85,7 +102,7 @@ describe('RecrutementService · côté RH', () => {
       inviteIds: ['U3'],
     });
     expect(tx.rendezVous.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'RDV1', annuleLe: null } }),
+      expect.objectContaining({ where: { id: 'RDV1', annuleLe: null, debut: { gt: expect.any(Date) } } }),
     );
     expect(tx.rendezVous.create.mock.calls[0][0].data.invites.create).toEqual([
       { utilisateurId: 'DG' },
@@ -98,6 +115,82 @@ describe('RecrutementService · côté RH', () => {
     expect(notifications.envoyer).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'entretien_planifie', destinataireIds: ['DG', 'U3'] }),
     );
+  });
+
+  it('replanifier : l’ancien rendez-vous part en annulation, puis le nouveau en invitation', async () => {
+    const { s, invitations } = monter();
+    const r = await s.planifierEntretien(moi(), 'C1', {
+      debut: '2026-11-04T10:00:00.000Z',
+      fin: '2026-11-04T11:00:00.000Z',
+      inviteIds: ['U3'],
+    });
+    expect(r).toEqual({ ok: true, rendezVousId: 'RDV2' });
+    expect(invitations.envoyer.mock.calls).toEqual([
+      ['RDV1', 'CANCEL'],
+      ['RDV2', 'REQUEST'],
+    ]);
+  });
+
+  it('replanifier : l’ancien rendez-vous passe à la version suivante avec son annulation (SEQUENCE iCalendar)', async () => {
+    const { s, tx } = monter();
+    await s.planifierEntretien(moi(), 'C1', {
+      debut: '2026-11-04T10:00:00.000Z',
+      fin: '2026-11-04T11:00:00.000Z',
+    });
+    const { data } = tx.rendezVous.updateMany.mock.calls[0][0];
+    expect(data).toEqual({ annuleLe: expect.any(Date), sequence: { increment: 1 } });
+    // Le nouveau rendez-vous part en version 0 (valeur par défaut en base).
+    expect(tx.rendezVous.create.mock.calls[0][0].data).not.toHaveProperty('sequence');
+  });
+
+  it('replanifier un entretien déjà annulé ou passé : aucune annulation ne repart', async () => {
+    const { s, tx, invitations } = monter();
+    tx.rendezVous.updateMany.mockResolvedValueOnce({ count: 0 });
+    await s.planifierEntretien(moi(), 'C1', {
+      debut: '2026-11-04T10:00:00.000Z',
+      fin: '2026-11-04T11:00:00.000Z',
+      inviteIds: ['U3'],
+    });
+    expect(invitations.envoyer.mock.calls).toEqual([['RDV2', 'REQUEST']]);
+  });
+
+  it('premier entretien : seule l’invitation du nouveau rendez-vous part, aucune annulation', async () => {
+    const { s, prisma, tx, invitations } = monter();
+    prisma.candidature.findFirst.mockResolvedValueOnce({
+      id: 'C1',
+      prenom: 'Awa',
+      nom: 'Diop',
+      etape: 'candidature',
+      rendezVousId: null,
+      posteId: 'P1',
+      poste: { intitule: 'Architecte', demandeParId: 'DG' },
+    });
+    await s.planifierEntretien(moi(), 'C1', {
+      debut: '2026-11-04T10:00:00.000Z',
+      fin: '2026-11-04T11:00:00.000Z',
+    });
+    expect(tx.rendezVous.updateMany).not.toHaveBeenCalled();
+    expect(invitations.envoyer.mock.calls).toEqual([['RDV2', 'REQUEST']]);
+  });
+
+  it('entretien refusé (fin avant début, candidature décidée) : aucune invitation ne part', async () => {
+    const { s, prisma, invitations } = monter();
+    await expect(
+      s.planifierEntretien(moi(), 'C1', { debut: '2026-11-04T11:00:00.000Z', fin: '2026-11-04T10:00:00.000Z' }),
+    ).rejects.toThrow('La fin doit suivre le début.');
+    prisma.candidature.findFirst.mockResolvedValueOnce({
+      id: 'C1',
+      prenom: 'Awa',
+      nom: 'Diop',
+      etape: 'refusee',
+      rendezVousId: 'RDV1',
+      posteId: 'P1',
+      poste: { intitule: 'Architecte', demandeParId: 'DG' },
+    });
+    await expect(
+      s.planifierEntretien(moi(), 'C1', { debut: '2026-11-04T10:00:00.000Z', fin: '2026-11-04T11:00:00.000Z' }),
+    ).rejects.toThrow('Candidature déjà décidée.');
+    expect(invitations.envoyer).not.toHaveBeenCalled();
   });
 
   it('« À votre attention » suit la matrice : rien sans Validation des postes ni décision', async () => {

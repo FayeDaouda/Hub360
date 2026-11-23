@@ -60,7 +60,13 @@ describe('messagePrixFige', () => {
 });
 
 describe('champsLibresModifies', () => {
-  const FICHE = { usage: 'residentiel', forme: 'villa', gabarit: 1, annexes: ['bureau'] };
+  const FICHE = {
+    typeProjet: 'residentiel',
+    usage: 'maisons_individuelles',
+    forme: 'villa',
+    gabarit: 1,
+    annexes: ['bureau'],
+  };
   const LIBRES = { standing: 'haut', gamme: 'premium', ficheProgramme: FICHE };
 
   it('rien demandé → aucun champ', () => {
@@ -68,7 +74,13 @@ describe('champsLibresModifies', () => {
   });
 
   it('fiche Programme identique avec les clés dans un autre ordre → pas un changement', () => {
-    const reordonnee = { annexes: ['bureau'], gabarit: 1, forme: 'villa', usage: 'residentiel' };
+    const reordonnee = {
+      annexes: ['bureau'],
+      gabarit: 1,
+      forme: 'villa',
+      typeProjet: 'residentiel',
+      usage: 'maisons_individuelles',
+    };
     expect(champsLibresModifies(LIBRES, { ficheProgramme: reordonnee })).toEqual([]);
   });
 

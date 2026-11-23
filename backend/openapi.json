@@ -9711,6 +9711,771 @@
         ]
       }
     },
+    "/api/societes/{slug}/agenda": {
+      "get": {
+        "operationId": "AgendaController_semaine",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "du",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "au",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "personne",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SemaineAgendaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      },
+      "post": {
+        "operationId": "AgendaController_creer",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreerRendezVousDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/personnes": {
+      "get": {
+        "operationId": "AgendaController_personnes",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/abonnement": {
+      "get": {
+        "operationId": "AgendaController_etatAbonnement",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatAbonnementAgendaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      },
+      "post": {
+        "operationId": "AgendaController_creerAbonnement",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LienAbonnementAgendaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      },
+      "delete": {
+        "operationId": "AgendaController_supprimerAbonnement",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/disponibilites": {
+      "get": {
+        "operationId": "AgendaController_disponibilites",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "debut",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fin",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclure",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisponibilitesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/{id}/reponse": {
+      "put": {
+        "operationId": "AgendaController_repondre",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepondreInvitationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/{id}": {
+      "patch": {
+        "operationId": "AgendaController_modifier",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifierRendezVousDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      },
+      "delete": {
+        "operationId": "AgendaController_annuler",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "portee",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "occurrence",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/agenda-abonnement/{fichier}": {
+      "get": {
+        "operationId": "AbonnementAgendaPublicController_flux",
+        "parameters": [
+          {
+            "name": "fichier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AbonnementAgendaPublic"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions": {
+      "get": {
+        "operationId": "ConnexionsAgendaController_etat",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/google": {
+      "post": {
+        "operationId": "ConnexionsAgendaController_debutGoogle",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebutConnexionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/google/confirmer": {
+      "post": {
+        "operationId": "ConnexionsAgendaController_confirmerGoogle",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmerConnexionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/cible": {
+      "put": {
+        "operationId": "ConnexionsAgendaController_cible",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CibleAgendaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}/active": {
+      "put": {
+        "operationId": "ConnexionsAgendaController_activer",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActiverConnexionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}/agendas/{agendaId}": {
+      "put": {
+        "operationId": "ConnexionsAgendaController_afficher",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agendaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AfficherAgendaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}/synchroniser": {
+      "post": {
+        "operationId": "ConnexionsAgendaController_synchroniser",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/connexions/{id}": {
+      "delete": {
+        "operationId": "ConnexionsAgendaController_deconnecter",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatConnexionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ConnexionsAgenda"
+        ]
+      }
+    },
+    "/api/agenda/google/retour": {
+      "get": {
+        "operationId": "RetourGoogleController_retour",
+        "parameters": [
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "RetourGoogle"
+        ]
+      }
+    },
     "/api/societes/{slug}/localites": {
       "get": {
         "operationId": "LocalitesController_lister",
@@ -10366,6 +11131,104 @@
         ]
       }
     },
+    "/api/societes/{slug}/annuaire/collegues": {
+      "get": {
+        "operationId": "AnnuaireController_lister",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnuaireDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Annuaire"
+        ]
+      }
+    },
+    "/api/societes/{slug}/annuaire/perimetre": {
+      "get": {
+        "operationId": "PerimetreAnnuaireController_lire",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerimetreAnnuaireDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PerimetreAnnuaire"
+        ]
+      },
+      "put": {
+        "operationId": "PerimetreAnnuaireController_regler",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReglerPerimetreDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerimetreAnnuaireDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PerimetreAnnuaire"
+        ]
+      }
+    },
     "/api/societes/{slug}/signalements": {
       "post": {
         "operationId": "SignalementsController_creer",
@@ -11006,145 +11869,6 @@
         ]
       }
     },
-    "/api/societes/{slug}/agenda": {
-      "get": {
-        "operationId": "AgendaController_semaine",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "du",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "au",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "personne",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SemaineAgendaDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Agenda"
-        ]
-      },
-      "post": {
-        "operationId": "AgendaController_creer",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreerRendezVousDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Agenda"
-        ]
-      }
-    },
-    "/api/societes/{slug}/agenda/personnes": {
-      "get": {
-        "operationId": "AgendaController_personnes",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Agenda"
-        ]
-      }
-    },
-    "/api/societes/{slug}/agenda/{id}": {
-      "delete": {
-        "operationId": "AgendaController_annuler",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Agenda"
-        ]
-      }
-    },
     "/api/societes/{slug}/annonces": {
       "get": {
         "operationId": "AnnoncesController_vue",
@@ -11573,6 +12297,7 @@
               "enum": [
                 "absence_a_decider",
                 "absence_decidee",
+                "agenda_deconnecte",
                 "annonce_a_valider",
                 "annonce_importante",
                 "arrivant_a_affecter",
@@ -11635,6 +12360,9 @@
                 "rappel_tache",
                 "rdv_annule",
                 "rdv_invitation",
+                "rdv_modifie",
+                "rdv_rappel",
+                "rdv_reponse",
                 "reglage_gouvernance_modifie",
                 "remboursement_a_traiter",
                 "remboursement_traite",
@@ -12021,9 +12749,9 @@
           "gamme": {
             "type": "string",
             "enum": [
-              "importe",
-              "local",
-              "sur_mesure_importe"
+              "economique",
+              "grand",
+              "moyen"
             ]
           },
           "client": {
@@ -12074,9 +12802,9 @@
           "gamme": {
             "type": "string",
             "enum": [
-              "importe",
-              "local",
-              "sur_mesure_importe"
+              "economique",
+              "grand",
+              "moyen"
             ]
           },
           "ficheProgramme": {
@@ -12296,6 +13024,17 @@
           "nineaClient": {
             "type": "string",
             "maxLength": 40
+          },
+          "remisePct": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              5,
+              10,
+              15,
+              20,
+              25
+            ]
           }
         }
       },
@@ -17494,6 +18233,10 @@
             "type": "string",
             "maxLength": 160
           },
+          "telephonePro": {
+            "type": "string",
+            "pattern": "^\\+?[\\d\\s().-]{6,25}$"
+          },
           "contactUrgence": {
             "type": "string",
             "maxLength": 200
@@ -18461,6 +19204,660 @@
           "consentement"
         ]
       },
+      "SerieAgendaDto": {
+        "type": "object",
+        "properties": {
+          "debut": {
+            "type": "string"
+          },
+          "fin": {
+            "type": "string"
+          },
+          "titre": {
+            "type": "string"
+          },
+          "lieu": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "lienVisio": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "debut",
+          "fin",
+          "titre",
+          "lieu",
+          "description",
+          "lienVisio"
+        ]
+      },
+      "ParticipantDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "reponse": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "non",
+              "oui",
+              "peut_etre"
+            ]
+          }
+        },
+        "required": [
+          "nom",
+          "reponse"
+        ]
+      },
+      "ElementAgendaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "conge",
+              "demande",
+              "echeance",
+              "externe",
+              "rendez_vous"
+            ]
+          },
+          "titre": {
+            "type": "string"
+          },
+          "jour": {
+            "type": "string"
+          },
+          "debut": {
+            "type": "string",
+            "nullable": true
+          },
+          "fin": {
+            "type": "string",
+            "nullable": true
+          },
+          "lieu": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "organisateur": {
+            "type": "string",
+            "nullable": true
+          },
+          "invites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "annulable": {
+            "type": "boolean"
+          },
+          "modifiable": {
+            "type": "boolean"
+          },
+          "entretien": {
+            "type": "boolean"
+          },
+          "jeSuisOrganisateur": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "inviteIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "serieId": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurrence": {
+            "type": "string",
+            "nullable": true
+          },
+          "regle": {
+            "type": "string",
+            "nullable": true
+          },
+          "regleTexte": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurrenceModifiee": {
+            "type": "boolean"
+          },
+          "serie": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SerieAgendaDto"
+              }
+            ]
+          },
+          "lienVisio": {
+            "type": "string",
+            "nullable": true
+          },
+          "rappelMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "maReponse": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "non",
+              "oui",
+              "peut_etre"
+            ]
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParticipantDto"
+            }
+          },
+          "demande": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "autre",
+                  "conge_paye",
+                  "maladie",
+                  "permission_exceptionnelle"
+                ],
+                "type": "string"
+              },
+              "jours": {
+                "type": "number"
+              },
+              "validationFinale": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "jours",
+              "validationFinale"
+            ]
+          },
+          "couleur": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "titre",
+          "jour",
+          "debut",
+          "fin",
+          "lieu",
+          "detail",
+          "organisateur",
+          "invites",
+          "annulable",
+          "modifiable",
+          "entretien",
+          "jeSuisOrganisateur",
+          "description",
+          "inviteIds",
+          "serieId",
+          "occurrence",
+          "regle",
+          "regleTexte",
+          "occurrenceModifiee",
+          "serie",
+          "lienVisio",
+          "rappelMinutes",
+          "maReponse",
+          "participants"
+        ]
+      },
+      "SemaineAgendaDto": {
+        "type": "object",
+        "properties": {
+          "du": {
+            "type": "string"
+          },
+          "au": {
+            "type": "string"
+          },
+          "personne": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nom"
+            ]
+          },
+          "elements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ElementAgendaDto"
+            }
+          },
+          "peutVoirAutres": {
+            "type": "boolean"
+          },
+          "peutCreer": {
+            "type": "boolean"
+          },
+          "peutInviter": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "du",
+          "au",
+          "personne",
+          "elements",
+          "peutVoirAutres",
+          "peutCreer",
+          "peutInviter"
+        ]
+      },
+      "EtatAbonnementAgendaDto": {
+        "type": "object",
+        "properties": {
+          "actif": {
+            "type": "boolean"
+          },
+          "creeLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "dernierAccesLe": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "actif",
+          "creeLe",
+          "dernierAccesLe"
+        ]
+      },
+      "LienAbonnementAgendaDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "CreerRendezVousDto": {
+        "type": "object",
+        "properties": {
+          "titre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "debut": {
+            "type": "string"
+          },
+          "fin": {
+            "type": "string"
+          },
+          "lieu": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "inviteIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "lienVisio": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "rappelMinutes": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              10,
+              30,
+              60,
+              1440
+            ]
+          },
+          "regle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "titre",
+          "debut",
+          "fin"
+        ]
+      },
+      "DisponibilitesDto": {
+        "type": "object",
+        "properties": {
+          "occupes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "absents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "occupes",
+          "absents"
+        ]
+      },
+      "RepondreInvitationDto": {
+        "type": "object",
+        "properties": {
+          "reponse": {
+            "type": "string",
+            "enum": [
+              "non",
+              "oui",
+              "peut_etre"
+            ]
+          }
+        },
+        "required": [
+          "reponse"
+        ]
+      },
+      "ModifierRendezVousDto": {
+        "type": "object",
+        "properties": {
+          "titre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "debut": {
+            "type": "string"
+          },
+          "fin": {
+            "type": "string"
+          },
+          "lieu": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "lienVisio": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "rappelMinutes": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              10,
+              30,
+              60,
+              1440
+            ]
+          },
+          "regle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "inviteIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "portee": {
+            "type": "string",
+            "enum": [
+              "occurrence",
+              "suivantes",
+              "toutes"
+            ]
+          },
+          "occurrence": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "titre",
+          "debut",
+          "fin",
+          "inviteIds"
+        ]
+      },
+      "DisponiblesConnexionDto": {
+        "type": "object",
+        "properties": {
+          "google": {
+            "type": "boolean"
+          },
+          "apple": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "google",
+          "apple"
+        ]
+      },
+      "AgendaExterneDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "couleur": {
+            "type": "string",
+            "nullable": true
+          },
+          "importe": {
+            "type": "boolean"
+          },
+          "cible": {
+            "type": "boolean"
+          },
+          "proprietaire": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "couleur",
+          "importe",
+          "cible",
+          "proprietaire"
+        ]
+      },
+      "ConnexionAgendaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fournisseur": {
+            "type": "string",
+            "enum": [
+              "apple",
+              "google"
+            ]
+          },
+          "compte": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "derniereSynchroLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "erreur": {
+            "type": "string",
+            "nullable": true
+          },
+          "agendas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgendaExterneDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fournisseur",
+          "compte",
+          "active",
+          "derniereSynchroLe",
+          "erreur",
+          "agendas"
+        ]
+      },
+      "EtatConnexionsDto": {
+        "type": "object",
+        "properties": {
+          "disponibles": {
+            "$ref": "#/components/schemas/DisponiblesConnexionDto"
+          },
+          "connexions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnexionAgendaDto"
+            }
+          }
+        },
+        "required": [
+          "disponibles",
+          "connexions"
+        ]
+      },
+      "DebutConnexionDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "ConfirmerConnexionDto": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "ticket"
+        ]
+      },
+      "CibleAgendaDto": {
+        "type": "object",
+        "properties": {
+          "agendaId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "agendaId"
+        ]
+      },
+      "ActiverConnexionDto": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "active"
+        ]
+      },
+      "AfficherAgendaDto": {
+        "type": "object",
+        "properties": {
+          "importe": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "importe"
+        ]
+      },
       "CreerLocaliteDto": {
         "type": "object",
         "properties": {
@@ -18639,6 +20036,163 @@
         "required": [
           "mode",
           "nom"
+        ]
+      },
+      "SocieteAnnuaireDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "nom"
+        ]
+      },
+      "MembreAnnuaireDto": {
+        "type": "object",
+        "properties": {
+          "utilisateurId": {
+            "type": "string"
+          },
+          "prenom": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "nomAffiche": {
+            "type": "string",
+            "nullable": true
+          },
+          "photoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "poste": {
+            "type": "string",
+            "nullable": true
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          },
+          "chef": {
+            "type": "string",
+            "nullable": true
+          },
+          "estChef": {
+            "type": "boolean"
+          },
+          "telephone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string"
+          },
+          "societe": {
+            "$ref": "#/components/schemas/SocieteAnnuaireDto"
+          },
+          "memeSociete": {
+            "type": "boolean"
+          },
+          "absentJusquau": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "utilisateurId",
+          "prenom",
+          "nom",
+          "nomAffiche",
+          "photoUrl",
+          "poste",
+          "cellule",
+          "chef",
+          "estChef",
+          "telephone",
+          "email",
+          "societe",
+          "memeSociete",
+          "absentJusquau"
+        ]
+      },
+      "AnnuaireDto": {
+        "type": "object",
+        "properties": {
+          "perimetre": {
+            "type": "string",
+            "enum": [
+              "groupe",
+              "societe",
+              "societe_direction"
+            ]
+          },
+          "societes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SocieteAnnuaireDto"
+            }
+          },
+          "membres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MembreAnnuaireDto"
+            }
+          },
+          "peutVoirAgendas": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "perimetre",
+          "societes",
+          "membres",
+          "peutVoirAgendas"
+        ]
+      },
+      "PerimetreAnnuaireDto": {
+        "type": "object",
+        "properties": {
+          "perimetre": {
+            "enum": [
+              "groupe",
+              "societe",
+              "societe_direction"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "perimetre"
+        ]
+      },
+      "ReglerPerimetreDto": {
+        "type": "object",
+        "properties": {
+          "perimetre": {
+            "type": "string",
+            "enum": [
+              "groupe",
+              "societe",
+              "societe_direction"
+            ]
+          },
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "perimetre",
+          "motif"
         ]
       },
       "CreerSignalementDto": {
@@ -19131,187 +20685,6 @@
           "id",
           "message",
           "createdAt"
-        ]
-      },
-      "ElementAgendaDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "conge",
-              "demande",
-              "echeance",
-              "rendez_vous"
-            ]
-          },
-          "titre": {
-            "type": "string"
-          },
-          "jour": {
-            "type": "string"
-          },
-          "debut": {
-            "type": "string",
-            "nullable": true
-          },
-          "fin": {
-            "type": "string",
-            "nullable": true
-          },
-          "lieu": {
-            "type": "string",
-            "nullable": true
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "organisateur": {
-            "type": "string",
-            "nullable": true
-          },
-          "invites": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "annulable": {
-            "type": "boolean"
-          },
-          "demande": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "type": {
-                "enum": [
-                  "autre",
-                  "conge_paye",
-                  "maladie",
-                  "permission_exceptionnelle"
-                ],
-                "type": "string"
-              },
-              "jours": {
-                "type": "number"
-              },
-              "validationFinale": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "id",
-              "type",
-              "jours",
-              "validationFinale"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "titre",
-          "jour",
-          "debut",
-          "fin",
-          "lieu",
-          "detail",
-          "organisateur",
-          "invites",
-          "annulable"
-        ]
-      },
-      "SemaineAgendaDto": {
-        "type": "object",
-        "properties": {
-          "du": {
-            "type": "string"
-          },
-          "au": {
-            "type": "string"
-          },
-          "personne": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "nom": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "nom"
-            ]
-          },
-          "elements": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ElementAgendaDto"
-            }
-          },
-          "peutVoirAutres": {
-            "type": "boolean"
-          },
-          "peutCreer": {
-            "type": "boolean"
-          },
-          "peutInviter": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "du",
-          "au",
-          "personne",
-          "elements",
-          "peutVoirAutres",
-          "peutCreer",
-          "peutInviter"
-        ]
-      },
-      "CreerRendezVousDto": {
-        "type": "object",
-        "properties": {
-          "titre": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 160
-          },
-          "debut": {
-            "type": "string"
-          },
-          "fin": {
-            "type": "string"
-          },
-          "lieu": {
-            "type": "string",
-            "maxLength": 160
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 2000
-          },
-          "inviteIds": {
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": [
-          "titre",
-          "debut",
-          "fin"
         ]
       },
       "AnnonceDto": {

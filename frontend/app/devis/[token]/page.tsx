@@ -5,6 +5,7 @@ import { CheckCircle2, Download, XCircle } from 'lucide-react';
 import { getDevisPublic, repondreDevisPublic } from '@/lib/devis';
 import { STATUTS_DEVIS, type DevisPublic, type StatutDevisEffectif } from '@/lib/types';
 import { DocumentFacturation } from '@/components/document-facturation';
+import { remiseDocument } from '@/lib/document-devis';
 import { useConfirmer } from '@/components/confirmation';
 import { formatLongDate } from '@hub/domain';
 import { FieldError } from '@/components/ui/field';
@@ -96,6 +97,7 @@ export default function DevisPublicPage(props: Props) {
           clientNom={devis.clientNom}
           objet={devis.objet}
           lignes={devis.lignes}
+          remise={remiseDocument(devis)}
           montantHt={devis.montantHt}
           montantTva={devis.montantTva}
           montantTtc={devis.montantTtc}

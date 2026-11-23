@@ -76,7 +76,6 @@ export const libelleRole = (role: string) =>
   role === ROLE_DIR_GC ? 'Direction GC' : role.replace(/\s*\(transverse\)$/, '');
 
 const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`;
-const SU = ['SU1', 'SU2', 'SU3'];
 // Décision inscrite par le HUB, telle que dérivée de sa source.
 type DecisionHub = {
   cle: string;
@@ -362,11 +361,12 @@ export class PilotageService {
   private async conversion(societeId: string) {
     const offres = await this.prisma.devis.findMany({
       where: { societeId, dossierCrmId: { not: null }, statut: { in: ['accepte', 'transforme'] } },
-      select: { lignes: { select: { produitService: { select: { code: true } } } } },
+      select: { lignes: { select: { produitService: { select: { code: true, famille: true } } } } },
     });
     return {
       signees: offres.length,
-      avecSuivi: offres.filter((o) => o.lignes.some((l) => SU.includes(l.produitService?.code ?? ''))).length,
+      // Toute ligne de suivi de chantier (SU0 à SU3).
+      avecSuivi: offres.filter((o) => o.lignes.some((l) => l.produitService?.famille === 'SU')).length,
     };
   }
 

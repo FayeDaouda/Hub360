@@ -19,6 +19,14 @@
       "prix_modifiable": false,
       "produits": [
         {
+          "code": "CO0",
+          "libelle": "Conception",
+          "description": "Conception dont le tarif au m² se fixe à la main sur l'offre (ajout HUB du 09/11/2026, hors catalogue fourni).",
+          "unite": "m2",
+          "prix_ht": null,
+          "prix_modifiable": true
+        },
+        {
           "code": "CO1",
           "libelle": "Conception — faible complexité",
           "description": "Solution économique pour les projets à faible complexité architecturale. Approche fonctionnelle et optimisée, réalisations standards respectant les contraintes budgétaires.",
@@ -84,6 +92,15 @@
       "prix_modifiable": false,
       "regle_auto": "La catégorie SU est déduite automatiquement de la catégorie CO du projet : CO1→SU1, CO2→SU2, CO3→SU3. Le champ ne doit pas être librement sélectionnable.",
       "produits": [
+        {
+          "code": "SU0",
+          "libelle": "Suivi de chantier",
+          "description": "Suivi de chantier d'un projet en CO0 : prix mensuel fixé à la main sur l'offre (ajout HUB du 09/11/2026, hors catalogue fourni).",
+          "unite": "mois",
+          "prix_ht": null,
+          "co_associe": "CO0",
+          "prix_modifiable": true
+        },
         {
           "code": "SU1",
           "libelle": "Suivi de chantier — projet simple",

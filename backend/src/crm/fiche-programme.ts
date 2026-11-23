@@ -13,9 +13,33 @@
 //  - villa : rez-de-chaussée + étages + sous-sols (chaque niveau est un plan) ;
 //  - immeuble, local commercial, équipement : une planche par ligne de la
 //    composition (une ligne regroupe des niveaux identiques) ;
-//  - la toiture-terrasse accessible ne compte pas comme planche.
+//  - la toiture-terrasse accessible et la mezzanine ne comptent pas comme planches.
 
-export const USAGES = ['residentiel', 'commercial', 'mixte', 'bureau'] as const;
+// Type de projet et usage (09/11/2026) : le type fixe la liste des usages
+// proposés ; « Mixte » se décrit à la main (texte libre). Un seul usage.
+export const TYPES_PROJET = [
+  'residentiel',
+  'commercial',
+  'industriel',
+  'institutionnel',
+  'culturel',
+  'religieux',
+  'transport',
+  'agricole',
+  'mixte',
+] as const;
+export const USAGES_PAR_TYPE: Record<Exclude<(typeof TYPES_PROJET)[number], 'mixte'>, readonly string[]> = {
+  residentiel: ['maisons_individuelles', 'logements_collectifs', 'immeubles_habitation', 'residences'],
+  commercial: ['bureaux', 'commerces', 'centres_commerciaux', 'hotels', 'restaurants'],
+  industriel: ['usines', 'entrepots', 'ateliers', 'centres_logistiques'],
+  institutionnel: ['ecoles', 'universites', 'hopitaux', 'administrations', 'tribunaux'],
+  culturel: ['musees', 'theatres', 'bibliotheques', 'stades', 'salles_sport'],
+  religieux: ['eglises', 'mosquees', 'temples', 'synagogues'],
+  transport: ['gares', 'aeroports', 'ports', 'parkings'],
+  agricole: ['hangars', 'etables', 'serres', 'silos'],
+};
+// Usage d'un projet mixte, écrit à la main.
+export const USAGE_LIBRE_MAX = 120;
 export const FORMES = ['villa', 'immeuble', 'local_commercial', 'equipement'] as const;
 export const LIBELLES_FORME: Record<(typeof FORMES)[number], string> = {
   villa: 'Villa',
@@ -75,8 +99,9 @@ export const COMMODITES: { groupe: string; items: [string, string][] }[] = [
   {
     groupe: 'Confort et connectivité',
     items: [
-      ['pre_climatisation', 'Pré-installation climatisation'],
-      ['climatisation_centralisee', 'Climatisation centralisée'],
+      // Une seule entrée depuis le 09/11/2026 (pré-installation et
+      // centralisée fusionnées, migration 20261109200000).
+      ['climatisation', 'Climatisation'],
       ['fibre', 'Fibre optique'],
       ['antenne_tv', 'Antenne TV collective'],
       ['domotique', 'Domotique'],
@@ -126,10 +151,14 @@ export type LigneComposition = {
 };
 
 export type FicheProgramme = {
-  usage: Un<typeof USAGES> | null;
+  typeProjet: Un<typeof TYPES_PROJET> | null;
+  // Clé de USAGES_PAR_TYPE[typeProjet], ou texte libre pour « Mixte ».
+  usage: string | null;
   forme: Un<typeof FORMES> | null;
   gabarit: number; // 0 = RDC (plain-pied), n = R+n
   sousSols: number;
+  // Mezzanine (09/11/2026) : décrite, ne compte pas comme planche.
+  mezzanine: boolean;
   toitureTerrasse: boolean;
   // Villa
   typologieVilla: Un<typeof TYPOLOGIES_VILLA> | null;
@@ -141,10 +170,12 @@ export type FicheProgramme = {
 };
 
 export const FICHE_VIDE: FicheProgramme = {
+  typeProjet: null,
   usage: null,
   forme: null,
   gabarit: 0,
   sousSols: 0,
+  mezzanine: false,
   toitureTerrasse: false,
   typologieVilla: null,
   suiteParentale: false,
@@ -168,9 +199,26 @@ function parmi<T extends readonly string[]>(liste: T, v: unknown, nom: string): 
   return v as Un<T>;
 }
 
+// Usage reçu, contrôlé selon le type : de sa liste, ou texte libre (Mixte) ;
+// sans type, pas d'usage.
+function usageDuType(type: Un<typeof TYPES_PROJET> | null, v: unknown): string | null {
+  if (!type || v === undefined || v === null || v === '') return null;
+  if (typeof v !== 'string') throw new ErreurFicheProgramme('Usage : valeur inconnue.');
+  if (type === 'mixte') {
+    const libre = v.trim();
+    if (libre.length > USAGE_LIBRE_MAX) {
+      throw new ErreurFicheProgramme(`Usage : ${USAGE_LIBRE_MAX} caractères au plus.`);
+    }
+    return libre || null;
+  }
+  if (!USAGES_PAR_TYPE[type].includes(v))
+    throw new ErreurFicheProgramme('Usage : valeur inconnue pour ce type de projet.');
+  return v;
+}
+
 // Forme bâtie lue dans une Fiche Programme enregistrée (JSON) ; null si
-// elle n'est pas choisie ou si la fiche n'existe pas. Remplace le type de
-// projet dans les affichages depuis le 09/11/2026.
+// elle n'est pas choisie ou si la fiche n'existe pas. Remplace l'ancien type
+// de bien (DossierCrm.type) dans les affichages depuis le 09/11/2026.
 export function formeDe(fiche: unknown): Un<typeof FORMES> | null {
   const forme = fiche && typeof fiche === 'object' ? (fiche as Record<string, unknown>).forme : null;
   return typeof forme === 'string' && (FORMES as readonly string[]).includes(forme)
@@ -188,6 +236,7 @@ export function normaliserFiche(brut: unknown): FicheProgramme {
   if (!brut || typeof brut !== 'object') throw new ErreurFicheProgramme('Fiche Programme invalide.');
   const f = brut as Record<string, unknown>;
   const forme = parmi(FORMES, f.forme, 'Forme bâtie');
+  const typeProjet = parmi(TYPES_PROJET, f.typeProjet, 'Type de projet');
   const gabarit = entier(f.gabarit, 0, GABARIT_MAX, 0, 'Gabarit');
   const sousSols = entier(f.sousSols, 0, SOUS_SOLS_MAX, 0, 'Sous-sols');
   const liste = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
@@ -216,10 +265,12 @@ export function normaliserFiche(brut: unknown): FicheProgramme {
       });
 
   return {
-    usage: parmi(USAGES, f.usage, 'Usage'),
+    typeProjet,
+    usage: usageDuType(typeProjet, f.usage),
     forme,
     gabarit,
     sousSols,
+    mezzanine: f.mezzanine === true,
     toitureTerrasse: f.toitureTerrasse === true,
     typologieVilla: forme === 'villa' ? parmi(TYPOLOGIES_VILLA, f.typologieVilla, 'Typologie de la villa') : null,
     suiteParentale: forme === 'villa' && f.suiteParentale === true,
@@ -257,20 +308,26 @@ export function controleComposition(f: FicheProgramme): { nonDecrits: number[]; 
 
 const ligneComplete = (l: LigneComposition) => !!l.usage && (l.usage !== 'logements' || !!l.typologie);
 
-// Programme décrit : usage, forme, puis la branche (typologie de la villa, ou
-// composition complète sans niveau oublié ni en double).
-export function programmeComplet(f: FicheProgramme): boolean {
-  if (!f.usage || !f.forme) return false;
+// Bâtiment décrit : forme, puis la branche (typologie de la villa, ou
+// composition complète sans niveau oublié ni en double). C'est lui seul qui
+// fixe les planches, donc le prix : jamais le type de projet ni l'usage.
+export function batimentDecrit(f: FicheProgramme): boolean {
+  if (!f.forme) return false;
   if (f.forme === 'villa') return !!f.typologieVilla;
   const c = controleComposition(f);
   return f.composition.length > 0 && f.composition.every(ligneComplete) && !c.nonDecrits.length && !c.enDouble.length;
+}
+
+// Programme décrit : type de projet et usage, puis le bâtiment.
+export function programmeComplet(f: FicheProgramme): boolean {
+  return !!f.typeProjet && !!f.usage && batimentDecrit(f);
 }
 
 // Planches déduites (cf. hypothèse en tête) ; null tant qu'on ne peut pas les
 // calculer (forme inconnue, composition incomplète) : saisie manuelle alors.
 export function planchesCalculees(f: FicheProgramme): number | null {
   if (f.forme === 'villa') return f.gabarit + 1 + f.sousSols;
-  if (avecComposition(f.forme) && programmeComplet(f)) return f.composition.length;
+  if (avecComposition(f.forme) && batimentDecrit(f)) return f.composition.length;
   return null;
 }
 
@@ -321,6 +378,7 @@ export function resume(f: FicheProgramme): string {
     }
     for (const [usage, n] of t.autres) parties.push(pluriel(n, ...AUTRES[usage]));
   }
+  if (f.mezzanine) parties.push('mezzanine');
   if (f.toitureTerrasse) parties.push('toiture-terrasse accessible');
   if (f.commodites.length) parties.push(pluriel(f.commodites.length, 'commodité', 'commodités'));
   return parties.join(' · ');

@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { genererJeton, hacherJeton } from '../auth/jetons';
 import { NotificationsService } from '../notifications/notifications.service';
-import { montantHtLignes, refDevis } from '../devis/domaine';
+import { montantHtLignes, montantTtcLignes, refDevis } from '../devis/domaine';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
@@ -38,14 +38,6 @@ type SignatairesSociete = {
   contratSignataireCeoFonction: string | null;
 };
 
-const montantTtcLignes = (lignes: LigneMontant[]) =>
-  lignes.reduce(
-    (s, l) =>
-      s +
-      ventilationTva(Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()), l.tauxTva.toNumber()).montantTtc,
-    0,
-  );
-
 // Nom et fonction du signataire requis, tels que réglés dans les réglages
 // des contrats (null si non renseignés).
 function signataireDe(s: SignatairesSociete, qui: Signataire) {
@@ -72,8 +64,8 @@ export class ContratsService {
 
   // Signataire requis pour une offre, selon le seuil de contresignature CEO
   // (Réglages · Règles et délais, montant TTC).
-  private async signatairePour(societeId: string, lignes: LigneMontant[]) {
-    const montantTtc = montantTtcLignes(lignes);
+  private async signatairePour(societeId: string, lignes: LigneMontant[], remisePct: number | null) {
+    const montantTtc = montantTtcLignes(lignes, remisePct);
     const seuil = await this.reglages.regle<number>(societeId, 'seuil_contresignature_ceo');
     return { qui: signataireRequis(montantTtc, seuil), montantTtc, seuil };
   }
@@ -94,9 +86,9 @@ export class ContratsService {
     if (!dossier) throw new NotFoundException('Dossier introuvable');
     const offre = dossier.offres[0] ?? null;
     const seuil = dossier.societe.contratSeuilSurMesureHt?.toNumber() ?? null;
-    const montantHt = offre ? montantHtLignes(offre.lignes) : null;
+    const montantHt = offre ? montantHtLignes(offre.lignes, offre.remisePct) : null;
     const mode = montantHt != null ? modeContrat(montantHt, seuil) : null;
-    const requis = offre ? await this.signatairePour(societeId, offre.lignes) : null;
+    const requis = offre ? await this.signatairePour(societeId, offre.lignes, offre.remisePct) : null;
     return {
       contrat: dossier.contrat ? this.formater(dossier.contrat) : null,
       preparation: {
@@ -137,9 +129,9 @@ export class ContratsService {
     if (!offre) {
       throw new ConflictException('Le contrat se prépare une fois l’offre acceptée par le client.');
     }
-    const montantHt = montantHtLignes(offre.lignes);
+    const montantHt = montantHtLignes(offre.lignes, offre.remisePct);
     const mode = modeContrat(montantHt, dossier.societe.contratSeuilSurMesureHt?.toNumber() ?? null);
-    const { qui } = await this.signatairePour(societeId, offre.lignes);
+    const { qui } = await this.signatairePour(societeId, offre.lignes, offre.remisePct);
     const manquants = this.reglagesManquants(dossier.societe, mode, qui);
     if (manquants.length) {
       throw new UnprocessableEntityException(
@@ -190,7 +182,7 @@ export class ContratsService {
     const c = await this.brouillon(societeId, dossierId);
     if (c.mode !== 'modele') throw new ConflictException('Contrat sur mesure : rien à générer.');
     const societe = await this.prisma.societe.findUniqueOrThrow({ where: { id: societeId } });
-    const { qui } = await this.signatairePour(societeId, c.devis.lignes);
+    const { qui } = await this.signatairePour(societeId, c.devis.lignes, c.devis.remisePct);
     const manquants = this.reglagesManquants(societe, 'modele', qui);
     if (manquants.length) {
       throw new UnprocessableEntityException(`À renseigner dans les réglages des contrats : ${manquants.join(', ')}.`);
@@ -480,13 +472,14 @@ export class ContratsService {
         dateEnvoi: Date | null;
         codeDossier: string | null;
         rangDossier: number | null;
+        remisePct: number | null;
         lignes: { tauxTva: Prisma.Decimal; quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[];
       };
       montantHt: number;
       signataire: { nom: string; fonction: string };
     },
   ): string {
-    const montantTtc = montantTtcLignes(x.offre.lignes);
+    const montantTtc = montantTtcLignes(x.offre.lignes, x.offre.remisePct);
     return remplirModele(modele, {
       societe: x.societe,
       client: x.dossier.client.nom,
@@ -503,7 +496,7 @@ export class ContratsService {
   }
 
   private montants(c: ContratDetail) {
-    return { montantTtc: montantTtcLignes(c.devis.lignes) };
+    return { montantTtc: montantTtcLignes(c.devis.lignes, c.devis.remisePct) };
   }
 
   private async charger(societeId: string, dossierId: string): Promise<ContratDetail> {

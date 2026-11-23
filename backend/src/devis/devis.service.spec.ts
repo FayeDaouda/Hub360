@@ -370,3 +370,157 @@ describe('DevisService — catalogue réel', () => {
     expect(libre).toMatchObject({ prixUnitaire: 42, quantite: 2 });
   });
 });
+
+// CO0 / SU0 (09/11/2026) : conception au tarif au m² saisi sur l'offre, faute
+// de tarif au catalogue. Une reprise majeure (TS-MAJ) d'un projet en CO0 prend
+// alors le tarif de la ligne CO de l'offre ACCEPTÉE du projet.
+describe('DevisService — catalogue CO0 / SU0 (prix saisi)', () => {
+  const produit = (o: { id: string; code: string } & Record<string, unknown>) => ({
+    societeId: 'S1',
+    famille: null,
+    coAssocie: null,
+    modeCalcul: 'quantite',
+    prixModifiable: false,
+    tauxTva: dec(18),
+    ...o,
+  });
+  const CATALOGUE = [
+    produit({
+      id: 'CO0',
+      code: 'CO0',
+      famille: 'CO',
+      modeCalcul: 'surface_planches',
+      prixModifiable: true,
+      prixUnitaire: null,
+    }),
+    produit({ id: 'CO2', code: 'CO2', famille: 'CO', modeCalcul: 'surface_planches', prixUnitaire: dec(7000) }),
+    produit({ id: 'SU0', code: 'SU0', famille: 'SU', coAssocie: 'CO0', prixModifiable: true, prixUnitaire: null }),
+    produit({ id: 'SU1', code: 'SU1', famille: 'SU', coAssocie: 'CO1', prixUnitaire: dec(300000) }),
+    produit({
+      id: 'TS-MAJ',
+      code: 'TS-MAJ',
+      famille: 'TS',
+      modeCalcul: 'tarif_co_surface_planches',
+      prixUnitaire: null,
+    }),
+  ];
+  const OFFRE = { offreDossier: true, categorieCo: null, devisProjet: false };
+
+  // `categorie` : catégorie de conception figée du dossier d'origine du projet ;
+  // `tarifOffreAcceptee` : prix de la ligne CO de son offre acceptée (null = aucune).
+  function monter(categorie: string | null, tarifOffreAcceptee: number | null) {
+    const ligneDevis = {
+      // La ligne CO de l'offre acceptée ne compte que si son produit est à
+      // prix saisi (CO0) : la base filtre sur prixModifiable.
+      findFirst: jest.fn(
+        ({
+          where,
+        }: {
+          where: {
+            devis: { dossierCrmId: string; statut: { in: string[] } };
+            produitService: { famille: string; prixModifiable?: boolean };
+          };
+        }) =>
+          Promise.resolve(
+            tarifOffreAcceptee != null &&
+              where.devis.dossierCrmId === 'DOS1' &&
+              where.devis.statut.in.includes('accepte') &&
+              where.produitService.prixModifiable === true &&
+              categorie === 'CO0'
+              ? { prixUnitaire: dec(tarifOffreAcceptee) }
+              : null,
+          ),
+      ),
+    };
+    const prisma = {
+      projet: {
+        findFirst: jest.fn().mockResolvedValue({ dossierCrm: { id: 'DOS1', categorieConception: categorie } }),
+      },
+      ligneDevis,
+      produitService: {
+        findMany: jest.fn(({ where }: { where: { id: { in: string[] } } }) =>
+          Promise.resolve(CATALOGUE.filter((p) => where.id.in.includes(p.id))),
+        ),
+        findFirst: jest.fn(({ where }: { where: { code: string } }) =>
+          Promise.resolve(CATALOGUE.find((p) => p.code === where.code) ?? null),
+        ),
+      },
+    } as unknown as PrismaService;
+    const service = new DevisService(
+      prisma,
+      {} as FacturationService,
+      {} as EmailService,
+      {} as NotificationsService,
+      { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService,
+      {} as OnboardingService,
+    );
+    return { service, ligneDevis };
+  }
+  const ligne = (o: object) => ({ designation: 'x', quantite: 1, prixUnitaire: 1, ...o });
+  const catalogue = (s: DevisService) =>
+    s as unknown as {
+      appliquerCatalogue: (
+        s: string,
+        l: object[],
+        ctx: object,
+      ) => Promise<{ quantite: number; prixUnitaire: number; surfaceM2: number | null; planches: number | null }[]>;
+    };
+
+  it('TS-MAJ d’un projet en CO0 : tarif au m² de la ligne CO de l’offre acceptée × surface × planches', async () => {
+    const { service } = monter('CO0', 6500);
+    const [ts] = await service.verifierLignesProjet('S1', 'P1', [
+      ligne({ produitServiceId: 'TS-MAJ', surfaceM2: 80, planches: 2, prixUnitaire: 1 }),
+    ] as never);
+    expect(ts).toMatchObject({ prixUnitaire: 6500, surfaceM2: 80, planches: 2, quantite: 160 });
+  });
+
+  it('TS-MAJ d’un projet en CO0 sans offre acceptée portant une ligne CO → 422', async () => {
+    const { service } = monter('CO0', null);
+    await expect(
+      service.verifierLignesProjet('S1', 'P1', [
+        ligne({ produitServiceId: 'TS-MAJ', surfaceM2: 80, planches: 2 }),
+      ] as never),
+    ).rejects.toThrow('catégorie de conception');
+  });
+
+  it('TS-MAJ d’un projet tarifé (CO2) : toujours le tarif du catalogue, même si l’offre avait un autre prix', async () => {
+    const ts = ligne({ produitServiceId: 'TS-MAJ', surfaceM2: 10, planches: 1 });
+    const [avecOffre] = await monter('CO2', 6500).service.verifierLignesProjet('S1', 'P1', [ts] as never);
+    expect(avecOffre.prixUnitaire).toBe(7000);
+    const [sansOffre] = await monter('CO2', null).service.verifierLignesProjet('S1', 'P1', [ts] as never);
+    expect(sansOffre.prixUnitaire).toBe(7000);
+  });
+
+  it('CO0 sur une offre : le prix au m² saisi est conservé, quantité = surface × planches', async () => {
+    const { service } = monter(null, null);
+    const [co] = await catalogue(service).appliquerCatalogue(
+      'S1',
+      [ligne({ produitServiceId: 'CO0', surfaceM2: 200, planches: 2, prixUnitaire: 4200 })],
+      OFFRE,
+    );
+    expect(co).toMatchObject({ prixUnitaire: 4200, surfaceM2: 200, planches: 2, quantite: 400 });
+  });
+
+  it('SU0 suit CO0 avec son prix saisi ; SU1 avec CO0 → 422 (le suivi se déduit)', async () => {
+    const { service } = monter(null, null);
+    const [, su] = await catalogue(service).appliquerCatalogue(
+      'S1',
+      [
+        ligne({ produitServiceId: 'CO0', surfaceM2: 1, planches: 1 }),
+        ligne({ produitServiceId: 'SU0', quantite: 4, prixUnitaire: 250000 }),
+      ],
+      OFFRE,
+    );
+    expect(su).toMatchObject({ prixUnitaire: 250000, quantite: 4 });
+    await expect(
+      catalogue(service).appliquerCatalogue(
+        'S1',
+        [
+          ligne({ produitServiceId: 'CO0', surfaceM2: 1, planches: 1 }),
+          ligne({ produitServiceId: 'SU1', quantite: 4 }),
+        ],
+        OFFRE,
+      ),
+    ).rejects.toThrow('ne correspond pas à la catégorie CO0');
+  });
+});

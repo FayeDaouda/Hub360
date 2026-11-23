@@ -1196,3 +1196,9 @@
   color: var(--text-muted);
   font-size: var(--t-13);
 }
+
+/* Remise de l'offre (09/11/2026) : un choix court sous les prestations. */
+.offre-remise {
+  max-width: 14rem;
+  margin-top: 1rem;
+}

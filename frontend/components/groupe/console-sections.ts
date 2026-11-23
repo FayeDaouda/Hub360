@@ -1,10 +1,10 @@
-import { History, LayoutGrid, LifeBuoy, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
+import { BookUser, History, LayoutGrid, LifeBuoy, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
 
 // Sections de l'Administration du HUB (refonte du 07/11/2026) : rangées en
 // trois groupes dans le menu latéral, chacune joignable par son adresse
 // (/groupe?onglet=droits) — rechargement, lien direct, capture.
 
-export type SectionConsole = 'comptes' | 'droits' | 'modules' | 'journal' | 'deblocages';
+export type SectionConsole = 'comptes' | 'droits' | 'modules' | 'annuaire' | 'journal' | 'deblocages';
 
 export type DefinitionSection = {
   cle: SectionConsole;
@@ -50,6 +50,14 @@ export const GROUPES_CONSOLE: GroupeSections[] = [
         icone: LayoutGrid,
         description: (societe) =>
           `Activez ou coupez chaque module pour ${societe}, et fermez le HUB pour maintenance. Chaque bascule exige un motif et entre au journal d’audit.`,
+      },
+      {
+        cle: 'annuaire',
+        portee: 'societe',
+        libelle: 'Annuaire',
+        icone: BookUser,
+        description: (societe) =>
+          `Ce que voient les salariés de ${societe} dans leur annuaire : leur société, plus la direction du groupe, ou tout le groupe. Seuls les champs d’annuaire (dont le téléphone professionnel) sont montrés. Chaque changement exige un motif et entre au journal d’audit.`,
       },
     ],
   },

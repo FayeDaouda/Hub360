@@ -8,6 +8,14 @@ import { daysBetween } from '@hub/domain';
 // n'est jamais persisté.
 export type StatutFactureEffectif = 'brouillon' | 'emise' | 'partiellement_payee' | 'payee' | 'en_retard' | 'annulee';
 
+// HT d'une ligne de devis, remise de l'offre appliquée (09/11/2026) — LE
+// calcul de tout montant de devis (offre, échéancier, factures de l'Onboard,
+// contrat, seuils, pipeline, commissions) : arrondi au franc par ligne.
+export function htLigne(quantite: number, prixUnitaire: number, remisePct: number | null): number {
+  const brut = quantite * prixUnitaire;
+  return Math.round(remisePct ? (brut * (100 - remisePct)) / 100 : brut);
+}
+
 // GARDE MIROIR de frontend/lib/types.ts::ventilationTva
 // FCFA sans décimale : la TVA est arrondie au franc. montantHt + tauxTva sont
 // les seules données stockées ; TVA et TTC en découlent — et restent figées de
