@@ -349,6 +349,162 @@ describe('Page Agenda', () => {
       expect(screen.getByLabelText('Fatou Ba')).toBeChecked();
     });
   });
+
+  // « Voir son agenda » depuis l'annuaire (22/11/2026) : ?collegue=… superpose
+  // l'agenda d'un collègue pour la visite, puis quitte l'adresse.
+  describe('adresse ?collegue=', () => {
+    const CLE = 'hub.agenda.gc.U1';
+    // Sept collègues (U2 à U8) : de quoi dépasser la limite de 5 agendas.
+    const COLLEGUES = [
+      { id: 'U2', nom: 'Moussa Sow' },
+      { id: 'U3', nom: 'Fatou Ba' },
+      { id: 'U4', nom: 'Ibrahima Fall' },
+      { id: 'U5', nom: 'Aminata Ndiaye' },
+      { id: 'U6', nom: 'Cheikh Diallo' },
+      { id: 'U7', nom: 'Mariama Sy' },
+      { id: 'U8', nom: 'Ousmane Kane' },
+    ];
+    const nom = (id: string) => COLLEGUES.find((p) => p.id === id)!.nom;
+    const aller = (chemin: string) => window.history.replaceState(null, '', chemin);
+    const lusPour = (id: string) => api.getAgenda.mock.calls.filter((appel: unknown[]) => appel[3] === id).length;
+
+    beforeEach(() => {
+      api.getPersonnesAgenda.mockResolvedValue(COLLEGUES);
+      // Chaque collègue a une réunion « Agenda de <nom> » ; soi-même voit les autres.
+      api.getAgenda.mockImplementation((_s: string, du: string, au: string, personne?: string) =>
+        Promise.resolve(
+          personne
+            ? reponse(du, au, {
+                personne: { id: personne, nom: nom(personne) },
+                elements: [
+                  {
+                    ...RDV,
+                    id: `R-${personne}`,
+                    titre: `Réunion de ${personne}`,
+                    debut: `${J}T14:00:00.000Z`,
+                    fin: `${J}T15:00:00.000Z`,
+                    modifiable: false,
+                    annulable: false,
+                  },
+                ],
+              })
+            : reponse(du, au, { peutVoirAutres: true }),
+        ),
+      );
+    });
+    afterEach(() => {
+      localStorage.clear();
+      aller('/');
+    });
+
+    it('coche et affiche l’agenda du collègue demandé, puis retire le paramètre de l’adresse', async () => {
+      aller('/admin/gc/agenda?collegue=U3&autre=1');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      expect(api.getAgenda).toHaveBeenCalledWith('gc', '2026-11-09', '2026-11-15', 'U3');
+      const bloc = await screen.findByRole('button', { name: /Fatou Ba : Réunion de U3/ });
+      expect(bloc.getAttribute('style')).toContain('--ton: var(--azur)');
+      // Seul « collegue » quitte l'adresse : le reste est gardé.
+      expect(window.location.pathname).toBe('/admin/gc/agenda');
+      expect(window.location.search).toBe('?autre=1');
+      expect(screen.getByLabelText('Moussa Sow')).not.toBeChecked();
+    });
+
+    it('sans paramètre, l’adresse n’est pas réécrite', async () => {
+      const remplacer = vi.spyOn(window.history, 'replaceState');
+      aller('/admin/gc/agenda');
+      remplacer.mockClear();
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      expect(remplacer).not.toHaveBeenCalled();
+      remplacer.mockRestore();
+    });
+
+    it('fusionne avec les préférences : le collègue demandé passe en tête, sans doublon, les autres réglages restent', async () => {
+      localStorage.setItem(
+        CLE,
+        JSON.stringify({ collegues: ['U2', 'U3', 'U4', 'U5', 'U6'], masques: ['echeance'], colonneMasquee: false }),
+      );
+      aller('/admin/gc/agenda?collegue=U3');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      // Déjà présent : il ne prend pas une seconde place, les cinq restent cochés.
+      for (const id of ['U2', 'U4', 'U5', 'U6']) expect(screen.getByLabelText(nom(id))).toBeChecked();
+      expect(screen.getByLabelText('Mariama Sy')).toBeDisabled();
+      await waitFor(() => expect(lusPour('U6')).toBeGreaterThan(0));
+      // En tête : la première couleur ; Moussa (U2) passe à la deuxième.
+      expect((await screen.findByRole('button', { name: /Fatou Ba : Réunion de U3/ })).getAttribute('style')).toContain(
+        '--ton: var(--azur)',
+      );
+      expect(screen.getByRole('button', { name: /Moussa Sow : Réunion de U2/ }).getAttribute('style')).toContain(
+        '--ton: var(--mandarine)',
+      );
+      // Le type masqué l'est toujours.
+      expect(screen.getByLabelText('Échéance')).not.toBeChecked();
+      expect(screen.getByLabelText('Rendez-vous')).toBeChecked();
+      expect(window.location.search).toBe('');
+    });
+
+    it('5 agendas au plus : le collègue demandé entre, le dernier des préférences sort', async () => {
+      localStorage.setItem(CLE, JSON.stringify({ collegues: ['U2', 'U3', 'U4', 'U5', 'U6'] }));
+      aller('/admin/gc/agenda?collegue=U7');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Mariama Sy')).toBeChecked());
+      for (const id of ['U2', 'U3', 'U4', 'U5']) expect(screen.getByLabelText(nom(id))).toBeChecked();
+      expect(screen.getByLabelText('Cheikh Diallo')).not.toBeChecked();
+      expect(screen.getByLabelText('Cheikh Diallo')).toBeDisabled();
+      expect(screen.getByText('5 agendas au plus en même temps.')).toBeInTheDocument();
+      await waitFor(() => expect(lusPour('U7')).toBeGreaterThan(0));
+      expect(lusPour('U6')).toBe(0);
+    });
+
+    it('un id inconnu (hors des personnes) n’affiche rien et ne casse rien', async () => {
+      localStorage.setItem(CLE, JSON.stringify({ collegues: ['U3'] }));
+      aller('/admin/gc/agenda?collegue=INCONNU');
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      expect(await screen.findByRole('button', { name: /Fatou Ba : Réunion de U3/ })).toBeInTheDocument();
+      expect(lusPour('INCONNU')).toBe(0);
+      expect(screen.queryByText('Agenda indisponible.')).not.toBeInTheDocument();
+      // Aucun collègue de plus n'est coché.
+      const coches = COLLEGUES.filter((p) => (screen.getByLabelText(p.nom) as HTMLInputElement).checked);
+      expect(coches.map((p) => p.id)).toEqual(['U3']);
+      expect(window.location.search).toBe('');
+    });
+
+    // Corrigé le 23/11/2026 : la coupe à 5 vient après le filtre des collègues
+    // actuels ; un id inconnu (ou son propre id) ne prend la place de personne.
+    it('un id inconnu ne chasse pas un des 5 agendas enregistrés', async () => {
+      localStorage.setItem(CLE, JSON.stringify({ collegues: ['U2', 'U3', 'U4', 'U5', 'U6'] }));
+      aller('/admin/gc/agenda?collegue=INCONNU');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Moussa Sow')).toBeChecked());
+      for (const id of ['U2', 'U3', 'U4', 'U5', 'U6']) expect(screen.getByLabelText(nom(id))).toBeChecked();
+      await waitFor(() => expect(lusPour('U6')).toBeGreaterThan(0));
+    });
+
+    it('le paramètre seul n’écrit rien dans les préférences du navigateur', async () => {
+      const enregistrer = vi.spyOn(Storage.prototype, 'setItem');
+      aller('/admin/gc/agenda?collegue=U3');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      await screen.findByRole('button', { name: /Fatou Ba : Réunion de U3/ });
+      expect(enregistrer).not.toHaveBeenCalled();
+      expect(localStorage.getItem(CLE)).toBeNull();
+      enregistrer.mockRestore();
+    });
+
+    it('le paramètre seul laisse intactes des préférences déjà enregistrées', async () => {
+      const avant = JSON.stringify({ masques: [], collegues: ['U2'], colonneMasquee: false });
+      localStorage.setItem(CLE, avant);
+      aller('/admin/gc/agenda?collegue=U3');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      expect(screen.getByLabelText('Moussa Sow')).toBeChecked();
+      expect(localStorage.getItem(CLE)).toBe(avant);
+    });
+  });
   // Lot B3 (12/11/2026) : l'invité répond depuis la fiche.
   describe('répondre à une invitation', () => {
     const INVITATION: ElementAgenda = {

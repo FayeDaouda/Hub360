@@ -204,7 +204,7 @@ export default function AgendaPage(props: Props) {
       };
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (Array.isArray(p.masques)) setMasques(p.masques);
-      if (Array.isArray(p.collegues)) setCollegues(p.collegues.slice(0, CALQUES_MAX));
+      if (Array.isArray(p.collegues)) setCollegues(p.collegues);
       if (typeof p.colonneMasquee === 'boolean') setColonneMasquee(p.colonneMasquee);
     } catch {
       // Stockage indisponible : réglages par défaut.
@@ -215,7 +215,7 @@ export default function AgendaPage(props: Props) {
     const url = new URL(window.location.href);
     const demande = url.searchParams.get('collegue');
     if (demande) {
-      setCollegues((c) => [demande, ...c.filter((x) => x !== demande)].slice(0, CALQUES_MAX));
+      setCollegues((c) => [demande, ...c.filter((x) => x !== demande)]);
       url.searchParams.delete('collegue');
       window.history.replaceState(null, '', url.toString());
     }
@@ -237,7 +237,9 @@ export default function AgendaPage(props: Props) {
   // la période ; seule la dernière lecture compte.
   const peutVoirAutres = !!agenda?.peutVoirAutres;
   const collegaux = peutVoirAutres && moiId ? personnes.filter((p) => p.id !== moiId) : [];
-  const colleguesValides = collegues.filter((id) => collegaux.some((p) => p.id === id));
+  // Coupés à CALQUES_MAX après le tri : un id inconnu (lien périmé, collègue
+  // parti) ne prend la place de personne.
+  const colleguesValides = collegues.filter((id) => collegaux.some((p) => p.id === id)).slice(0, CALQUES_MAX);
   const cleCollegues = colleguesValides.join(',');
   const periodeCle = `${du}|${au}`;
   const derniereCalques = useRef(0);

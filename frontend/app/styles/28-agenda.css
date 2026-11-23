@@ -1197,7 +1197,9 @@
   gap: var(--e-24);
   position: sticky;
   top: var(--e-16);
-  /* Hauteur bornée par la grille (grille-horaire.tsx) : elle défile seule. */
+  /* Hauteur bornée par la grille (grille-horaire.tsx) : elle défile seule.
+     Sans grille (Mois, Année, Planning) : la hauteur de l'écran. */
+  max-height: calc(100dvh - 2 * var(--e-16));
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
