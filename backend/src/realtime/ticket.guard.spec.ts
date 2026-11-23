@@ -84,8 +84,11 @@ describe('Gardes de ticket résolues par Nest', () => {
     const tickets = module.get(TicketStore);
     const chat = tickets.emettre({ ...PAYLOAD, stream: 'chat' });
     const notif = tickets.emettre({ ...PAYLOAD, stream: 'notifications' });
-    expect(module.get(TicketGuard).canActivate(ctxOf(req({ query: { token: chat } })))).toBe(true);
-    expect(module.get(TicketNotificationsGuard).canActivate(ctxOf(req({ query: { token: notif } })))).toBe(true);
-    await module.close();
+    try {
+      expect(module.get(TicketGuard).canActivate(ctxOf(req({ query: { token: chat } })))).toBe(true);
+      expect(module.get(TicketNotificationsGuard).canActivate(ctxOf(req({ query: { token: notif } })))).toBe(true);
+    } finally {
+      await module.close();
+    }
   });
 });

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type { MessageEvent } from '@nestjs/common';
 import { TypeCanal } from '@prisma/client';
-import { interval, merge, Observable, Subject } from 'rxjs';
-import { filter, map } from 'rxjs/operators';
+import { interval, merge, Observable, Subject, timer } from 'rxjs';
+import { filter, map, takeUntil } from 'rxjs/operators';
 import { ROLE_COMPANY_ADMIN } from '@hub/domain';
+import { STREAM_LIFETIME_MS } from '../realtime/notifications.bus';
 
 // Audience d'un événement de conversation : mêmes règles qu'AccesCanalGuard.
 export type AudienceCanal = {
@@ -63,7 +64,11 @@ export class ChatBus {
     );
     // Battement : tient la connexion ouverte à travers les proxys / timeouts.
     const battement$ = interval(BATTEMENT_MS).pipe(map((): MessageEvent => ({ type: 'ping', data: {} })));
-    return merge(evenements$, battement$);
+    // Durée de vie bornée, comme le flux des notifications (audit du
+    // 23/11/2026) : le front se reconnecte avec un ticket frais, donc les
+    // droits du moment sont relus — un compte désactivé, déconnecté partout,
+    // privé de la messagerie ou changé de cellule cesse de recevoir.
+    return merge(evenements$, battement$).pipe(takeUntil(timer(STREAM_LIFETIME_MS)));
   }
 
   private visible(e: ChatEvt, a: Abonne): boolean {

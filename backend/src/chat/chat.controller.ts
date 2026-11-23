@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { CompteCommeLecture, PermissionSelonMethode, RequiertPermission } from '../commun/permission.decorator';
@@ -169,8 +170,12 @@ export class ChatController {
   }
 
   // Jeton court pour l'URL du flux SSE (EventSource ne pose pas d'en-tête).
+  // Fréquence bornée comme les notifications (audit du 23/11/2026) : un
+  // onglet en demande un à chaque (re)connexion, pas des centaines.
   @Post('chat/ticket')
   @CompteCommeLecture()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   ticket(@Req() req: R) {
     return {
       token: this.tickets.emettre({
