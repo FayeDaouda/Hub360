@@ -264,4 +264,36 @@ describe('Agenda', () => {
     await api(app, dirgc).delete(`/agenda/${id}`).expect(200);
     await api(app, dirgc).delete(`/agenda/${nouvelle}`).expect(200);
   });
+
+  // Agendas connectés (16/11/2026) : sans clé ni application Google, la
+  // connexion n'est pas proposée ; un retour de Google inconnu renvoie à
+  // l'accueil sans rien créer.
+  it('connexions : état sans secret, connexion refusée sans configuration, retour inconnu', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    const etat = (await api(app, cfo).get('/agenda/connexions').expect(200)).body as {
+      disponibles: { google: boolean };
+      connexions: unknown[];
+    };
+    expect(etat).toEqual({ disponibles: { google: false, apple: false }, connexions: [] });
+    await api(app, cfo).post('/agenda/connexions/google').expect(400);
+    const retour = await request(app.getHttpServer()).get('/api/agenda/google/retour?state=inconnu&code=x').expect(302);
+    expect(retour.headers.location).toMatch(/\?connexion=echec$/);
+    await request(app.getHttpServer()).get('/api/societes/grey-concrete/agenda/connexions').expect(401);
+    // Confirmation : ticket mal formé refusé par la validation, ticket inconnu introuvable, sans session 401.
+    await api(app, cfo).post('/agenda/connexions/google/confirmer', { ticket: 'x' }).expect(400);
+    await api(app, cfo)
+      .post('/agenda/connexions/google/confirmer', { ticket: 'A'.repeat(43) })
+      .expect(404);
+    // Où le HUB écrit : « nulle part » passe (verrou de transaction réel) ; un
+    // agenda inconnu ou d'un autre est introuvable.
+    await api(app, cfo).put('/agenda/connexions/cible', { agendaId: null }).expect(200);
+    await api(app, cfo)
+      .put('/agenda/connexions/cible', { agendaId: '00000000-0000-4000-8000-000000000000' })
+      .expect(404);
+    await api(app, cfo).put('/agenda/connexions/cible', { agendaId: 'pas-un-uuid' }).expect(400);
+    await request(app.getHttpServer())
+      .post('/api/societes/grey-concrete/agenda/connexions/google/confirmer')
+      .send({ ticket: 'A'.repeat(43) })
+      .expect(401);
+  });
 });

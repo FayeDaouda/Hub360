@@ -127,11 +127,119 @@ describe('Page Agenda', () => {
       await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
     });
 
-    it('sur téléphone, le planning s’ouvre par défaut', async () => {
-      window.matchMedia = vi.fn().mockImplementation((q: string) => ({ matches: q === '(max-width: 640px)' }));
+    it('sur téléphone : « Mois et jour » par défaut, barre compacte, tiroir des vues, Créer flottant', async () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(max-width: 640px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
       await monter();
-      await waitFor(() => expect(screen.getByRole('radio', { name: 'Planning' })).toBeChecked());
-      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11'));
+      // La grille du mois entier ; la journée choisie (aujourd'hui) en liste.
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-10-26', '2026-12-06'));
+      const liste = await screen.findByRole('region', { name: /Jeudi 12 novembre/ });
+      expect(within(liste).getByText('Point chantier')).toBeInTheDocument();
+      expect(within(liste).getByText('Plateau')).toBeInTheDocument();
+      // Le 12 est choisi et porte un point ; toucher le 13 le choisit.
+      const mois = screen.getByRole('group', { name: 'Choisir un jour' });
+      const douze = within(mois).getByRole('button', { name: /jeudi 12 novembre · 1 élément/ });
+      expect(douze).toHaveAttribute('aria-pressed', 'true');
+      await userEvent.click(within(mois).getByRole('button', { name: /^vendredi 13 novembre$/ }));
+      expect(await screen.findByText('Rien de prévu ce jour-là.')).toBeInTheDocument();
+      // Le mois en titre (sans menu déroulant), pas de flèches ; Créer flotte au pouce.
+      expect(screen.getByRole('heading', { name: 'Novembre 2026' })).toBeInTheDocument();
+      expect(document.querySelector('.agenda-barre .agenda-fleches')).toBeNull();
+      expect(document.querySelector('.agenda-fab')).toHaveAccessibleName('Créer un rendez-vous');
+      // Les vues, dans le tiroir : Planning charge les 30 jours.
+      await userEvent.click(screen.getByRole('button', { name: 'Vues et agendas' }));
+      const tiroir = await screen.findByRole('dialog', { name: 'Vues et agendas' });
+      expect(within(tiroir).getByRole('button', { name: 'Mois et jour' })).toHaveAttribute('aria-current', 'true');
+      await userEvent.click(within(tiroir).getByRole('button', { name: 'Planning' }));
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-13', '2026-12-12'));
+      expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
+    });
+
+    it('ordinateur : la colonne se replie d’un clic, et le choix est gardé', async () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(min-width: 1101px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      localStorage.clear();
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      const bouton = screen.getByRole('button', { name: 'Colonne des agendas' });
+      expect(bouton).toHaveAttribute('aria-expanded', 'true');
+      await userEvent.click(bouton);
+      expect(bouton).toHaveAttribute('aria-expanded', 'false');
+      expect(document.querySelector('.agenda-disposition')).toHaveClass('is-colonne-masquee');
+      // Pas de tiroir sur grand écran.
+      expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem('hub.agenda.gc.U1') ?? '{}')).toMatchObject({ colonneMasquee: true });
+      localStorage.clear();
+    });
+
+    it('ordinateur : une colonne repliée la dernière fois le reste au retour ; ignoré sous 1100 px', async () => {
+      localStorage.setItem('hub.agenda.gc.U1', JSON.stringify({ colonneMasquee: true }));
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(min-width: 1101px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      expect(document.querySelector('.agenda-disposition')).toHaveClass('is-colonne-masquee');
+      expect(screen.getByRole('button', { name: 'Colonne des agendas' })).toHaveAttribute('aria-expanded', 'false');
+      localStorage.clear();
+    });
+
+    it('sur tablette : le tiroir prend le focus, Échap le ferme et rend le focus au bouton', async () => {
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      const bouton = screen.getByRole('button', { name: 'Colonne des agendas' });
+      await userEvent.click(bouton);
+      const tiroir = await screen.findByRole('dialog', { name: 'Vues et agendas' });
+      expect(within(tiroir).getByRole('button', { name: 'Fermer' })).toHaveFocus();
+      await userEvent.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog', { name: 'Vues et agendas' })).not.toBeInTheDocument();
+      expect(bouton).toHaveFocus();
+    });
+
+    it('sur téléphone, le mini-calendrier du titre se ferme à Échap', async () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(max-width: 640px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      await monter();
+      await screen.findByRole('group', { name: 'Choisir un jour' });
+      // En « Mois et jour », le titre n'ouvre rien : on passe en 3 jours.
+      await userEvent.click(screen.getByRole('button', { name: 'Vues et agendas' }));
+      await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '3 jours' }));
+      const titre = await screen.findByRole('button', { name: /Novembre 2026/ });
+      await userEvent.click(titre);
+      expect(document.getElementById('agenda-mini-deroulant')).toBeInTheDocument();
+      await userEvent.keyboard('{Escape}');
+      expect(document.getElementById('agenda-mini-deroulant')).toBeNull();
+    });
+
+    it('sur téléphone, glisser le doigt vers la gauche avance d’un mois', async () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(max-width: 640px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      await monter();
+      const ligne = await screen.findByRole('button', { name: /Point chantier/ });
+      const zone = ligne.closest('.agenda-principal')!;
+      fireEvent.touchStart(zone, { touches: [{ clientX: 300, clientY: 400 }] });
+      fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 120, clientY: 410 }] });
+      // Décembre : la grille du lundi 30 novembre au 10 janvier.
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-30', '2027-01-10'));
+      // Un geste surtout vertical (défilement) ne change pas de période.
+      const appels = api.getAgenda.mock.calls.length;
+      fireEvent.touchStart(zone, { touches: [{ clientX: 200, clientY: 100 }] });
+      fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 120, clientY: 400 }] });
+      expect(api.getAgenda.mock.calls.length).toBe(appels);
     });
   });
 
@@ -239,6 +347,162 @@ describe('Page Agenda', () => {
       await waitFor(() => expect(api.getAgenda).toHaveBeenCalledWith('gc', '2026-11-09', '2026-11-15', 'U3'));
       expect(api.getAgenda).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'PARTI');
       expect(screen.getByLabelText('Fatou Ba')).toBeChecked();
+    });
+  });
+
+  // « Voir son agenda » depuis l'annuaire (22/11/2026) : ?collegue=… superpose
+  // l'agenda d'un collègue pour la visite, puis quitte l'adresse.
+  describe('adresse ?collegue=', () => {
+    const CLE = 'hub.agenda.gc.U1';
+    // Sept collègues (U2 à U8) : de quoi dépasser la limite de 5 agendas.
+    const COLLEGUES = [
+      { id: 'U2', nom: 'Moussa Sow' },
+      { id: 'U3', nom: 'Fatou Ba' },
+      { id: 'U4', nom: 'Ibrahima Fall' },
+      { id: 'U5', nom: 'Aminata Ndiaye' },
+      { id: 'U6', nom: 'Cheikh Diallo' },
+      { id: 'U7', nom: 'Mariama Sy' },
+      { id: 'U8', nom: 'Ousmane Kane' },
+    ];
+    const nom = (id: string) => COLLEGUES.find((p) => p.id === id)!.nom;
+    const aller = (chemin: string) => window.history.replaceState(null, '', chemin);
+    const lusPour = (id: string) => api.getAgenda.mock.calls.filter((appel: unknown[]) => appel[3] === id).length;
+
+    beforeEach(() => {
+      api.getPersonnesAgenda.mockResolvedValue(COLLEGUES);
+      // Chaque collègue a une réunion « Agenda de <nom> » ; soi-même voit les autres.
+      api.getAgenda.mockImplementation((_s: string, du: string, au: string, personne?: string) =>
+        Promise.resolve(
+          personne
+            ? reponse(du, au, {
+                personne: { id: personne, nom: nom(personne) },
+                elements: [
+                  {
+                    ...RDV,
+                    id: `R-${personne}`,
+                    titre: `Réunion de ${personne}`,
+                    debut: `${J}T14:00:00.000Z`,
+                    fin: `${J}T15:00:00.000Z`,
+                    modifiable: false,
+                    annulable: false,
+                  },
+                ],
+              })
+            : reponse(du, au, { peutVoirAutres: true }),
+        ),
+      );
+    });
+    afterEach(() => {
+      localStorage.clear();
+      aller('/');
+    });
+
+    it('coche et affiche l’agenda du collègue demandé, puis retire le paramètre de l’adresse', async () => {
+      aller('/admin/gc/agenda?collegue=U3&autre=1');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      expect(api.getAgenda).toHaveBeenCalledWith('gc', '2026-11-09', '2026-11-15', 'U3');
+      const bloc = await screen.findByRole('button', { name: /Fatou Ba : Réunion de U3/ });
+      expect(bloc.getAttribute('style')).toContain('--ton: var(--azur)');
+      // Seul « collegue » quitte l'adresse : le reste est gardé.
+      expect(window.location.pathname).toBe('/admin/gc/agenda');
+      expect(window.location.search).toBe('?autre=1');
+      expect(screen.getByLabelText('Moussa Sow')).not.toBeChecked();
+    });
+
+    it('sans paramètre, l’adresse n’est pas réécrite', async () => {
+      const remplacer = vi.spyOn(window.history, 'replaceState');
+      aller('/admin/gc/agenda');
+      remplacer.mockClear();
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      expect(remplacer).not.toHaveBeenCalled();
+      remplacer.mockRestore();
+    });
+
+    it('fusionne avec les préférences : le collègue demandé passe en tête, sans doublon, les autres réglages restent', async () => {
+      localStorage.setItem(
+        CLE,
+        JSON.stringify({ collegues: ['U2', 'U3', 'U4', 'U5', 'U6'], masques: ['echeance'], colonneMasquee: false }),
+      );
+      aller('/admin/gc/agenda?collegue=U3');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      // Déjà présent : il ne prend pas une seconde place, les cinq restent cochés.
+      for (const id of ['U2', 'U4', 'U5', 'U6']) expect(screen.getByLabelText(nom(id))).toBeChecked();
+      expect(screen.getByLabelText('Mariama Sy')).toBeDisabled();
+      await waitFor(() => expect(lusPour('U6')).toBeGreaterThan(0));
+      // En tête : la première couleur ; Moussa (U2) passe à la deuxième.
+      expect((await screen.findByRole('button', { name: /Fatou Ba : Réunion de U3/ })).getAttribute('style')).toContain(
+        '--ton: var(--azur)',
+      );
+      expect(screen.getByRole('button', { name: /Moussa Sow : Réunion de U2/ }).getAttribute('style')).toContain(
+        '--ton: var(--mandarine)',
+      );
+      // Le type masqué l'est toujours.
+      expect(screen.getByLabelText('Échéance')).not.toBeChecked();
+      expect(screen.getByLabelText('Rendez-vous')).toBeChecked();
+      expect(window.location.search).toBe('');
+    });
+
+    it('5 agendas au plus : le collègue demandé entre, le dernier des préférences sort', async () => {
+      localStorage.setItem(CLE, JSON.stringify({ collegues: ['U2', 'U3', 'U4', 'U5', 'U6'] }));
+      aller('/admin/gc/agenda?collegue=U7');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Mariama Sy')).toBeChecked());
+      for (const id of ['U2', 'U3', 'U4', 'U5']) expect(screen.getByLabelText(nom(id))).toBeChecked();
+      expect(screen.getByLabelText('Cheikh Diallo')).not.toBeChecked();
+      expect(screen.getByLabelText('Cheikh Diallo')).toBeDisabled();
+      expect(screen.getByText('5 agendas au plus en même temps.')).toBeInTheDocument();
+      await waitFor(() => expect(lusPour('U7')).toBeGreaterThan(0));
+      expect(lusPour('U6')).toBe(0);
+    });
+
+    it('un id inconnu (hors des personnes) n’affiche rien et ne casse rien', async () => {
+      localStorage.setItem(CLE, JSON.stringify({ collegues: ['U3'] }));
+      aller('/admin/gc/agenda?collegue=INCONNU');
+      await monter();
+      await screen.findByRole('button', { name: /Point chantier/ });
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      expect(await screen.findByRole('button', { name: /Fatou Ba : Réunion de U3/ })).toBeInTheDocument();
+      expect(lusPour('INCONNU')).toBe(0);
+      expect(screen.queryByText('Agenda indisponible.')).not.toBeInTheDocument();
+      // Aucun collègue de plus n'est coché.
+      const coches = COLLEGUES.filter((p) => (screen.getByLabelText(p.nom) as HTMLInputElement).checked);
+      expect(coches.map((p) => p.id)).toEqual(['U3']);
+      expect(window.location.search).toBe('');
+    });
+
+    // Corrigé le 23/11/2026 : la coupe à 5 vient après le filtre des collègues
+    // actuels ; un id inconnu (ou son propre id) ne prend la place de personne.
+    it('un id inconnu ne chasse pas un des 5 agendas enregistrés', async () => {
+      localStorage.setItem(CLE, JSON.stringify({ collegues: ['U2', 'U3', 'U4', 'U5', 'U6'] }));
+      aller('/admin/gc/agenda?collegue=INCONNU');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Moussa Sow')).toBeChecked());
+      for (const id of ['U2', 'U3', 'U4', 'U5', 'U6']) expect(screen.getByLabelText(nom(id))).toBeChecked();
+      await waitFor(() => expect(lusPour('U6')).toBeGreaterThan(0));
+    });
+
+    it('le paramètre seul n’écrit rien dans les préférences du navigateur', async () => {
+      const enregistrer = vi.spyOn(Storage.prototype, 'setItem');
+      aller('/admin/gc/agenda?collegue=U3');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      await screen.findByRole('button', { name: /Fatou Ba : Réunion de U3/ });
+      expect(enregistrer).not.toHaveBeenCalled();
+      expect(localStorage.getItem(CLE)).toBeNull();
+      enregistrer.mockRestore();
+    });
+
+    it('le paramètre seul laisse intactes des préférences déjà enregistrées', async () => {
+      const avant = JSON.stringify({ masques: [], collegues: ['U2'], colonneMasquee: false });
+      localStorage.setItem(CLE, avant);
+      aller('/admin/gc/agenda?collegue=U3');
+      await monter();
+      await waitFor(() => expect(screen.getByLabelText('Fatou Ba')).toBeChecked());
+      expect(screen.getByLabelText('Moussa Sow')).toBeChecked();
+      expect(localStorage.getItem(CLE)).toBe(avant);
     });
   });
   // Lot B3 (12/11/2026) : l'invité répond depuis la fiche.

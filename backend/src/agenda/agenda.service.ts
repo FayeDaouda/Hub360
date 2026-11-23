@@ -95,6 +95,49 @@ function regleTronquee(regle: string, occ: Date): string {
   return formatRRule({ ...parseRRule(regle), count: undefined, until: toIsoDay(new Date(+occ - JOUR_MS)) });
 }
 
+const NOMS_FOURNISSEURS = { google: 'Google Agenda', apple: 'Apple Calendrier' } as const;
+
+// Un rendez-vous importé → éléments de l'Agenda : un horaire, ou — journée
+// entière — un élément par jour couvert dans la période (fin exclue).
+function elementsExternes(
+  x: {
+    id: string;
+    titre: string;
+    lieu: string | null;
+    debut: Date;
+    fin: Date;
+    journee: boolean;
+    agenda: { nom: string; couleur: string | null; connexion: { fournisseur: 'google' | 'apple' } };
+  },
+  pourSoi: boolean,
+  du: string,
+  au: string,
+): ElementAgendaDto[] {
+  const base = {
+    type: 'externe' as const,
+    titre: pourSoi ? x.titre : 'Occupé',
+    lieu: pourSoi ? x.lieu : null,
+    detail: pourSoi ? `${NOMS_FOURNISSEURS[x.agenda.connexion.fournisseur]} · ${x.agenda.nom}` : null,
+    // La couleur de son agenda d'origine (pour soi seulement ; « #rrggbb »).
+    ...(pourSoi && x.agenda.couleur && /^#[0-9a-f]{6}$/i.test(x.agenda.couleur) && { couleur: x.agenda.couleur }),
+    organisateur: null,
+    invites: [],
+    annulable: false,
+    ...SANS_ACTION,
+  };
+  if (!x.journee) {
+    return [
+      { ...base, id: `ext:${x.id}`, jour: toIsoDay(x.debut), debut: x.debut.toISOString(), fin: x.fin.toISOString() },
+    ];
+  }
+  const jours: ElementAgendaDto[] = [];
+  for (let j = toIsoDay(x.debut); j < toIsoDay(x.fin) || j === toIsoDay(x.debut); j = addDays(j, 1)) {
+    if (j >= du && j <= au) jours.push({ ...base, id: `ext:${x.id}:${j}`, jour: j, debut: null, fin: null });
+    if (jours.length > 366) break;
+  }
+  return jours;
+}
+
 // Échéances, congés, demandes : rien à modifier, aucun invité.
 const SANS_ACTION = {
   serieId: null,
@@ -168,7 +211,7 @@ export class AgendaService {
     const finExclue = new Date(`${addDays(au, 1)}T00:00:00Z`);
     const jours = daysBetween(du, au) + 1;
 
-    const [rdv, taches, conges] = await Promise.all([
+    const [rdv, taches, conges, externes] = await Promise.all([
       this.prisma.rendezVous.findMany({
         where: {
           societeId: a.societeId,
@@ -202,6 +245,19 @@ export class AgendaService {
           dossier: { utilisateurId: cible },
         },
         select: { id: true, type: true, dateDebut: true, dateFin: true },
+      }),
+      // Rendez-vous personnels importés de Google ou d'Apple (16/11/2026).
+      this.prisma.evenementExterne.findMany({
+        where: {
+          societeId: a.societeId,
+          debut: { lt: finExclue },
+          fin: { gt: debut },
+          agenda: { importe: true, connexion: { utilisateurId: cible, active: true } },
+        },
+        include: {
+          agenda: { select: { nom: true, couleur: true, connexion: { select: { fournisseur: true } } } },
+        },
+        orderBy: { debut: 'asc' },
       }),
     ]);
 
@@ -285,6 +341,9 @@ export class AgendaService {
         annulable: false,
         ...SANS_ACTION,
       })),
+      // Rendez-vous personnels importés (16/11/2026) : leur titre pour la
+      // personne elle-même, « Occupé » pour qui regarde son agenda.
+      ...externes.flatMap((x) => elementsExternes(x, cible === a.userId, du, au)),
       // Un congé : un élément par jour de la période qu'il couvre.
       ...conges.flatMap((c) =>
         Array.from({ length: jours }, (_, i) => addDays(du, i))
@@ -542,6 +601,11 @@ export class AgendaService {
     };
     const avant = r.exceptions.find((e) => +e.occurrence === +occ);
     const debutAvant = avant?.debut ?? occ;
+    // Rien de changé (enregistré à l'identique, ou reprise depuis Google qui
+    // revient au même) : ni écriture, ni notification, ni e-mail.
+    const norme = (v: string | Date | null | undefined) => (v instanceof Date ? v.toISOString() : (v ?? null));
+    const cles = ['titre', 'debut', 'fin', 'lieu', 'description', 'lienVisio'] as const;
+    if (!avant?.annulee && cles.every((k) => norme(champs[k]) === norme(avant?.[k]))) return { ok: true };
     await this.prisma.$transaction(async (tx) => {
       const maj = await tx.rendezVous.updateMany({
         where: { id: r.id, annuleLe: null },
@@ -817,7 +881,7 @@ export class AgendaService {
       select: { utilisateurId: true },
     });
     const ids = [...new Set(membres.map((m) => m.utilisateurId))];
-    const [rdv, absences] = await Promise.all([
+    const [rdv, absences, externes] = await Promise.all([
       this.prisma.rendezVous.findMany({
         where: {
           societeId: a.societeId,
@@ -852,6 +916,16 @@ export class AgendaService {
         },
         select: { dossier: { select: { utilisateurId: true } } },
       }),
+      // Rendez-vous personnels importés (Google, Apple) : « occupé », sans détail.
+      this.prisma.evenementExterne.findMany({
+        where: {
+          societeId: a.societeId,
+          debut: { lt: fin },
+          fin: { gt: debut },
+          agenda: { importe: true, connexion: { utilisateurId: { in: ids }, active: true } },
+        },
+        select: { agenda: { select: { connexion: { select: { utilisateurId: true } } } } },
+      }),
     ]);
     const membresSet = new Set(ids);
     const occupes = new Set<string>();
@@ -861,6 +935,7 @@ export class AgendaService {
       occupes.add(r.organisateurId);
       for (const i of r.invites) if (i.reponse !== 'non') occupes.add(i.utilisateurId);
     }
+    for (const x of externes) occupes.add(x.agenda.connexion.utilisateurId);
     const absents = new Set(absences.map((x) => x.dossier.utilisateurId).filter((x): x is string => !!x));
     if (!hasRight(a.permissions, ETAPE.agendaAutres, 'lecture')) {
       return { occupes: [...new Set([...occupes, ...absents])].filter((x) => membresSet.has(x)), absents: [] };

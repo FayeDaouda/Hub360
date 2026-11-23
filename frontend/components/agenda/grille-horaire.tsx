@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
-import { Repeat } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
+import { Repeat, Video } from 'lucide-react';
 import {
   addDays,
   formatTime,
@@ -11,17 +11,28 @@ import {
   minutesOfDay,
 } from '@hub/domain';
 import type { ElementAgenda } from '@/lib/agenda';
+import type { Rect } from '@/lib/agenda-placement';
 import { creneauClique, MINUTES_JOUR, placerJour } from '@/lib/agenda-grille';
 import { creneauDe, deplacer, instants, memeCreneau, redimensionner, type Creneau } from '@/lib/agenda-glisser';
 
-// Couleur d'un élément : celle du collègue dont l'agenda est superposé.
+// Couleur d'un élément : celle du collègue dont l'agenda est superposé ;
+// pour un rendez-vous importé, celle de son agenda d'origine (« #rrggbb »).
 export const styleCalque = (e: ElementAgenda) =>
-  e.calque ? { ['--ton' as string]: `var(--${e.calque.couleur})` } : undefined;
+  e.calque
+    ? { ['--ton' as string]: `var(--${e.calque.couleur})` }
+    : e.couleur && /^#[0-9a-f]{6}$/i.test(e.couleur)
+      ? { ['--ton' as string]: e.couleur }
+      : undefined;
 export const titreAffiche = (e: ElementAgenda) =>
   e.calque && e.type !== 'rendez_vous' ? `${e.calque.nom} · ${e.titre}` : e.titre;
 
 // Glisser commencé : rien ne bouge avant 4 px (un simple clic ouvre la fiche).
 const SEUIL_PX = 4;
+// Créneau tracé à la souris dans une colonne vide (18/11/2026).
+type Trace = { jour: string; colonne: number; depart: number; actuel: number; y: number; bouge: boolean };
+const QUART = 15;
+const rect = (r: DOMRect): Rect => ({ top: r.top, left: r.left, right: r.right, bottom: r.bottom });
+
 type Glisse = {
   e: ElementAgenda;
   mode: 'deplacer' | 'redimensionner';
@@ -35,14 +46,47 @@ type Glisse = {
 // Hauteur d'une heure dans la grille, en pixels (le CSS la reprend).
 const HEURE_PX = 48;
 const px = (minutes: number) => (minutes / 60) * HEURE_PX;
-// À l'ouverture : la journée de travail en vue (7 h 30), ou l'heure actuelle.
-const DEFILEMENT_MIN = 7 * 60 + 30;
+// À l'ouverture (18/11/2026) : la journée de travail (7 h), ou plus tôt si un
+// rendez-vous commence avant ; une demi-heure de marge au-dessus.
+const DEBUT_JOURNEE_MIN = 7 * 60;
+const MARGE_MIN = 30;
+// Un rendez-vous de moins de 50 minutes tient sur une ligne : « Titre, 15:30 ».
+const COURT_MIN = 50;
+// Chevauchements (comme Google Agenda) : chaque rendez-vous déborde sur la
+// colonne suivante, celui qui commence après passe devant. Colonne étroite
+// (semaine sur un petit écran, téléphone) : côte à côte, sans débord.
+const DEBORD = 1.7;
+const COLONNE_ETROITE_PX = 140;
 
-export const TONS: Record<ElementAgenda['type'], 'info' | 'attention' | 'neutre' | 'risque'> = {
+// Où se place un rendez-vous parmi ceux qu'il chevauche, en % de la colonne.
+export function largeurBloc(colonne: number, colonnes: number, debord = DEBORD): { gauche: number; largeur: number } {
+  const part = 100 / colonnes;
+  const gauche = colonne * part;
+  const largeur = colonne === colonnes - 1 ? part : Math.min(100 - gauche, part * debord);
+  return { gauche, largeur };
+}
+
+// Le premier défilement : 7 h (ou le premier rendez-vous, s'il est plus tôt),
+// moins une demi-heure ; aujourd'hui affiché et l'heure actuelle hors de vue :
+// elle, au tiers de la hauteur.
+export function defilementInitial(premier: number | null, maintenant: number | null, visibles: number): number {
+  let cible = Math.min(DEBUT_JOURNEE_MIN, premier ?? DEBUT_JOURNEE_MIN) - MARGE_MIN;
+  if (maintenant !== null && (maintenant < cible || maintenant > cible + visibles * 0.8)) {
+    cible = maintenant - visibles / 3;
+  }
+  return Math.max(0, cible);
+}
+
+const minutesDe = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+const estWeekEnd = (jour: string) => [0, 6].includes(new Date(`${jour}T12:00:00Z`).getUTCDay());
+
+export const TONS: Record<ElementAgenda['type'], 'info' | 'attention' | 'neutre' | 'risque' | 'validation'> = {
   rendez_vous: 'info',
   echeance: 'attention',
   conge: 'neutre',
   demande: 'risque',
+  // Rendez-vous personnels importés de Google ou d'Apple (16/11/2026).
+  externe: 'validation',
 };
 
 // Vues Jour et Semaine en grille horaire (12/11/2026), façon Google Agenda :
@@ -58,6 +102,7 @@ export function GrilleHoraire({
   aujourdhui,
   elements,
   peutCreer,
+  brouillon = null,
   onCreneau,
   onOuvrir,
   onJour,
@@ -67,22 +112,34 @@ export function GrilleHoraire({
   aujourdhui: string;
   elements: ElementAgenda[];
   peutCreer: boolean;
-  onCreneau: (jour: string, debut: string, fin: string) => void;
-  onOuvrir: (e: ElementAgenda) => void;
+  // Le créneau en cours de création rapide (bloc fantôme).
+  brouillon?: { jour: string; debut: string; fin: string } | null;
+  // `ancre` : où poser la carte de création rapide (le créneau à l'écran).
+  onCreneau: (jour: string, debut: string, fin: string, ancre?: Rect) => void;
+  // `ancre` : où poser la fiche (le bloc cliqué).
+  onOuvrir: (e: ElementAgenda, ancre?: Rect) => void;
   onJour?: (jour: string) => void;
   onDeplacer?: (e: ElementAgenda, debut: string, fin: string) => void;
 }) {
   const corps = useRef<HTMLDivElement>(null);
   const colonnes = useRef<(HTMLDivElement | null)[]>([]);
   const [glisse, setGlisse] = useState<Glisse | null>(null);
+  const [trace, setTrace] = useState<Trace | null>(null);
+  // Colonnes étroites : les rendez-vous qui se chevauchent, côte à côte.
+  const [serre, setSerre] = useState(false);
+  // Un tracé se termine aussi par un « click » : ne pas créer une 2e fois.
+  const vientDeTracer = useRef(false);
   // Un glisser se termine par un « click » du navigateur : ne pas ouvrir la fiche.
   const vientDeGlisser = useRef(false);
-  // Échap abandonne un glisser en cours.
-  const enGlisse = !!glisse;
+  // Échap abandonne un glisser ou un tracé en cours.
+  const enGlisse = !!glisse || !!trace;
   useEffect(() => {
     if (!enGlisse) return;
     const touche = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') setGlisse(null);
+      if (ev.key === 'Escape') {
+        setGlisse(null);
+        setTrace(null);
+      }
     };
     window.addEventListener('keydown', touche);
     return () => window.removeEventListener('keydown', touche);
@@ -93,12 +150,86 @@ export function GrilleHoraire({
     return () => clearInterval(t);
   }, []);
   const avecAujourdhui = jours.includes(aujourdhui);
+
+  // La grille occupe la hauteur de l'écran, jusqu'à la navigation du bas sur
+  // téléphone : jamais de vide dessous, jamais de double défilement.
+  useLayoutEffect(() => {
+    const el = corps.current;
+    if (!el) return;
+    // Le bas utilisable : le haut de la navigation du bas (téléphone) ou de
+    // l'écran, moins la marge basse de la page (sinon elle déborde d'autant).
+    const ajuster = () => {
+      const main = el.closest('main');
+      const marge = Math.max(16, main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0);
+      const navBas = [...document.querySelectorAll('nav')]
+        .filter((n) => getComputedStyle(n).position === 'fixed')
+        .map((n) => n.getBoundingClientRect())
+        .filter((r) => r.height > 0 && r.top > window.innerHeight / 2)
+        .reduce((min, r) => Math.min(min, r.top), window.innerHeight);
+      const bas = navBas - marge;
+      const largeurColonne = colonnes.current[0]?.getBoundingClientRect().width ?? 0;
+      setSerre(largeurColonne > 0 && largeurColonne < COLONNE_ETROITE_PX);
+      const hauteur = `${Math.max(320, Math.round(bas - (el.getBoundingClientRect().top + window.scrollY)))}px`;
+      if (el.style.height !== hauteur) el.style.height = hauteur;
+      // La colonne de gauche (ordinateur) s'arrête au même endroit et défile seule.
+      const cote = el.closest('.agenda-disposition')?.querySelector<HTMLElement>(':scope > .agenda-cote');
+      if (cote) {
+        const max = `${Math.max(320, Math.round(bas - (cote.getBoundingClientRect().top + window.scrollY)))}px`;
+        if (cote.style.maxHeight !== max) cote.style.maxHeight = max;
+      }
+    };
+    ajuster();
+    // Ce qui pousse la grille (demandes à décider, mini-calendrier) la
+    // réajuste aussi (à l'image suivante : jamais de boucle d'observation) ;
+    // sans ResizeObserver, le redimensionnement suffit.
+    let image = 0;
+    const plusTard = () => {
+      cancelAnimationFrame(image);
+      image = requestAnimationFrame(ajuster);
+    };
+    const obs = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(plusTard);
+    obs?.observe(document.body);
+    // La largeur des colonnes change aussi quand la colonne de gauche se
+    // replie, sans que la page change de taille.
+    obs?.observe(el.closest('.agenda-disposition') ?? el);
+    window.addEventListener('resize', plusTard);
+    return () => {
+      cancelAnimationFrame(image);
+      obs?.disconnect();
+      window.removeEventListener('resize', plusTard);
+      // Hors de la grille (Mois, Planning…), la colonne retrouve sa hauteur.
+      el.closest('.agenda-disposition')
+        ?.querySelector<HTMLElement>(':scope > .agenda-cote')
+        ?.style.removeProperty('max-height');
+    };
+  }, []);
+
+  // Premier défilement de la période : une fois ses rendez-vous connus.
+  const cleJours = jours.join(',');
+  const premierHoraire = elements
+    .filter((e) => e.debut && e.fin && jours.includes(e.jour) && e.debut.slice(0, 10) === e.jour)
+    .reduce<number | null>((min, e) => Math.min(min ?? Infinity, minutesOfDay(e.debut!)), null);
+  // Des rendez-vous de ces jours-là (pas ceux de la période d'avant, encore
+  // affichés le temps de la lecture).
+  const charges = elements.some((e) => jours.includes(e.jour));
+  const defile = useRef<{ cle: string; pose: number } | null>(null);
   useEffect(() => {
-    const cible = avecAujourdhui ? Math.max(0, maintenant - 90) : DEFILEMENT_MIN;
-    if (corps.current) corps.current.scrollTop = px(cible);
-    // Au changement de période seulement, pas à chaque minute.
+    const el = corps.current;
+    if (!el) return;
+    const cle = `${cleJours}|${charges}`;
+    const avant = defile.current;
+    if (avant && (avant.cle === cle || avant.cle === `${cleJours}|true`)) return;
+    // Défilée à la main entre-temps (lecture lente) : on ne la fait pas sauter.
+    if (avant?.cle.startsWith(`${cleJours}|`) && Math.abs(el.scrollTop - avant.pose) > 2) {
+      defile.current = { cle, pose: el.scrollTop };
+      return;
+    }
+    const visibles = (el.clientHeight / HEURE_PX) * 60;
+    el.scrollTop = px(defilementInitial(premierHoraire, avecAujourdhui ? maintenant : null, visibles));
+    defile.current = { cle, pose: el.scrollTop };
+    // Au changement de période (et à l'arrivée de ses rendez-vous) seulement.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jours.join(','), avecAujourdhui]);
+  }, [cleJours, charges]);
 
   // Pendant un glisser : le rendez-vous s'affiche à sa place d'arrivée.
   const affiches = elements.map((e) => {
@@ -118,10 +249,39 @@ export function GrilleHoraire({
 
   function cliquer(jour: string, ev: MouseEvent<HTMLDivElement>) {
     if (!peutCreer || ev.target !== ev.currentTarget) return;
-    const y = ev.clientY - ev.currentTarget.getBoundingClientRect().top;
-    const { debut, fin } = creneauClique((y / HEURE_PX) * 60);
-    onCreneau(jour, hhmmOfMinutes(debut), hhmmOfMinutes(Math.min(fin, MINUTES_JOUR - 1)));
+    if (vientDeTracer.current) {
+      vientDeTracer.current = false;
+      return;
+    }
+    const r = ev.currentTarget.getBoundingClientRect();
+    const { debut, fin } = creneauClique(((ev.clientY - r.top) / HEURE_PX) * 60);
+    const finBornee = Math.min(fin, MINUTES_JOUR - 1);
+    onCreneau(jour, hhmmOfMinutes(debut), hhmmOfMinutes(finBornee), {
+      top: r.top + px(debut),
+      bottom: r.top + px(finBornee),
+      left: r.left,
+      right: r.right,
+    });
   }
+
+  // Tracer un créneau (souris, stylet) : de la case pressée à celle relâchée,
+  // au quart d'heure. Au doigt, le défilement garde la main.
+  const minuteSous = (colonne: number, clientY: number) => {
+    const r = colonnes.current[colonne]?.getBoundingClientRect();
+    const m = r ? ((clientY - r.top) / HEURE_PX) * 60 : 0;
+    return Math.max(0, Math.min(MINUTES_JOUR - QUART, Math.floor(m / QUART) * QUART));
+  };
+  function commencerTrace(jour: string, colonne: number, ev: PointerEvent<HTMLDivElement>) {
+    if (!peutCreer || ev.target !== ev.currentTarget || ev.button !== 0 || ev.pointerType === 'touch') return;
+    vientDeTracer.current = false;
+    // Pas de capture tout de suite : un simple clic reste un clic sur la case.
+    const m = minuteSous(colonne, ev.clientY);
+    setTrace({ jour, colonne, depart: m, actuel: m, y: ev.clientY, bouge: false });
+  }
+  const bornesTrace = (t: Trace) => ({
+    debut: Math.min(t.depart, t.actuel),
+    fin: Math.min(Math.max(t.depart, t.actuel) + QUART, MINUTES_JOUR - 1),
+  });
 
   // Seuls les rendez-vous qu'on peut modifier, tenant dans une journée.
   const glissable = (e: ElementAgenda) =>
@@ -130,9 +290,8 @@ export function GrilleHoraire({
   function commencer(e: ElementAgenda, ev: PointerEvent<HTMLButtonElement>) {
     if (!glissable(e) || ev.button !== 0 || ev.pointerType === 'touch') return;
     vientDeGlisser.current = false;
-    // Capture sur le corps de la grille, qui ne bouge jamais : le bloc, lui,
-    // change de colonne (et d'élément) quand il passe à un autre jour.
-    corps.current?.setPointerCapture?.(ev.pointerId);
+    // Pas de capture à l'appui : un simple clic doit rester un clic sur le
+    // bloc (il ouvre la fiche). Elle vient au premier mouvement (voir suivre).
     const origine = creneauDe(e.debut!, e.fin!);
     const poignee = (ev.target as HTMLElement).classList.contains('agenda-bloc-poignee');
     setGlisse({
@@ -147,6 +306,15 @@ export function GrilleHoraire({
   }
 
   function suivre(ev: PointerEvent<HTMLDivElement>) {
+    if (trace) {
+      if (ev.buttons === 0) return setTrace(null);
+      const bouge = trace.bouge || Math.abs(ev.clientY - trace.y) >= SEUIL_PX;
+      // Le tracé commence : le pointeur est suivi même hors de la grille.
+      if (bouge && !trace.bouge) corps.current?.setPointerCapture?.(ev.pointerId);
+      const actuel = minuteSous(trace.colonne, ev.clientY);
+      if (bouge !== trace.bouge || actuel !== trace.actuel) setTrace({ ...trace, actuel, bouge });
+      return;
+    }
     if (!glisse) return;
     // Bouton relâché hors de la page : on abandonne.
     if (ev.buttons === 0) {
@@ -156,6 +324,9 @@ export function GrilleHoraire({
     const dx = ev.clientX - glisse.x;
     const dy = ev.clientY - glisse.y;
     if (!glisse.bouge && Math.hypot(dx, dy) < SEUIL_PX) return;
+    // Le glisser commence : capture sur le corps de la grille, qui ne bouge
+    // jamais (le bloc, lui, change de colonne en passant à un autre jour).
+    if (!glisse.bouge) corps.current?.setPointerCapture?.(ev.pointerId);
     const delta = (dy / HEURE_PX) * 60;
     let apercu: Creneau;
     if (glisse.mode === 'redimensionner') apercu = redimensionner(glisse.origine, delta);
@@ -173,6 +344,21 @@ export function GrilleHoraire({
   }
 
   function terminer() {
+    if (trace) {
+      if (trace.bouge) {
+        vientDeTracer.current = true;
+        const { debut, fin } = bornesTrace(trace);
+        const r = colonnes.current[trace.colonne]?.getBoundingClientRect();
+        onCreneau(
+          trace.jour,
+          hhmmOfMinutes(debut),
+          hhmmOfMinutes(fin),
+          r && { top: r.top + px(debut), bottom: r.top + px(fin), left: r.left, right: r.right },
+        );
+      }
+      setTrace(null);
+      return;
+    }
     if (!glisse) return;
     if (glisse.bouge) {
       vientDeGlisser.current = true;
@@ -183,13 +369,19 @@ export function GrilleHoraire({
     setGlisse(null);
   }
 
-  function ouvrir(e: ElementAgenda) {
+  function ouvrir(e: ElementAgenda, ev: MouseEvent<HTMLElement>) {
     if (vientDeGlisser.current) {
       vientDeGlisser.current = false;
       return;
     }
-    onOuvrir(e);
+    onOuvrir(e, rect(ev.currentTarget.getBoundingClientRect()));
   }
+  // Le bloc fantôme : le créneau tracé, ou celui de la création rapide.
+  const fantome = trace?.bouge
+    ? { jour: trace.jour, ...bornesTrace(trace) }
+    : brouillon
+      ? { jour: brouillon.jour, debut: minutesDe(brouillon.debut), fin: minutesDe(brouillon.fin) }
+      : null;
 
   return (
     <div className="agenda-grille" style={{ ['--jours' as string]: jours.length }}>
@@ -199,9 +391,18 @@ export function GrilleHoraire({
           <button
             key={j}
             type="button"
-            className={`agenda-grille-jour${j === aujourdhui ? ' is-aujourdhui' : ''}`}
+            className={[
+              'agenda-grille-jour',
+              j === aujourdhui && 'is-aujourdhui',
+              j < aujourdhui && 'is-passe',
+              estWeekEnd(j) && 'is-weekend',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             onClick={() => onJour?.(j)}
             disabled={!onJour}
+            aria-label={onJour ? `${formatWeekdayDayMonth(j)} : afficher la journée` : formatWeekdayDayMonth(j)}
+            aria-current={j === aujourdhui ? 'date' : undefined}
           >
             <span>{formatWeekdayShort(j)}</span>
             <strong>{Number(j.slice(8))}</strong>
@@ -220,7 +421,7 @@ export function GrilleHoraire({
                   type="button"
                   className={`agenda-puce agenda-puce--${TONS[e.type]}${e.maReponse === 'non' && !e.calque ? ' is-decline' : ''}`}
                   style={styleCalque(e)}
-                  onClick={() => onOuvrir(e)}
+                  onClick={(ev) => onOuvrir(e, rect(ev.currentTarget.getBoundingClientRect()))}
                   title={titreAffiche(e)}
                 >
                   {titreAffiche(e)}
@@ -234,16 +435,33 @@ export function GrilleHoraire({
       <div
         className="agenda-grille-corps"
         ref={corps}
-        onPointerMove={glisse ? suivre : undefined}
-        onPointerUp={glisse ? terminer : undefined}
-        onPointerCancel={glisse ? () => setGlisse(null) : undefined}
+        onPointerMove={glisse || trace ? suivre : undefined}
+        onPointerUp={glisse || trace ? terminer : undefined}
+        onPointerCancel={
+          glisse || trace
+            ? () => {
+                setGlisse(null);
+                setTrace(null);
+              }
+            : undefined
+        }
       >
         <div className="agenda-grille-heures" aria-hidden>
           {Array.from({ length: 24 }, (_, h) => (
-            <span key={h} style={{ top: px(h * 60) }}>
+            <span
+              key={h}
+              style={{ top: px(h * 60) }}
+              // L'heure actuelle la remplace quand elles se touchent.
+              className={avecAujourdhui && Math.abs(h * 60 - maintenant) < 14 ? 'is-masquee' : undefined}
+            >
               {h === 0 ? '' : `${String(h).padStart(2, '0')}:00`}
             </span>
           ))}
+          {avecAujourdhui && (
+            <span className="agenda-grille-heure-actuelle" style={{ top: px(maintenant) }}>
+              {hhmmOfMinutes(maintenant)}
+            </span>
+          )}
         </div>
         {jours.map((j, i) => (
           <div
@@ -251,48 +469,97 @@ export function GrilleHoraire({
             ref={(el) => {
               colonnes.current[i] = el;
             }}
-            className={`agenda-grille-colonne${peutCreer ? ' is-cliquable' : ''}`}
+            className={[
+              'agenda-grille-colonne',
+              peutCreer && 'is-cliquable',
+              estWeekEnd(j) && 'is-weekend',
+              j === aujourdhui && 'is-aujourdhui',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             onClick={(ev) => cliquer(j, ev)}
+            onPointerDown={(ev) => commencerTrace(j, i, ev)}
           >
-            {j === aujourdhui && (
-              <span className="agenda-grille-maintenant" style={{ top: px(maintenant) }} aria-hidden />
-            )}
-            {placerJour(horaires(j), j).map((p) => (
-              <button
-                key={p.e.id}
-                type="button"
-                className={[
-                  'agenda-bloc',
-                  `agenda-puce--${TONS[p.e.type]}`,
-                  glissable(p.e) && 'is-glissable',
-                  glisse?.bouge && glisse.e.id === p.e.id && 'is-glisse',
-                  // Déclinée : visible, mais effacée (comme Google Agenda).
-                  p.e.maReponse === 'non' && !p.e.calque && 'is-decline',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                style={{
-                  ...styleCalque(p.e),
-                  top: px(p.debut),
-                  height: px(p.fin - p.debut) - 2,
-                  left: `calc(${(p.colonne / p.colonnes) * 100}% + 2px)`,
-                  width: `calc(${100 / p.colonnes}% - 4px)`,
-                }}
-                onClick={() => ouvrir(p.e)}
-                onPointerDown={(ev) => commencer(p.e, ev)}
-                aria-label={`${p.e.calque ? `${p.e.calque.nom} : ` : ''}${p.e.titre}${p.e.maReponse === 'non' && !p.e.calque ? ' (déclinée)' : ''}${p.e.serieId ? ' (répétée)' : ''}, ${formatWeekdayDayMonth(j)}, ${formatTime(p.e.debut!)} – ${formatTime(p.e.fin!)}`}
+            {fantome && fantome.jour === j && (
+              <span
+                className="agenda-bloc agenda-bloc--fantome"
+                style={{ top: px(fantome.debut) + 1, height: Math.max(px(fantome.fin - fantome.debut) - 2, 18) }}
+                aria-hidden
               >
-                <strong>
-                  {p.e.serieId && <Repeat size={11} aria-hidden className="agenda-bloc-repete" />}
-                  {p.e.titre}
-                </strong>
-                <span>
-                  {formatTime(p.e.debut!)} – {formatTime(p.e.fin!)}
-                  {p.e.lieu ? ` · ${p.e.lieu}` : ''}
+                <span className="agenda-bloc-titre">
+                  <strong>(Sans titre)</strong>
                 </span>
-                {glissable(p.e) && <span className="agenda-bloc-poignee" aria-hidden />}
-              </button>
-            ))}
+                <span className="agenda-bloc-heures">
+                  {hhmmOfMinutes(fantome.debut)} – {hhmmOfMinutes(fantome.fin)}
+                </span>
+              </span>
+            )}
+            {avecAujourdhui && (
+              <span
+                className={`agenda-grille-maintenant${j === aujourdhui ? '' : ' is-autre-jour'}`}
+                style={{ top: px(maintenant) }}
+                aria-hidden
+              />
+            )}
+            {placerJour(horaires(j), j).map((p) => {
+              const { gauche, largeur } = largeurBloc(p.colonne, p.colonnes, serre ? 1 : DEBORD);
+              const duree = p.fin - p.debut;
+              const decline = p.e.maReponse === 'non' && !p.e.calque;
+              const heures = `${formatTime(p.e.debut!)} – ${formatTime(p.e.fin!)}`;
+              return (
+                <button
+                  key={p.e.id}
+                  type="button"
+                  className={[
+                    'agenda-bloc',
+                    `agenda-puce--${TONS[p.e.type]}`,
+                    duree < COURT_MIN && 'is-court',
+                    duree >= 75 && 'is-long',
+                    duree >= 55 && 'is-heure',
+                    p.e.fin! < new Date().toISOString() && 'is-passe',
+                    p.e.calque && 'is-calque',
+                    // Couleur de l'agenda d'origine (Google) : un aplat plus sombre en mode sombre.
+                    p.e.couleur && !p.e.calque && 'is-couleur-libre',
+                    glissable(p.e) && 'is-glissable',
+                    glisse?.bouge && glisse.e.id === p.e.id && 'is-glisse',
+                    // Déclinée : visible, mais en contour (comme Google Agenda).
+                    decline && 'is-decline',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  style={{
+                    ...styleCalque(p.e),
+                    top: px(p.debut) + 1,
+                    height: px(duree) - 2,
+                    left: `calc(${gauche}% + 1px)`,
+                    width: `calc(${largeur}% - 4px)`,
+                    zIndex: 1 + p.colonne,
+                  }}
+                  onClick={(ev) => ouvrir(p.e, ev)}
+                  onPointerDown={(ev) => commencer(p.e, ev)}
+                  aria-label={`${p.e.calque ? `${p.e.calque.nom} : ` : ''}${p.e.titre}${decline ? ' (déclinée)' : ''}${p.e.serieId ? ' (répétée)' : ''}, ${formatWeekdayDayMonth(j)}, ${heures}${p.e.lieu ? `, ${p.e.lieu}` : ''}`}
+                >
+                  <span className="agenda-bloc-titre">
+                    {p.e.serieId && <Repeat size={11} aria-hidden className="agenda-bloc-icone" />}
+                    {p.e.lienVisio && <Video size={12} aria-hidden className="agenda-bloc-icone" />}
+                    <strong>{titreAffiche(p.e)}</strong>
+                    {duree < COURT_MIN && (
+                      <span className="agenda-bloc-heure-courte">{`, ${formatTime(p.e.debut!)}`}</span>
+                    )}
+                  </span>
+                  {duree >= COURT_MIN && (
+                    <span className="agenda-bloc-heures">
+                      {formatTime(p.e.debut!)}
+                      {/* Bloc étroit : le début seulement (voir la feuille de style). */}
+                      <span className="agenda-bloc-fin"> – {formatTime(p.e.fin!)}</span>
+                    </span>
+                  )}
+                  {/* Le lieu, s'il reste une ligne (1 h 15 et plus). */}
+                  {duree >= 75 && p.e.lieu && <span className="agenda-bloc-lieu">{p.e.lieu}</span>}
+                  {glissable(p.e) && <span className="agenda-bloc-poignee" aria-hidden />}
+                </button>
+              );
+            })}
           </div>
         ))}
       </div>

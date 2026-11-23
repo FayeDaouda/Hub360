@@ -45,6 +45,7 @@ const monter = () => {
     tacheProjet: { findMany: jest.fn().mockResolvedValue([]) },
     candidature: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) },
     demandeAbsence: { findMany: jest.fn().mockResolvedValue([]) },
+    evenementExterne: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((f: (tx: typeof prisma) => unknown) => f(prisma));
@@ -133,6 +134,42 @@ describe('Agenda · récurrence', () => {
       );
       expect(invitations.envoyer).toHaveBeenCalledWith('S1', 'REQUEST');
       expect(prisma.rendezVous.create).not.toHaveBeenCalled();
+    });
+
+    it('cette occurrence enregistrée sans changement (ou reprise de Google identique) : rien d’écrit, personne prévenu', async () => {
+      const { s, prisma, notifications, invitations } = monter();
+      const r = await s.modifier(moi, 'S1', {
+        ...corps(),
+        portee: 'occurrence',
+        occurrence: '2026-11-30T09:00:00.000Z',
+      });
+      expect(r).toEqual({ ok: true });
+      expect(prisma.exceptionRendezVous.upsert).not.toHaveBeenCalled();
+      expect(notifications.envoyer).not.toHaveBeenCalled();
+      expect(invitations.envoyer).not.toHaveBeenCalled();
+      // Déjà modifiée et renvoyée à l'identique : rien non plus.
+      const b = monter();
+      b.prisma.rendezVous.findFirst.mockResolvedValue({
+        ...SERIE,
+        exceptions: [
+          {
+            occurrence: new Date('2026-11-30T09:00:00.000Z'),
+            annulee: false,
+            titre: null,
+            debut: new Date('2026-11-30T14:00:00.000Z'),
+            fin: new Date('2026-11-30T15:00:00.000Z'),
+            lieu: null,
+            description: null,
+            lienVisio: null,
+          },
+        ],
+      });
+      await b.s.modifier(moi, 'S1', {
+        ...corps({ debut: '2026-11-30T14:00:00.000Z', fin: '2026-11-30T15:00:00.000Z' }),
+        portee: 'occurrence',
+        occurrence: '2026-11-30T09:00:00.000Z',
+      });
+      expect(b.prisma.exceptionRendezVous.upsert).not.toHaveBeenCalled();
     });
 
     it('cette occurrence : changer les invités est refusé ; une date hors de la règle aussi', async () => {

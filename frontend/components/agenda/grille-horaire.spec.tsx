@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ElementAgenda } from '@/lib/agenda';
-import { GrilleHoraire } from './grille-horaire';
+import { defilementInitial, GrilleHoraire, largeurBloc } from './grille-horaire';
 
 const J = '2026-11-12';
 const el = (e: Partial<ElementAgenda> & Pick<ElementAgenda, 'id' | 'type'>): ElementAgenda => ({
@@ -55,19 +55,55 @@ describe('GrilleHoraire', () => {
   it('le rendez-vous à son heure, l’échéance dans le bandeau « Journée » ; un clic ouvre la fiche', () => {
     const { onOuvrir, container } = monter();
     const bloc = screen.getByRole('button', { name: /Point chantier/ });
-    expect(bloc).toHaveStyle({ top: '432px', height: '46px' }); // 9 h × 48 px, 1 h − 2 px
-    expect(bloc).toHaveTextContent('09:00 – 10:00 · Plateau');
+    // 9 h × 48 px (+1 px d'écart), 1 h − 2 px.
+    expect(bloc).toHaveStyle({ top: '433px', height: '46px' });
+    expect(bloc).toHaveTextContent('09:00 – 10:00');
+    // Le lieu dans son nom accessible ; à l'écran seulement à partir d'1 h 15.
+    expect(bloc).toHaveAccessibleName(/Plateau/);
+    expect(bloc).not.toHaveTextContent('Plateau');
     expect(container.querySelector('.agenda-grille-journee')).toHaveTextContent('Plans RDC');
     fireEvent.click(bloc);
-    expect(onOuvrir).toHaveBeenCalledWith(ELEMENTS[0]);
+    // Avec l'ancre où poser la fiche (le bloc à l'écran).
+    expect(onOuvrir).toHaveBeenCalledWith(ELEMENTS[0], expect.objectContaining({ top: expect.any(Number) }));
     fireEvent.click(screen.getByRole('button', { name: 'Plans RDC' }));
-    expect(onOuvrir).toHaveBeenLastCalledWith(ELEMENTS[1]);
+    expect(onOuvrir).toHaveBeenLastCalledWith(ELEMENTS[1], expect.any(Object));
   });
 
   it('un créneau vide cliqué propose la demi-heure, pour une heure', () => {
     const { onCreneau, container } = monter();
     fireEvent.click(container.querySelector('.agenda-grille-colonne')!, { clientY: 14.75 * 48 });
-    expect(onCreneau).toHaveBeenCalledWith(J, '14:30', '15:30');
+    expect(onCreneau).toHaveBeenCalledWith(J, '14:30', '15:30', expect.objectContaining({ top: 14.5 * 48 }));
+  });
+
+  it('tracer un créneau à la souris : du quart d’heure pressé à celui relâché, sans second clic', () => {
+    const { onCreneau, container } = monter();
+    const colonne = container.querySelector('.agenda-grille-colonne')!;
+    const corps = container.querySelector('.agenda-grille-corps')!;
+    fireEvent.pointerDown(colonne, { button: 0, pointerType: 'mouse', clientY: 10 * 48, pointerId: 1 });
+    fireEvent.pointerMove(corps, { buttons: 1, clientY: 11.6 * 48, pointerId: 1 });
+    // Le bloc fantôme suit le tracé.
+    expect(container.querySelector('.agenda-bloc--fantome')).toHaveTextContent('10:00 – 11:45');
+    fireEvent.pointerUp(corps, { clientY: 11.6 * 48, pointerId: 1 });
+    fireEvent.click(colonne, { clientY: 11.6 * 48 });
+    expect(onCreneau).toHaveBeenCalledOnce();
+    expect(onCreneau).toHaveBeenCalledWith(J, '10:00', '11:45', expect.any(Object));
+  });
+
+  it('création rapide en cours : son créneau en fantôme dans la grille', () => {
+    const { container } = render(
+      <GrilleHoraire
+        jours={[J]}
+        aujourdhui="2026-11-20"
+        elements={[]}
+        peutCreer
+        brouillon={{ jour: J, debut: '14:00', fin: '15:30' }}
+        onCreneau={vi.fn()}
+        onOuvrir={vi.fn()}
+      />,
+    );
+    const fantome = container.querySelector('.agenda-bloc--fantome')!;
+    expect(fantome).toHaveTextContent('(Sans titre)14:00 – 15:30');
+    expect(fantome).toHaveStyle({ top: `${14 * 48 + 1}px` });
   });
 
   it('sans le droit de créer, cliquer un créneau ne fait rien', () => {
@@ -94,8 +130,88 @@ describe('GrilleHoraire', () => {
       />,
     );
     const [veille, lendemain] = container.querySelectorAll('.agenda-grille-colonne');
-    expect(veille.querySelector('.agenda-bloc')).toHaveStyle({ top: `${23 * 48}px` });
-    expect(lendemain.querySelector('.agenda-bloc')).toHaveStyle({ top: '0px', height: `${48 - 2}px` });
+    expect(veille.querySelector('.agenda-bloc')).toHaveStyle({ top: `${23 * 48 + 1}px` });
+    expect(lendemain.querySelector('.agenda-bloc')).toHaveStyle({ top: '1px', height: `${48 - 2}px` });
+  });
+
+  it('court (moins de 50 min) : une ligne « Titre, 15:30 » ; long : le lieu en plus', () => {
+    const { container } = render(
+      <GrilleHoraire
+        jours={[J]}
+        aujourdhui="2026-11-20"
+        elements={[
+          el({ id: 'Appel', type: 'rendez_vous', debut: `${J}T15:30:00.000Z`, fin: `${J}T16:00:00.000Z` }),
+          el({
+            id: 'Atelier',
+            type: 'rendez_vous',
+            debut: `${J}T09:00:00.000Z`,
+            fin: `${J}T11:00:00.000Z`,
+            lieu: 'Studio',
+          }),
+        ]}
+        peutCreer={false}
+        onCreneau={vi.fn()}
+        onOuvrir={vi.fn()}
+      />,
+    );
+    const [atelier, appel] = [...container.querySelectorAll('.agenda-bloc')];
+    expect(appel).toHaveClass('is-court');
+    expect(appel).toHaveTextContent('Appel, 15:30');
+    expect(atelier).toHaveClass('is-long');
+    expect(atelier).toHaveTextContent('09:00 – 11:00Studio');
+  });
+
+  it('les jours du week-end et aujourd’hui sont marqués ; les jours passés aussi', () => {
+    const { container } = render(
+      <GrilleHoraire
+        jours={['2026-11-20', '2026-11-21', '2026-11-22']}
+        aujourdhui="2026-11-21"
+        elements={[]}
+        peutCreer={false}
+        onCreneau={vi.fn()}
+        onOuvrir={vi.fn()}
+      />,
+    );
+    const [ven, sam, dim] = container.querySelectorAll('.agenda-grille-jour');
+    expect(ven).toHaveClass('is-passe');
+    expect(sam).toHaveClass('is-aujourdhui', 'is-weekend');
+    expect(sam).toHaveAttribute('aria-current', 'date');
+    expect(dim).toHaveClass('is-weekend');
+    expect(dim).not.toHaveClass('is-passe');
+    // L'heure actuelle dans la gouttière, la ligne sur chaque jour affiché.
+    expect(container.querySelector('.agenda-grille-heure-actuelle')).toBeInTheDocument();
+    expect(container.querySelectorAll('.agenda-grille-maintenant')).toHaveLength(3);
+    expect(container.querySelectorAll('.agenda-grille-maintenant.is-autre-jour')).toHaveLength(2);
+  });
+
+  describe('chevauchements et premier défilement', () => {
+    it('chaque bloc déborde sur la colonne suivante, le dernier garde sa part', () => {
+      expect(largeurBloc(0, 1)).toEqual({ gauche: 0, largeur: 100 });
+      expect(largeurBloc(0, 2)).toEqual({ gauche: 0, largeur: 85 });
+      expect(largeurBloc(1, 2)).toEqual({ gauche: 50, largeur: 50 });
+      const [a, b, c] = [0, 1, 2].map((i) => largeurBloc(i, 3));
+      expect(a.largeur).toBeCloseTo(56.67, 1);
+      expect(b.gauche).toBeCloseTo(33.33, 1);
+      expect(c.gauche + c.largeur).toBeCloseTo(100, 5);
+    });
+
+    it('colonnes étroites : côte à côte, sans débord', () => {
+      expect(largeurBloc(0, 2, 1)).toEqual({ gauche: 0, largeur: 50 });
+      expect(largeurBloc(1, 2, 1)).toEqual({ gauche: 50, largeur: 50 });
+    });
+
+    it('7 h, ou le premier rendez-vous s’il est plus tôt ; l’heure actuelle si elle est hors de vue', () => {
+      const visibles = 12 * 60; // 12 heures à l'écran
+      expect(defilementInitial(null, null, visibles)).toBe(6.5 * 60);
+      expect(defilementInitial(9 * 60, null, visibles)).toBe(6.5 * 60);
+      expect(defilementInitial(5 * 60, null, visibles)).toBe(4.5 * 60);
+      // Aujourd'hui, 10 h : déjà dans la vue, on garde 6 h 30.
+      expect(defilementInitial(null, 10 * 60, visibles)).toBe(6.5 * 60);
+      // 21 h : hors de vue, au tiers de la hauteur.
+      expect(defilementInitial(null, 21 * 60, visibles)).toBe(21 * 60 - 4 * 60);
+      // Jamais avant minuit.
+      expect(defilementInitial(0, null, visibles)).toBe(0);
+    });
   });
 
   // Glisser-déplacer (12/11/2026).

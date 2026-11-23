@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { addDays, addMonths, formatMonthYear, formatWeekdayDayMonth } from '@hub/domain';
-import type { ElementAgenda } from '@/lib/agenda';
+import { addDays, addMonths, daysBetween, formatMonthYear, formatWeekdayDayMonth } from '@hub/domain';
+import type { ConnexionAgenda, ElementAgenda } from '@/lib/agenda';
+import { VUES, type Vue } from '@/lib/agenda-periode';
 import { LIBELLES } from './fiche-element';
 import { TONS } from './grille-horaire';
 
@@ -12,7 +13,7 @@ const JOURS_COURTS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 // (Ni le turquoise ni l'ocre : trop proches des rendez-vous et des échéances.)
 export const COULEURS_CALQUES = ['azur', 'mandarine', 'jade', 'fuchsia', 'corail'] as const;
 export const CALQUES_MAX = COULEURS_CALQUES.length;
-const TYPES: ElementAgenda['type'][] = ['rendez_vous', 'echeance', 'conge', 'demande'];
+const TYPES: ElementAgenda['type'][] = ['rendez_vous', 'echeance', 'conge', 'demande', 'externe'];
 
 // Colonne de gauche de l'Agenda (12/11/2026), façon Google Agenda : un
 // mini-calendrier pour sauter à une date, ses agendas à afficher ou masquer,
@@ -29,6 +30,11 @@ export function ColonneAgenda({
   personnes,
   collegues,
   onCollegues,
+  vue,
+  onVue,
+  connectes = [],
+  onAfficherExterne,
+  onGererConnexions,
 }: {
   ancre: string;
   du: string;
@@ -41,7 +47,16 @@ export function ColonneAgenda({
   personnes: { id: string; nom: string }[];
   collegues: string[];
   onCollegues: (ids: string[]) => void;
+  // Téléphone (tiroir) : les vues en tête, comme Google Agenda.
+  vue?: Vue;
+  onVue?: (v: Vue) => void;
+  // Ses comptes reliés (Google…) : chaque agenda affiché ou masqué d'un clic
+  // (18/11/2026) ; « Gérer » ouvre la fenêtre des agendas connectés.
+  connectes?: ConnexionAgenda[];
+  onAfficherExterne?: (connexionId: string, agendaId: string, importe: boolean) => void;
+  onGererConnexions?: () => void;
 }) {
+  const comptesActifs = connectes.filter((c) => c.active);
   const [filtre, setFiltre] = useState('');
   const basculerType = (t: ElementAgenda['type']) =>
     onMasques(masques.includes(t) ? masques.filter((x) => x !== t) : [...masques, t]);
@@ -50,7 +65,22 @@ export function ColonneAgenda({
   const visibles = personnes.filter((p) => p.nom.toLowerCase().includes(filtre.trim().toLowerCase()));
 
   return (
-    <div className="agenda-cote" id="agenda-colonne">
+    <div className="agenda-cote">
+      {vue && onVue && (
+        <nav className="agenda-cote-vues" aria-label="Vue">
+          {VUES.map((v) => (
+            <button
+              key={v.cle}
+              type="button"
+              className={`agenda-cote-vue${vue === v.cle ? ' is-active' : ''}`}
+              aria-current={vue === v.cle ? 'true' : undefined}
+              onClick={() => onVue(v.cle)}
+            >
+              {v.libelle}
+            </button>
+          ))}
+        </nav>
+      )}
       <MiniCalendrier key={ancre.slice(0, 7)} ancre={ancre} du={du} au={au} aujourdhui={aujourdhui} onJour={onJour} />
 
       <fieldset className="agenda-cote-groupe">
@@ -63,6 +93,46 @@ export function ColonneAgenda({
           </label>
         ))}
       </fieldset>
+
+      {onGererConnexions && (
+        <fieldset className="agenda-cote-groupe">
+          <legend className="agenda-cote-legende">
+            Agendas connectés
+            <button type="button" className="agenda-cote-gerer" onClick={onGererConnexions}>
+              {connectes.length ? 'Gérer' : 'Connecter'}
+            </button>
+          </legend>
+          {comptesActifs.length === 0 && (
+            <p className="agenda-detail agenda-cote-aide">
+              {connectes.length
+                ? 'Vos comptes sont en pause.'
+                : 'Vos agendas Google (perso, pro…) dans le HUB, dans les deux sens.'}
+            </p>
+          )}
+          {comptesActifs.map((c) => (
+            <div key={c.id} className="agenda-cote-compte">
+              <span className="agenda-cote-compte-nom" title={c.compte}>
+                {c.compte}
+              </span>
+              {c.agendas.map((a) => (
+                <label key={a.id} className="agenda-cote-choix">
+                  <input
+                    type="checkbox"
+                    checked={a.importe}
+                    onChange={() => onAfficherExterne?.(c.id, a.id, !a.importe)}
+                  />
+                  <span
+                    className="agenda-cote-pastille"
+                    style={{ ['--ton' as string]: a.couleur ?? 'var(--ag-externe)' }}
+                    aria-hidden
+                  />
+                  <span className="agenda-cote-texte">{a.nom}</span>
+                </label>
+              ))}
+            </div>
+          ))}
+        </fieldset>
+      )}
 
       {personnes.length > 0 && (
         <fieldset className="agenda-cote-groupe">
@@ -105,7 +175,7 @@ export function ColonneAgenda({
 
 // Mini-calendrier : un mois, la période affichée surlignée ; un jour cliqué
 // y amène l'Agenda. Il se feuillette sans changer la période affichée.
-function MiniCalendrier({
+export function MiniCalendrier({
   ancre,
   du,
   au,
@@ -119,6 +189,7 @@ function MiniCalendrier({
   onJour: (jour: string) => void;
 }) {
   const [decalage, setDecalage] = useState(0);
+  const bande = daysBetween(du, au) <= 6;
   const mois = addMonths(ancre.slice(0, 7), decalage);
   const premier = `${mois}-01`;
   const lundi = addDays(premier, -((new Date(`${premier}T12:00:00Z`).getUTCDay() + 6) % 7));
@@ -149,14 +220,17 @@ function MiniCalendrier({
             {j}
           </span>
         ))}
-        {Array.from({ length: 42 }, (_, i) => addDays(lundi, i)).map((j) => (
+        {Array.from({ length: 42 }, (_, i) => addDays(lundi, i)).map((j, i) => (
           <button
             key={j}
             type="button"
             className={[
               'agenda-mini-jour',
               j.slice(0, 7) !== mois && 'is-hors-mois',
-              j >= du && j <= au && 'is-periode',
+              // La période affichée en bande continue (jour, 3 jours, semaine).
+              bande && j >= du && j <= au && 'is-periode',
+              bande && j >= du && j <= au && (j === du || i % 7 === 0) && 'is-periode-debut',
+              bande && j >= du && j <= au && (j === au || i % 7 === 6) && 'is-periode-fin',
               j === aujourdhui && 'is-aujourdhui',
             ]
               .filter(Boolean)

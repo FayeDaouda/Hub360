@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { addDays, ETAPE, hasRight, ROLE_HUB_ADMIN, todayIso } from '@hub/domain';
+import { addDays, ETAPE, hasRight, todayIso } from '@hub/domain';
 import { genererJeton } from '../auth/jetons';
 import { PrismaService } from '../prisma/prisma.service';
 import { hasFullAccess, RightsService } from '../rights/rights.service';
 import { SwitchesService } from '../switches/switches.service';
 import type { Acteur } from './agenda.service';
+import { acteurAgenda } from './acteur';
 import { AgendaService } from './agenda.service';
 import type { ElementAgendaDto } from './agenda.dto';
 import { emailsReels } from '../email/email.service';
@@ -82,42 +83,16 @@ export class AbonnementAgendaService {
   // société. Toute perte d'accès répond « introuvable », comme un jeton faux.
   async flux(ab: AbonnementLu) {
     const introuvable = new NotFoundException('Agenda introuvable');
-    const [utilisateur, societe, affectations] = await Promise.all([
-      this.prisma.utilisateur.findUnique({
-        where: { id: ab.utilisateurId },
-        select: { actif: true, sessionsValidesDepuis: true },
-      }),
-      this.prisma.societe.findUnique({ where: { id: ab.societeId }, select: { nom: true, slug: true, actif: true } }),
-      this.prisma.utilisateurSocieteRole.findMany({
-        where: {
-          utilisateurId: ab.utilisateurId,
-          OR: [{ societeId: ab.societeId }, { societeId: null }],
-          role: { supprimeLe: null },
-        },
-        select: { societeId: true, role: { select: { nom: true } } },
-      }),
-    ]);
-    // Même choix du rôle qu'à la connexion : celui de la société, sinon le
-    // rôle transverse.
-    const acces =
-      affectations.find((x) => x.societeId === ab.societeId) ?? affectations.find((x) => x.societeId === null);
-    if (!utilisateur?.actif || !societe?.actif || !acces) throw introuvable;
+    const lu = await acteurAgenda(this.prisma, this.rights, ab.utilisateurId, ab.societeId);
+    if (!lu) throw introuvable;
     // « Déconnecter partout », nouveau mot de passe, désactivation : toutes
     // les sessions coupées le sont aussi pour un lien créé avant.
-    if (utilisateur.sessionsValidesDepuis && utilisateur.sessionsValidesDepuis > ab.creeLe) throw introuvable;
-    const role = acces.role.nom;
-    const adminHub = role === ROLE_HUB_ADMIN;
-    await this.switches.refuseDuringMaintenance(hasFullAccess({ adminHub, role }));
-    const permissions = await this.rights.forUser({
-      userId: ab.utilisateurId,
-      societeId: ab.societeId,
-      role,
-      adminHub,
-    });
-    if (!hasRight(permissions, ETAPE.agenda, 'lecture')) throw introuvable;
+    if (lu.sessionsValidesDepuis && lu.sessionsValidesDepuis > ab.creeLe) throw introuvable;
+    const { acteur, societe } = lu;
+    await this.switches.refuseDuringMaintenance(hasFullAccess({ adminHub: lu.adminHub, role: acteur.role }));
+    if (!hasRight(acteur.permissions, ETAPE.agenda, 'lecture')) throw introuvable;
 
     const du = addDays(todayIso(), -JOURS_PASSES);
-    const acteur: Acteur = { userId: ab.utilisateurId, societeId: ab.societeId, role, permissions };
     const periode = await this.agenda.semaine(acteur, du, undefined, addDays(du, JOURS_FENETRE), {
       sansDemandes: true,
     });

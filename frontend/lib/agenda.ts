@@ -14,7 +14,8 @@ import type { TypeAbsence } from './types';
 
 export type ElementAgenda = {
   id: string;
-  type: 'rendez_vous' | 'echeance' | 'conge' | 'demande';
+  // externe : rendez-vous personnel importé de Google ou d'Apple (16/11/2026).
+  type: 'rendez_vous' | 'echeance' | 'conge' | 'demande' | 'externe';
   titre: string;
   jour: string;
   debut: string | null;
@@ -55,6 +56,8 @@ export type ElementAgenda = {
   // Front seulement (12/11/2026) : élément de l'agenda d'un collègue
   // superposé au sien, avec la couleur de ce collègue.
   calque?: Calque;
+  // Rendez-vous importé (18/11/2026) : la couleur de son agenda d'origine.
+  couleur?: string;
   // Demande d'absence à trancher (son agenda) : décision du N+1, ou
   // validation finale du CEO.
   demande?: { id: string; type: TypeAbsence; jours: number; validationFinale: boolean };
@@ -133,3 +136,52 @@ export const getDisponibilites = (slug: string, debut: string, fin: string, ids:
     slug,
     `/agenda/disponibilites?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}&ids=${ids.slice(0, 50).join(',')}${exclure ? `&exclure=${exclure}` : ''}`,
   );
+
+// Agendas connectés (Google, Apple), 16/11/2026 — API NestJS :
+//   GET    …/agenda/connexions                  état (jamais l'accès chiffré)
+//   POST   …/agenda/connexions/google           adresse où autoriser chez Google
+//   POST   …/agenda/connexions/google/confirmer { ticket } au retour : relier le compte
+//   PUT    …/agenda/connexions/:id/agendas/:a   { importe } un agenda affiché ou masqué
+//   PUT    …/agenda/connexions/cible            { agendaId | null } où le HUB écrit
+//   PUT    …/agenda/connexions/:id/active       { active } un compte activé ou en pause
+//   POST   …/agenda/connexions/:id/synchroniser synchroniser maintenant
+//   DELETE …/agenda/connexions/:id              déconnecter
+export type AgendaExterne = {
+  id: string;
+  nom: string;
+  couleur: string | null;
+  importe: boolean;
+  cible: boolean;
+  proprietaire: boolean; // seul un agenda à soi peut recevoir les réunions du HUB
+};
+// Agendas affichés au plus par connexion (même borne que l'API).
+export const AGENDAS_IMPORTES_MAX = 10;
+export type ConnexionAgenda = {
+  id: string;
+  fournisseur: 'google' | 'apple';
+  compte: string;
+  active: boolean; // en pause : plus de synchronisation (18/11/2026)
+  derniereSynchroLe: string | null;
+  erreur: string | null;
+  agendas: AgendaExterne[];
+};
+export type EtatConnexions = { disponibles: { google: boolean; apple: boolean }; connexions: ConnexionAgenda[] };
+
+export const getConnexions = (slug: string) => apiSociete<EtatConnexions>(slug, '/agenda/connexions');
+export const connecterGoogle = (slug: string) =>
+  apiSociete<{ url: string }>(slug, '/agenda/connexions/google', { method: 'POST' });
+export const confirmerGoogle = (slug: string, ticket: string) =>
+  apiSociete<EtatConnexions>(slug, '/agenda/connexions/google/confirmer', { method: 'POST', body: { ticket } });
+export const afficherAgendaExterne = (slug: string, connexionId: string, agendaId: string, importe: boolean) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${connexionId}/agendas/${agendaId}`, {
+    method: 'PUT',
+    body: { importe },
+  });
+export const choisirCibleAgenda = (slug: string, agendaId: string | null) =>
+  apiSociete<EtatConnexions>(slug, '/agenda/connexions/cible', { method: 'PUT', body: { agendaId } });
+export const activerConnexion = (slug: string, id: string, active: boolean) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}/active`, { method: 'PUT', body: { active } });
+export const synchroniserConnexion = (slug: string, id: string) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}/synchroniser`, { method: 'POST' });
+export const deconnecterAgenda = (slug: string, id: string) =>
+  apiSociete<EtatConnexions>(slug, `/agenda/connexions/${id}`, { method: 'DELETE' });

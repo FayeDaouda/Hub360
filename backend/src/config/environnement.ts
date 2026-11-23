@@ -38,6 +38,16 @@ class VariablesEnvironnement {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) HUB_RELAIS?: number;
   @IsOptional() @IsIn(['obligatoire', 'desactive']) HUB_DOUBLE_FACTEUR?: string;
   @IsOptional() @IsIn(['autorise']) HUB_DONNEES_DEMO?: string;
+  // Synchronisation de l'Agenda avec Google et Apple (16/11/2026) : clé de
+  // chiffrement des accès (32 octets en base64) ; absente, la synchronisation
+  // est désactivée. Identifiants de l'application Google (console Cloud).
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9+/]{43}=$/, {
+    message: 'AGENDA_CLE_CHIFFREMENT : 32 octets en base64 (openssl rand -base64 32).',
+  })
+  AGENDA_CLE_CHIFFREMENT?: string;
+  @IsOptional() @IsString() GOOGLE_CLIENT_ID?: string;
+  @IsOptional() @IsString() GOOGLE_CLIENT_SECRET?: string;
 }
 
 // Problèmes de configuration, en clair ; liste vide si tout est bon. Une

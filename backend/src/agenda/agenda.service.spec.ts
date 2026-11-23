@@ -23,6 +23,7 @@ const svc = () => {
     inviteRendezVous: { deleteMany: jest.fn(), createMany: jest.fn(), update: jest.fn() },
     $transaction: jest.fn(),
     demandeAbsence: { findMany: jest.fn().mockResolvedValue([]) },
+    evenementExterne: { findMany: jest.fn().mockResolvedValue([]) },
   };
   // Transaction interactive : le rappel reçoit le même faux client.
   prisma.$transaction.mockImplementation((f: (tx: typeof prisma) => unknown) => f(prisma));
@@ -875,6 +876,77 @@ describe('AgendaService', () => {
       await expect(
         s.disponibilites(moi({}), '2026-11-13T09:00:00.000Z', '2026-11-13T09:00:00.000Z', ['U2']),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // Rendez-vous importés de Google ou d'Apple (16/11/2026).
+  describe('rendez-vous importés', () => {
+    const IMPORTE = {
+      id: 'X1',
+      titre: 'Dentiste',
+      lieu: 'Mermoz',
+      debut: new Date('2026-11-03T08:00:00.000Z'),
+      fin: new Date('2026-11-03T09:00:00.000Z'),
+      journee: false,
+      agenda: { nom: 'Awa', couleur: '#039be5', connexion: { fournisseur: 'google' } },
+    };
+
+    it('pour soi : le titre et le lieu ; pour un collègue : « Occupé », sans détail', async () => {
+      const { s, prisma } = svc();
+      prisma.evenementExterne.findMany.mockResolvedValue([IMPORTE]);
+      const moiVue = await s.semaine(moi({ agenda: 'L' }), '2026-11-02');
+      expect(moiVue.elements.find((e) => e.type === 'externe')).toMatchObject({
+        titre: 'Dentiste',
+        lieu: 'Mermoz',
+        detail: 'Google Agenda · Awa',
+        // La couleur de son agenda d'origine, pour soi.
+        couleur: '#039be5',
+        modifiable: false,
+        annulable: false,
+      });
+      const autre = await s.semaine(moi({ agenda: 'L', 'agenda.autres': 'L' }), '2026-11-02', 'U9');
+      const vu = autre.elements.find((e) => e.type === 'externe');
+      expect(vu).toMatchObject({ titre: 'Occupé', lieu: null, detail: null });
+      expect(vu).not.toHaveProperty('couleur');
+      expect(JSON.stringify(vu)).not.toContain('Dentiste');
+      expect(prisma.evenementExterne.findMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          // Seulement les comptes actifs (un compte en pause n'affiche rien).
+          where: expect.objectContaining({
+            agenda: { importe: true, connexion: { utilisateurId: 'U9', active: true } },
+          }),
+        }),
+      );
+    });
+
+    it('journée entière sur deux jours : un élément par jour, sans heure', async () => {
+      const { s, prisma } = svc();
+      prisma.evenementExterne.findMany.mockResolvedValue([
+        {
+          ...IMPORTE,
+          journee: true,
+          debut: new Date('2026-11-03T00:00:00.000Z'),
+          fin: new Date('2026-11-05T00:00:00.000Z'),
+        },
+      ]);
+      const vue = await s.semaine(moi({ agenda: 'L' }), '2026-11-02');
+      expect(vue.elements.filter((e) => e.type === 'externe').map((e) => [e.jour, e.debut])).toEqual([
+        ['2026-11-03', null],
+        ['2026-11-04', null],
+      ]);
+    });
+
+    it('disponibilités : un rendez-vous importé rend la personne occupée', async () => {
+      const { s, prisma } = svc();
+      jest.useFakeTimers({ now: new Date('2026-11-01T08:00:00.000Z'), doNotFake: ['nextTick', 'queueMicrotask'] });
+      try {
+        prisma.utilisateurSocieteRole.findMany.mockResolvedValue([{ utilisateurId: 'U2' }]);
+        prisma.evenementExterne.findMany.mockResolvedValue([{ agenda: { connexion: { utilisateurId: 'U2' } } }]);
+        const d = await s.disponibilites(moi({}), '2026-11-03T08:30:00.000Z', '2026-11-03T09:30:00.000Z', ['U2']);
+        expect(d.occupes).toEqual(['U2']);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 });

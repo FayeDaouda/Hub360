@@ -23,6 +23,13 @@ const EVENEMENTS: Record<AvisSecurite['evenement'], { sujet: string; phrase: str
     phrase:
       'La double authentification de votre compte {marque} a été réinitialisée par l’administration du HUB ; vous la réactiverez à votre prochaine connexion',
   },
+  // Synchronisation de l'Agenda (16/11/2026) : un compte Google relié.
+  agenda_connecte: {
+    sujet: 'Google Agenda connecté à votre compte',
+    phrase: 'Un compte Google Agenda{detail} a été connecté à votre Agenda {marque}',
+    conduite:
+      'Si c’est bien vous, il n’y a rien à faire. Sinon, déconnectez-le dans « Agendas connectés » de l’Agenda, faites « Déconnecter partout » dans votre compte et prévenez l’administration du HUB.',
+  },
   compte_verrouille: {
     sujet: 'Votre compte est verrouillé',
     phrase: `Après ${ESSAIS_AVANT_VERROUILLAGE} essais de connexion infructueux, votre compte {marque} a été verrouillé`,
@@ -39,7 +46,8 @@ export function contenuAvisSecurite(a: AvisSecurite): { sujet: string; texte: st
   const evenement = EVENEMENTS[a.evenement];
   const sujet = `${evenement.sujet} · ${marque}`;
   const fin = a.jusquau ? ` Il rouvrira le ${formatLongDateTime(a.jusquau.toISOString())}.` : '';
-  const constat = `${evenement.phrase.replace('{marque}', marque)} le ${formatLongDateTime(a.le.toISOString())} (heure de Dakar).${fin}`;
+  const phrase = evenement.phrase.replace('{marque}', marque).replace('{detail}', a.detail ? ` (${a.detail})` : '');
+  const constat = `${phrase} le ${formatLongDateTime(a.le.toISOString())} (heure de Dakar).${fin}`;
   const conduite = evenement.conduite ?? CONDUITE;
   const texte = [`Bonjour ${a.prenom},`, '', constat, '', conduite].join('\n');
   const html = [

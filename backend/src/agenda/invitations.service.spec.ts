@@ -25,6 +25,7 @@ const monter = (rdv: unknown = RDV) => {
   const prisma = {
     rendezVous: { findUnique: jest.fn().mockResolvedValue(rdv) },
     candidature: { count: jest.fn().mockResolvedValue(0) },
+    connexionAgenda: { findMany: jest.fn().mockResolvedValue([]) },
     utilisateur: { findMany: jest.fn().mockResolvedValue(COMPTES) },
   };
   const email = { envoyerInvitationAgenda: jest.fn().mockResolvedValue({ envoye: true }) };
@@ -220,5 +221,35 @@ describe('InvitationsAgendaService', () => {
     const ics: string = email.envoyerInvitationAgenda.mock.calls[0][0].ics;
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
     expect(ics).not.toContain('RECURRENCE-ID');
+  });
+
+  it('qui a connecté son agenda (Google, Apple) ne reçoit pas l’e-mail : la réunion arrive dans son agenda', async () => {
+    const { s, email, prisma } = monter();
+    const connexions = (prisma as unknown as { connexionAgenda: { findMany: jest.Mock } }).connexionAgenda.findMany;
+    connexions.mockResolvedValue([
+      { utilisateurId: 'U2', autoriseLe: new Date('2026-11-10'), utilisateur: { sessionsValidesDepuis: null } },
+    ]);
+    expect(await s.envoyer('R1', 'REQUEST')).toBe(0);
+    expect(email.envoyerInvitationAgenda).not.toHaveBeenCalled();
+    // Seulement une connexion saine : sans erreur, déjà synchronisée, avec un agenda cible.
+    expect(connexions.mock.calls[0][0].where).toMatchObject({
+      active: true,
+      erreur: null,
+      derniereSynchroLe: { not: null },
+      agendas: { some: { cible: true } },
+    });
+  });
+
+  it('connexion autorisée avant « déconnecter partout » : l’e-mail part quand même', async () => {
+    const { s, email, prisma } = monter();
+    (prisma as unknown as { connexionAgenda: { findMany: jest.Mock } }).connexionAgenda.findMany.mockResolvedValue([
+      {
+        utilisateurId: 'U2',
+        autoriseLe: new Date('2026-11-10'),
+        utilisateur: { sessionsValidesDepuis: new Date('2026-11-12') },
+      },
+    ]);
+    await s.envoyer('R1', 'REQUEST');
+    expect(email.envoyerInvitationAgenda).toHaveBeenCalled();
   });
 });

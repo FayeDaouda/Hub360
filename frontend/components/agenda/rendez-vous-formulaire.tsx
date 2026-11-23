@@ -165,7 +165,7 @@ export function RendezVousFormulaire({
   }
 
   return (
-    <Modal onClose={onClose} busy={envoi} portal labelledBy="rdv-titre">
+    <Modal onClose={onClose} busy={envoi} portal labelledBy="rdv-titre" className="agenda-formulaire-fenetre">
       <header className="modal-header">
         <h2 id="rdv-titre">
           <CalendarClock size={18} aria-hidden /> {modification ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous'}

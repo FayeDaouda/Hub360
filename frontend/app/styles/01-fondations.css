@@ -416,3 +416,78 @@ button {
   width: 22px;
   height: 22px;
 }
+
+/* Menu déroulant (components/ui/menu.tsx, 18/11/2026) : verre, comme les
+   autres menus du chrome. */
+.menu {
+  position: relative;
+  display: inline-flex;
+}
+.menu-liste {
+  position: absolute;
+  z-index: 45;
+  top: calc(100% + 6px);
+  display: grid;
+  min-width: 15rem;
+  max-width: calc(100vw - 2rem);
+  padding: 6px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+  box-shadow: var(--ombre-3);
+  animation: menu-ouvre 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
+}
+.menu-liste--droite {
+  right: 0;
+}
+.menu-liste--gauche {
+  left: 0;
+  transform-origin: top left;
+}
+.menu-element {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-12);
+  min-height: 40px;
+  padding: 0 var(--e-12);
+  border: none;
+  border-radius: var(--r-10);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-14);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.menu-element:hover,
+.menu-element:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+.menu-element-icone {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+.menu-element.is-coche .menu-element-icone {
+  color: var(--action);
+}
+.menu-element-raccourci {
+  color: var(--text-subtle);
+  font: inherit;
+  font-size: var(--t-12);
+}
+@keyframes menu-ouvre {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-liste {
+    animation: none;
+  }
+}

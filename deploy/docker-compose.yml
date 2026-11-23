@@ -60,6 +60,10 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       HUB_DONNEES_DEMO: ${HUB_DONNEES_DEMO:-}
+      # Synchronisation de l'Agenda (Google, Apple) : vides = désactivée.
+      AGENDA_CLE_CHIFFREMENT: ${AGENDA_CLE_CHIFFREMENT:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       # Suivi des erreurs (backend/src/monitoring) : destinataire des alertes,
       # et dossier des sauvegardes surveillé chaque matin.
       ALERTES_EMAIL: ${ALERTES_EMAIL:-}
