@@ -12297,6 +12297,7 @@
               "enum": [
                 "absence_a_decider",
                 "absence_decidee",
+                "agenda_deconnecte",
                 "annonce_a_valider",
                 "annonce_importante",
                 "arrivant_a_affecter",
