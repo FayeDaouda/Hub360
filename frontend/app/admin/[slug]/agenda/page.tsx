@@ -30,7 +30,17 @@ import {
   type ReponseInvitation,
   type SemaineAgenda,
 } from '@/lib/agenda';
-import { decaler as decalerAncre, enGrille, periode, VUES_TELEPHONE, type Vue } from '@/lib/agenda-periode';
+import {
+  actionClavier,
+  decaler as decalerAncre,
+  enGrille,
+  periode,
+  periodeLue,
+  toucheIgnoree,
+  VUES,
+  VUES_TELEPHONE,
+  type Vue,
+} from '@/lib/agenda-periode';
 import type { Rect } from '@/lib/agenda-placement';
 import { LIBELLE_TYPE_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
 import { useTitrePage } from '@/lib/layout-contexte';
@@ -39,6 +49,7 @@ import { DecisionN1Modal } from '@/components/absences/decision-n1-modal';
 import { AbonnementAgendaModal } from '@/components/agenda/abonnement-agenda-modal';
 import { AgendasConnectes } from '@/components/agenda/agendas-connectes';
 import { BarreAgenda, BoutonCreerFlottant } from '@/components/agenda/barre-agenda';
+import { SqueletteAgenda } from '@/components/agenda/squelette-agenda';
 import { TiroirAgenda } from '@/components/agenda/tiroir-agenda';
 import { CALQUES_MAX, ColonneAgenda, COULEURS_CALQUES, MiniCalendrier } from '@/components/agenda/colonne-agenda';
 import { CreationRapide, type Creneau } from '@/components/agenda/creation-rapide';
@@ -52,7 +63,6 @@ import { GrilleHoraire, TONS } from '@/components/agenda/grille-horaire';
 import { RendezVousFormulaire, valeursVides, type ValeursRendezVous } from '@/components/agenda/rendez-vous-formulaire';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
-import { Skeleton } from '@/components/ui/feedback';
 
 type Props = { params: Promise<{ slug: string }> };
 // Formulaire ouvert : création (pré-remplie d'un créneau) ou modification.
@@ -126,6 +136,7 @@ export default function AgendaPage(props: Props) {
   }, [slug]);
   useEffect(lireComptes, [lireComptes]);
   async function afficherExterne(connexionId: string, agendaId: string, importe: boolean) {
+    setErreur(null);
     try {
       setComptes((await afficherAgendaExterne(slug, connexionId, agendaId, importe)).connexions);
       setErreur(null);
@@ -158,17 +169,27 @@ export default function AgendaPage(props: Props) {
 
   // Seule la dernière demande compte : une réponse lente (la semaine, avant
   // le planning d'un téléphone) n'écrase jamais une période plus récente.
+  // U5 (23/11/2026) : la lecture en cours (barre de progression, période
+  // d'avant estompée) et son échec, à part des erreurs d'action (« Réessayer »).
+  const [chargement, setChargement] = useState(true);
+  const [erreurLecture, setErreurLecture] = useState<string | null>(null);
   const derniere = useRef(0);
   const charger = useCallback(() => {
     const n = ++derniere.current;
+    setChargement(true);
+    // Une nouvelle tentative remplace le message (le squelette revient).
+    setErreurLecture(null);
     getAgenda(slug, du, au)
       .then((s) => {
         if (n !== derniere.current) return;
         setAgenda(s);
-        setErreur(null);
+        setErreurLecture(null);
       })
       .catch((e) => {
-        if (n === derniere.current) setErreur(e instanceof ApiError ? e.message : 'Agenda indisponible.');
+        if (n === derniere.current) setErreurLecture(e instanceof ApiError ? e.message : 'Agenda indisponible.');
+      })
+      .finally(() => {
+        if (n === derniere.current) setChargement(false);
       });
   }, [slug, du, au]);
 
@@ -264,6 +285,7 @@ export default function AgendaPage(props: Props) {
 
   async function annuler(e: ElementAgenda) {
     setFiche(null);
+    setErreur(null);
     // Une occurrence d'une série : laquelle annuler ?
     const choix = e.serieId ? await portee.demander('Annuler un événement récurrent', 'Confirmer') : undefined;
     if (choix === null) return;
@@ -283,6 +305,8 @@ export default function AgendaPage(props: Props) {
   const [sensVue, setSensVue] = useState<'suivant' | 'precedent' | 'fixe'>('fixe');
   if (vue !== vu.vue || du !== vu.du) {
     setVu({ vue, du });
+    // Le message d'une action échouée ne suit pas dans une autre période.
+    setErreur(null);
     setSensVue(vue !== vu.vue ? 'fixe' : du > vu.du ? 'suivant' : 'precedent');
   }
   // Grand écran : plus de tiroir (la colonne est en place).
@@ -367,11 +391,35 @@ export default function AgendaPage(props: Props) {
   };
   // « Créer » : aujourd'hui s'il est affiché, sinon le premier jour affiché.
   const creerMaintenant = () => creer(du <= aujourdhui && aujourdhui <= au ? aujourdhui : du);
+  // Raccourcis clavier (U5, 23/11/2026) : la lettre d'une vue proposée sur
+  // cet écran, T, ← →, C ; rien pendant une saisie ou une fenêtre ouverte.
+  // Les gestes du rendu courant, lus par un écouteur posé une fois.
+  const gestesClavier = useRef({ choisirVue, decaler, creerMaintenant, peutCreer, etroit, aujourdhui });
+  useEffect(() => {
+    gestesClavier.current = { choisirVue, decaler, creerMaintenant, peutCreer, etroit, aujourdhui };
+  });
+  useEffect(() => {
+    const touche = (ev: KeyboardEvent) => {
+      if (ev.defaultPrevented || ev.repeat || toucheIgnoree(ev.target, ev.key)) return;
+      const g = gestesClavier.current;
+      const proposees = VUES.map((v) => v.cle).filter((v) => g.etroit || !VUES_TELEPHONE.includes(v));
+      const action = actionClavier(ev, proposees);
+      if (!action || (action.type === 'creer' && !g.peutCreer)) return;
+      ev.preventDefault();
+      if (action.type === 'vue') g.choisirVue(action.vue);
+      else if (action.type === 'aujourdhui') setAncre(g.aujourdhui);
+      else if (action.type === 'decaler') g.decaler(action.sens);
+      else g.creerMaintenant();
+    };
+    window.addEventListener('keydown', touche);
+    return () => window.removeEventListener('keydown', touche);
+  }, []);
   // Une occurrence d'une série : la portée d'abord (comme Google Agenda),
   // puis le formulaire rempli avec ce qu'elle vise — cette date, ou toute la
   // série (ses propres valeurs, jamais celles de l'occurrence).
   async function modifier(e: ElementAgenda) {
     setFiche(null);
+    setErreur(null);
     const choix = e.serieId ? await portee.demander('Modifier un événement récurrent', 'Continuer') : undefined;
     if (choix === null) return;
     const source = choix === 'toutes' && e.serie ? e.serie : { ...e, debut: e.debut!, fin: e.fin! };
@@ -397,6 +445,7 @@ export default function AgendaPage(props: Props) {
   // enregistré (invités prévenus comme pour une modification) ; en cas
   // d'échec, l'agenda est relu tel qu'il est.
   async function deplacerRendezVous(e: ElementAgenda, debut: string, fin: string) {
+    setErreur(null);
     // Une occurrence d'une série : cet événement, les suivants ou tous (la
     // question tient lieu de confirmation) ; sinon, confirmer si invités.
     const choix = e.serieId ? await portee.demander('Déplacer un événement récurrent', 'Déplacer') : undefined;
@@ -468,6 +517,7 @@ export default function AgendaPage(props: Props) {
   }
   // Répondre à une invitation depuis sa fiche (12/11/2026) : la fiche suit.
   async function repondre(e: ElementAgenda, reponse: ReponseInvitation) {
+    setErreur(null);
     try {
       await repondreInvitation(slug, cibleDe(e), reponse);
       // Sa réponse et sa ligne dans la liste des participants.
@@ -570,6 +620,21 @@ export default function AgendaPage(props: Props) {
         )}
         <div className="agenda-principal" {...balayage}>
           {erreur && <FieldError>{erreur}</FieldError>}
+          {erreurLecture && (
+            <div className="agenda-erreur" role="alert">
+              <span>{erreurLecture}</span>
+              <button type="button" className="btn-ghost btn-ghost--sm" onClick={charger}>
+                Réessayer
+              </button>
+            </div>
+          )}
+          {/* Lecteur d'écran : la vue et la période, à chaque changement. */}
+          <p className="sr-only" aria-live="polite">
+            {periodeLue(vue, ancre)}
+          </p>
+          {chargement && agenda && (
+            <div className="agenda-progression" role="progressbar" aria-label="Chargement de l’agenda" />
+          )}
 
           {/* Demandes d'absence de la période qui attendent sa décision. */}
           {demandes.length > 0 && (
@@ -596,9 +661,15 @@ export default function AgendaPage(props: Props) {
             </section>
           )}
 
-          <div key={`${vue}|${du}`} className={`agenda-vue agenda-vue--${sensVue}`}>
+          <div
+            key={`${vue}|${du}`}
+            className={`agenda-vue agenda-vue--${sensVue}${chargement && agenda ? ' is-chargement' : ''}`}
+            aria-busy={chargement}
+          >
             {!agenda ? (
-              <Skeleton size="sm" />
+              erreurLecture ? null : (
+                <SqueletteAgenda />
+              )
             ) : enGrille(vue) ? (
               <GrilleHoraire
                 key={`${vue}|${du}`}

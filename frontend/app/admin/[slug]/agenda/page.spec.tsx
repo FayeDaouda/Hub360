@@ -835,4 +835,351 @@ describe('Page Agenda', () => {
       expect(await screen.findByText('Chaque semaine le jeudi · cette date modifiée')).toBeInTheDocument();
     });
   });
+
+  // U5 (23/11/2026) : raccourcis clavier, chargement, erreur de lecture et
+  // annonce de la période au lecteur d'écran.
+  describe('U5', () => {
+    const ordinateur = () => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(min-width: 1101px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+    };
+    // Une lecture lente : la promesse attend qu'on la résolve.
+    const lectureLente = () => {
+      const enAttente: { resoudre: () => void; rejeter: (e: unknown) => void }[] = [];
+      api.getAgenda.mockImplementation(
+        (_s: string, du: string, au: string) =>
+          new Promise<SemaineAgenda>((ok, ko) => {
+            enAttente.push({ resoudre: () => ok(reponse(du, au)), rejeter: ko });
+          }),
+      );
+      return enAttente;
+    };
+    const vueAffichee = () => document.querySelector('.agenda-vue')!;
+    const annonce = () => document.querySelector('p.sr-only[aria-live="polite"]');
+    const charge = () => screen.findByRole('button', { name: /Point chantier/ });
+
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    describe('raccourcis clavier (ordinateur)', () => {
+      beforeEach(ordinateur);
+
+      it('M, J, P puis S changent de vue et lisent la période de chaque vue', async () => {
+        await monter();
+        await charge();
+
+        await userEvent.keyboard('m');
+        expect(screen.getByRole('radio', { name: 'Mois' })).toBeChecked();
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-10-26', '2026-12-06'));
+
+        await userEvent.keyboard('J');
+        expect(screen.getByRole('radio', { name: 'Jour' })).toBeChecked();
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, J));
+
+        await userEvent.keyboard('p');
+        expect(screen.getByRole('radio', { name: 'Planning' })).toBeChecked();
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', J, '2026-12-11'));
+
+        await userEvent.keyboard('s');
+        expect(screen.getByRole('radio', { name: 'Semaine' })).toBeChecked();
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-09', '2026-11-15'));
+      });
+
+      it('→ avance d’une semaine, ← revient, T ramène à aujourd’hui', async () => {
+        await monter();
+        await charge();
+
+        await userEvent.keyboard('{ArrowRight}');
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
+        await userEvent.keyboard('{ArrowLeft}');
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-09', '2026-11-15'));
+
+        await userEvent.keyboard('{ArrowRight}{ArrowRight}');
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-23', '2026-11-29'));
+        await userEvent.keyboard('t');
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-09', '2026-11-15'));
+        expect(screen.getByRole('heading', { name: '9 – 15 novembre 2026' })).toBeInTheDocument();
+      });
+
+      it('une touche maintenue (répétition automatique) ne fait défiler aucune période', async () => {
+        await monter();
+        await charge();
+        const appels = api.getAgenda.mock.calls.length;
+        fireEvent.keyDown(document.body, { key: 'ArrowRight', repeat: true });
+        expect(api.getAgenda.mock.calls.length).toBe(appels);
+        expect(screen.getByRole('heading', { name: '9 – 15 novembre 2026' })).toBeInTheDocument();
+      });
+
+      it('C ouvre le formulaire « Nouveau rendez-vous » à aujourd’hui quand il est affiché', async () => {
+        await monter();
+        await charge();
+        await userEvent.keyboard('c');
+        expect(await screen.findByRole('heading', { name: /Nouveau rendez-vous/ })).toBeInTheDocument();
+        expect(screen.getByLabelText('Date')).toHaveValue(J);
+      });
+
+      it('C, sur une autre semaine, ouvre le formulaire au premier jour affiché', async () => {
+        await monter();
+        await charge();
+        await userEvent.keyboard('{ArrowRight}');
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
+        await userEvent.keyboard('C');
+        expect(await screen.findByRole('heading', { name: /Nouveau rendez-vous/ })).toBeInTheDocument();
+        expect(screen.getByLabelText('Date')).toHaveValue('2026-11-16');
+      });
+
+      it('C ne fait rien sans le droit de créer', async () => {
+        api.getAgenda.mockImplementation((_s: string, du: string, au: string) =>
+          Promise.resolve(reponse(du, au, { peutCreer: false })),
+        );
+        await monter();
+        await charge();
+        expect(screen.queryByRole('button', { name: /Créer/ })).not.toBeInTheDocument();
+        // Pas de preventDefault non plus : la touche reste au navigateur.
+        expect(fireEvent.keyDown(document.body, { key: 'c' })).toBe(true);
+        await userEvent.keyboard('c');
+        expect(screen.queryByRole('heading', { name: /Nouveau rendez-vous/ })).not.toBeInTheDocument();
+      });
+
+      it('une lettre tapée dans la recherche de collègue ne change pas de vue', async () => {
+        const nombreux = Array.from({ length: 9 }, (_, i) => ({ id: `U${i + 2}`, nom: `Collègue ${i + 2}` }));
+        api.getPersonnesAgenda.mockResolvedValue(nombreux);
+        api.getAgenda.mockImplementation((_s: string, du: string, au: string) =>
+          Promise.resolve(reponse(du, au, { peutVoirAutres: true })),
+        );
+        await monter();
+        await charge();
+        const recherche = await screen.findByRole('searchbox', { name: 'Chercher un collègue' });
+        const appels = api.getAgenda.mock.calls.length;
+        await userEvent.type(recherche, 'Mts');
+        expect(recherche).toHaveValue('Mts');
+        expect(screen.getByRole('radio', { name: 'Semaine' })).toBeChecked();
+        expect(api.getAgenda.mock.calls.length).toBe(appels);
+        // Les flèches déplacent le curseur du champ, pas la période.
+        await userEvent.keyboard('{ArrowLeft}{ArrowRight}');
+        expect(api.getAgenda.mock.calls.length).toBe(appels);
+        expect(screen.getByRole('heading', { name: '9 – 15 novembre 2026' })).toBeInTheDocument();
+      });
+
+      it('formulaire ouvert : ni la saisie ni les flèches ne touchent à la vue derrière', async () => {
+        await monter();
+        await charge();
+        await userEvent.keyboard('c');
+        await screen.findByRole('heading', { name: /Nouveau rendez-vous/ });
+        const appels = api.getAgenda.mock.calls.length;
+        const objet = screen.getByLabelText('Objet');
+        await userEvent.type(objet, 'Mise au point');
+        expect(objet).toHaveValue('Mise au point');
+        // Même depuis un bouton de la fenêtre (hors champ) : la fenêtre ouverte suffit.
+        screen.getAllByRole('button', { name: /Fermer|Annuler/ })[0].focus();
+        await userEvent.keyboard('m{ArrowRight}t');
+        expect(screen.getByRole('radio', { name: 'Semaine', hidden: true })).toBeChecked();
+        expect(api.getAgenda.mock.calls.length).toBe(appels);
+      });
+
+      it('Ctrl+S, ⌘+M et Alt+→ ne font rien et restent au navigateur', async () => {
+        await monter();
+        await charge();
+        const appels = api.getAgenda.mock.calls.length;
+        expect(fireEvent.keyDown(document.body, { key: 's', ctrlKey: true })).toBe(true);
+        expect(fireEvent.keyDown(document.body, { key: 'm', metaKey: true })).toBe(true);
+        expect(fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true })).toBe(true);
+        await userEvent.keyboard('{Control>}j{/Control}');
+        expect(screen.getByRole('radio', { name: 'Semaine' })).toBeChecked();
+        expect(api.getAgenda.mock.calls.length).toBe(appels);
+      });
+
+      it('X et O (vues du téléphone) ne font rien sur ordinateur', async () => {
+        await monter();
+        await charge();
+        const appels = api.getAgenda.mock.calls.length;
+        await userEvent.keyboard('xXoO');
+        expect(screen.getByRole('radio', { name: 'Semaine' })).toBeChecked();
+        expect(screen.queryByRole('radio', { name: '3 jours' })).not.toBeInTheDocument();
+        expect(api.getAgenda.mock.calls.length).toBe(appels);
+      });
+
+      it('un raccourci reconnu est retenu (preventDefault) : la page ne défile pas', async () => {
+        await monter();
+        await charge();
+        expect(fireEvent.keyDown(document.body, { key: 'ArrowRight' })).toBe(false);
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
+      });
+
+      // Après un clic sur une vue, le focus reste sur le bouton radio : les
+      // lettres restent actives (seules les flèches y sont réservées).
+      it('après un clic sur « Mois », S repasse en semaine sans cliquer ailleurs', async () => {
+        await monter();
+        await charge();
+        await userEvent.click(screen.getByRole('radio', { name: 'Mois' }));
+        await userEvent.keyboard('s');
+        expect(screen.getByRole('radio', { name: 'Semaine' })).toBeChecked();
+      });
+
+      // Une case cochée garde le focus : les lettres restent actives (seuls
+      // les champs de saisie de texte les bloquent).
+      it('après avoir décoché « Rendez-vous » dans la colonne, M passe au mois', async () => {
+        await monter();
+        await charge();
+        await userEvent.click(screen.getByLabelText('Rendez-vous'));
+        await userEvent.keyboard('m');
+        expect(screen.getByRole('radio', { name: 'Mois' })).toBeChecked();
+      });
+    });
+
+    describe('chargement', () => {
+      it('premier chargement : le squelette « Chargement de l’agenda », puis l’agenda', async () => {
+        const enAttente = lectureLente();
+        await monter();
+        expect(screen.getByRole('status')).toHaveTextContent('Chargement de l’agenda');
+        // Rien à estomper encore : pas de barre de progression.
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+        expect(vueAffichee()).not.toHaveClass('is-chargement');
+        await act(async () => enAttente[enAttente.length - 1].resoudre());
+        await charge();
+        expect(screen.queryByText(/Chargement de l’agenda…/)).not.toBeInTheDocument();
+      });
+
+      it('lecture lente après un changement de période : barre de progression et vue estompée, retirées à la réponse', async () => {
+        await monter();
+        await charge();
+        const enAttente = lectureLente();
+        await userEvent.click(screen.getByRole('button', { name: 'Semaine suivante' }));
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
+        expect(screen.getByRole('progressbar', { name: 'Chargement de l’agenda' })).toBeInTheDocument();
+        expect(vueAffichee()).toHaveClass('is-chargement');
+        expect(vueAffichee()).toHaveAttribute('aria-busy', 'true');
+        // Le squelette ne revient pas : l'agenda d'avant reste affiché, estompé.
+        expect(screen.queryByText(/Chargement de l’agenda…/)).not.toBeInTheDocument();
+
+        await act(async () => enAttente[enAttente.length - 1].resoudre());
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+        expect(vueAffichee()).not.toHaveClass('is-chargement');
+        expect(vueAffichee()).toHaveAttribute('aria-busy', 'false');
+      });
+
+      it('une réponse dépassée n’éteint pas la barre de la lecture plus récente', async () => {
+        await monter();
+        await charge();
+        const enAttente = lectureLente();
+        const suivante = screen.getByRole('button', { name: 'Semaine suivante' });
+        await userEvent.click(suivante);
+        await userEvent.click(suivante);
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-23', '2026-11-29'));
+        const [ancienne, recente] = [enAttente[enAttente.length - 2], enAttente[enAttente.length - 1]];
+
+        await act(async () => ancienne.resoudre());
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(vueAffichee()).toHaveAttribute('aria-busy', 'true');
+
+        await act(async () => recente.resoudre());
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+      });
+
+      it('l’échec d’une lecture dépassée n’affiche aucune erreur', async () => {
+        await monter();
+        await charge();
+        const enAttente = lectureLente();
+        const suivante = screen.getByRole('button', { name: 'Semaine suivante' });
+        await userEvent.click(suivante);
+        await userEvent.click(suivante);
+        const [ancienne, recente] = [enAttente[enAttente.length - 2], enAttente[enAttente.length - 1]];
+        await act(async () => ancienne.rejeter(new ApiError('Trop tard.', 503)));
+        await act(async () => recente.resoudre());
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(screen.queryByText('Trop tard.')).not.toBeInTheDocument();
+      });
+    });
+
+    describe('erreur de lecture', () => {
+      it('le message du serveur et « Réessayer » ; réessayer relit et efface le message', async () => {
+        api.getAgenda.mockRejectedValue(new ApiError('Agenda momentanément indisponible.', 503));
+        await monter();
+        const alerte = await screen.findByRole('alert');
+        expect(alerte).toHaveTextContent('Agenda momentanément indisponible.');
+        // Pas de squelette sans fin à côté du message.
+        expect(screen.queryByText(/Chargement de l’agenda…/)).not.toBeInTheDocument();
+
+        api.getAgenda.mockImplementation((_s: string, du: string, au: string) => Promise.resolve(reponse(du, au)));
+        const appels = api.getAgenda.mock.calls.length;
+        await userEvent.click(within(alerte).getByRole('button', { name: 'Réessayer' }));
+        expect(api.getAgenda.mock.calls.length).toBe(appels + 1);
+        expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-09', '2026-11-15');
+        await charge();
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      });
+
+      it('une panne réseau (erreur non API) : message générique', async () => {
+        api.getAgenda.mockRejectedValue(new TypeError('Failed to fetch'));
+        await monter();
+        expect(await screen.findByRole('alert')).toHaveTextContent('Agenda indisponible.');
+        expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+      });
+
+      it('réessayer qui échoue encore laisse le message et le bouton', async () => {
+        api.getAgenda.mockRejectedValue(new ApiError('Agenda momentanément indisponible.', 503));
+        await monter();
+        await userEvent.click(within(await screen.findByRole('alert')).getByRole('button', { name: 'Réessayer' }));
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+        expect(screen.getByRole('alert')).toHaveTextContent('Agenda momentanément indisponible.');
+        expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+      });
+
+      // Le message d'une action échouée s'efface au changement de période (et
+      // au début de l'action suivante), pas à la relecture qui suit l'échec.
+      it('le message d’une action échouée disparaît à la lecture suivante réussie', async () => {
+        const invitation: ElementAgenda = {
+          ...RDV,
+          debut: `${J}T14:00:00.000Z`,
+          fin: `${J}T15:00:00.000Z`,
+          organisateur: 'Fatou Ba',
+          jeSuisOrganisateur: false,
+          modifiable: false,
+          annulable: false,
+          maReponse: null,
+          inviteIds: [],
+        };
+        api.getAgenda.mockImplementation((_s: string, du: string, au: string) =>
+          Promise.resolve(reponse(du, au, { elements: [invitation] })),
+        );
+        api.repondreInvitation.mockRejectedValue(new ApiError('Cette réunion est passée.', 409));
+        await monter();
+        await userEvent.click(await charge());
+        await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Peut-être' }));
+        expect(await screen.findByText('Cette réunion est passée.')).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Semaine suivante' }));
+        await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-16', '2026-11-22'));
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+        expect(screen.queryByText('Cette réunion est passée.')).not.toBeInTheDocument();
+      });
+    });
+
+    describe('annonce de la période (lecteur d’écran)', () => {
+      beforeEach(ordinateur);
+
+      it('une seule zone annoncée : « Semaine, … » puis « Mois, … » après M', async () => {
+        await monter();
+        await charge();
+        expect(annonce()).toHaveTextContent('Semaine, 9 – 15 novembre 2026');
+        await userEvent.keyboard('m');
+        expect(annonce()).toHaveTextContent('Mois, Novembre 2026');
+        // Le titre visible n'est plus annoncé en double.
+        expect(document.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
+      });
+
+      it('la période suivante est annoncée après →', async () => {
+        await monter();
+        await charge();
+        await userEvent.keyboard('{ArrowRight}');
+        expect(annonce()).toHaveTextContent('Semaine, 16 – 22 novembre 2026');
+        // Le jour gardé est celui de l'ancre (aujourd'hui + 7), pas le lundi.
+        await userEvent.keyboard('j');
+        expect(annonce()).toHaveTextContent('Jour, jeudi 19 novembre 2026');
+      });
+    });
+  });
 });

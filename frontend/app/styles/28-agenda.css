@@ -1078,6 +1078,7 @@
   gap: var(--e-24);
 }
 .agenda-principal {
+  position: relative;
   display: grid;
   gap: var(--e-12);
   min-width: 0;
@@ -2480,4 +2481,132 @@
 .agenda-puce .agenda-initiales {
   margin-right: 4px;
   vertical-align: 1px;
+}
+
+/* U5 (23/11/2026) — Chargement : une fine barre en haut de la vue et la
+   période d'avant estompée (seulement si la lecture dure : pas de clignement). */
+.agenda-progression {
+  /* Hors du flux : rien ne bouge quand elle paraît (écart de la grille). */
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 5;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--action) 15%, transparent);
+}
+.agenda-progression::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  border-radius: inherit;
+  background: var(--action);
+  animation: agenda-progression 1.1s ease-in-out infinite;
+}
+@keyframes agenda-progression {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.agenda-vue.is-chargement {
+  opacity: 0.6;
+  transition: opacity 160ms ease 250ms;
+}
+/* Échec de lecture : le message et « Réessayer ». */
+.agenda-erreur {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-8);
+  padding: var(--e-8) var(--e-12);
+  border: 1px solid color-mix(in oklch, var(--pill-risque) 40%, var(--border));
+  border-radius: var(--r-14);
+  background: color-mix(in oklch, var(--pill-risque) 8%, var(--surface));
+  color: var(--text);
+  font-size: var(--t-14);
+}
+/* Premier chargement : la forme de la grille. */
+.agenda-squelette {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-20);
+  background: var(--surface);
+  overflow: hidden;
+}
+.agenda-squelette-tete {
+  display: grid;
+  grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+  gap: var(--e-8);
+  padding: var(--e-12) var(--e-8);
+  border-bottom: 1px solid var(--border);
+}
+.agenda-squelette-tete span:first-child {
+  grid-column: 2;
+}
+.agenda-squelette-tete span,
+.agenda-squelette-bloc {
+  border-radius: var(--r-10);
+  background: linear-gradient(100deg, var(--surface-2) 30%, var(--border) 50%, var(--surface-2) 70%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.agenda-squelette-tete span {
+  height: 36px;
+}
+.agenda-squelette-corps {
+  display: grid;
+  grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(7, 48px);
+  gap: 0 var(--e-8);
+  padding: var(--e-8);
+  background-image: linear-gradient(var(--border) 1px, transparent 1px);
+  background-size: 100% 48px;
+  background-position: 0 var(--e-8);
+}
+.agenda-squelette-bloc {
+  margin: 2px 0;
+}
+@media (max-width: 640px) {
+  .agenda-squelette-tete,
+  .agenda-squelette-corps {
+    grid-template-columns: 44px repeat(3, minmax(0, 1fr));
+  }
+  .agenda-squelette-tete span:nth-child(n + 4),
+  .agenda-squelette-bloc:nth-child(n + 3) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agenda-progression::after,
+  .agenda-squelette-tete span,
+  .agenda-squelette-bloc {
+    animation: none;
+  }
+  .agenda-vue.is-chargement {
+    transition: none;
+  }
+}
+
+/* U5 — Au doigt (écrans tactiles) : des cibles de 44 px au moins. */
+@media (pointer: coarse) {
+  .agenda-mini-tete .btn-ghost--sm {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .agenda-barre .menu-element,
+  .agenda-cote-choix,
+  .agenda-cote-vue {
+    min-height: 44px;
+  }
+  .agenda-icone-bouton {
+    width: 44px;
+    height: 44px;
+  }
 }
