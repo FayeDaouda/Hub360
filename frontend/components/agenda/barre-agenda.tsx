@@ -13,7 +13,8 @@ import {
 import { LIBELLES_FLECHES, titrePeriode, VUES, VUES_TELEPHONE, type Vue } from '@/lib/agenda-periode';
 import { Menu, type ElementMenu } from '@/components/ui/menu';
 
-// Barre de l'Agenda (18/11/2026), façon Google Agenda.
+// Barre de l'Agenda (18/11/2026), façon Google Agenda. Raccourcis clavier
+// (U5) dans les infobulles : la lettre de chaque vue, T, ← →, C.
 // Ordinateur, une ligne : Aujourd'hui, ‹ ›, la période ; à droite la vue,
 // « ⋯ » (lien d'abonnement, agendas connectés) et « Créer ».
 // Téléphone : ☰ (vues, mini-calendrier, agendas), le mois (ouvre le
@@ -86,9 +87,7 @@ export function BarreAgenda({
         </button>
         {/* « Mois et jour » montre déjà le mois : le titre n'ouvre rien. */}
         {vue === 'moisjour' ? (
-          <h2 className="agenda-titre agenda-titre-seul" aria-live="polite">
-            {titrePeriode(vue, ancre, true)}
-          </h2>
+          <h2 className="agenda-titre agenda-titre-seul">{titrePeriode(vue, ancre, true)}</h2>
         ) : (
           <button
             type="button"
@@ -97,9 +96,7 @@ export function BarreAgenda({
             aria-controls="agenda-mini-deroulant"
             onClick={onMini}
           >
-            <span className="agenda-titre" aria-live="polite">
-              {titrePeriode(vue, ancre, true)}
-            </span>
+            <span className="agenda-titre">{titrePeriode(vue, ancre, true)}</span>
             <ChevronDown size={16} aria-hidden className="agenda-titre-chevron" />
           </button>
         )}
@@ -131,7 +128,13 @@ export function BarreAgenda({
         >
           <PanelLeft size={18} aria-hidden />
         </button>
-        <button type="button" className="btn-ghost agenda-aujourdhui" onClick={onAujourdhui}>
+        <button
+          type="button"
+          className="btn-ghost agenda-aujourdhui"
+          title="Aujourd’hui (T)"
+          aria-keyshortcuts="T"
+          onClick={onAujourdhui}
+        >
           Aujourd’hui
         </button>
         <span className="agenda-fleches">
@@ -139,7 +142,8 @@ export function BarreAgenda({
             type="button"
             className="agenda-icone-bouton"
             aria-label={precedent}
-            title={precedent}
+            title={`${precedent} (←)`}
+            aria-keyshortcuts="ArrowLeft"
             onClick={() => onDecaler(-1)}
           >
             <ChevronLeft size={18} aria-hidden />
@@ -148,15 +152,15 @@ export function BarreAgenda({
             type="button"
             className="agenda-icone-bouton"
             aria-label={suivant}
-            title={suivant}
+            title={`${suivant} (→)`}
+            aria-keyshortcuts="ArrowRight"
             onClick={() => onDecaler(1)}
           >
             <ChevronRight size={18} aria-hidden />
           </button>
         </span>
-        <h2 className="agenda-titre" aria-live="polite">
-          {titrePeriode(vue, ancre)}
-        </h2>
+        {/* La période est annoncée par la page (lecteur d'écran, U5). */}
+        <h2 className="agenda-titre">{titrePeriode(vue, ancre)}</h2>
       </div>
       <div className="agenda-barre-droite">
         {/* Écran moyen : les vues dans un menu, pour que la barre tienne sur une ligne. */}
@@ -173,6 +177,7 @@ export function BarreAgenda({
             cle: v.cle,
             libelle: v.libelle,
             coche: vue === v.cle,
+            raccourci: v.raccourci,
             onChoisir: () => onVue(v.cle),
           }))}
         />
@@ -184,6 +189,8 @@ export function BarreAgenda({
               role="radio"
               aria-checked={vue === v.cle}
               className={vue === v.cle ? 'is-active' : ''}
+              title={`${v.libelle} (${v.raccourci})`}
+              aria-keyshortcuts={v.raccourci}
               onClick={() => onVue(v.cle)}
             >
               {v.libelle}
@@ -192,7 +199,13 @@ export function BarreAgenda({
         </div>
         {plus}
         {peutCreer && (
-          <button type="button" className="btn-primary agenda-creer" onClick={onCreer}>
+          <button
+            type="button"
+            className="btn-primary agenda-creer"
+            title="Créer un rendez-vous (C)"
+            aria-keyshortcuts="C"
+            onClick={onCreer}
+          >
             <Plus size={18} aria-hidden /> Créer
           </button>
         )}

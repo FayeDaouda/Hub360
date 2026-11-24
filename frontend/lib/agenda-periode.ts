@@ -122,3 +122,49 @@ export function titrePeriode(vue: Vue, ancre: string, court = false): string {
   if (court) return capitale(F_MOIS_ANNEE.format(date(MILIEU[vue](du))));
   return intervalle(du, au);
 }
+
+// Ce qu'annonce un lecteur d'écran au changement de période (U5,
+// 23/11/2026) : la vue et la période entière — sur téléphone aussi, où le
+// titre visible n'est que le mois.
+export function periodeLue(vue: Vue, ancre: string): string {
+  const libelle = VUES.find((v) => v.cle === vue)?.libelle ?? '';
+  // Un jour (« Mois et jour » : le jour choisi, le titre n'est que le mois).
+  if (vue === 'jour' || vue === 'moisjour') return `${libelle}, ${F_JOUR_LONG.format(date(ancre))}`;
+  return `${libelle}, ${titrePeriode(vue, ancre)}`;
+}
+
+// Raccourcis clavier (U5, 23/11/2026), façon Google Agenda : la lettre d'une
+// vue, T aujourd'hui, ← et → la période, C créer. Jamais avec Ctrl, ⌘ ou
+// Alt (raccourcis du navigateur) ; la page les ignore pendant une saisie ou
+// une fenêtre ouverte.
+export type ActionClavier =
+  { type: 'vue'; vue: Vue } | { type: 'aujourdhui' } | { type: 'creer' } | { type: 'decaler'; sens: 1 | -1 };
+
+export function actionClavier(
+  touche: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean },
+  vuesProposees: Vue[],
+): ActionClavier | null {
+  if (touche.ctrlKey || touche.metaKey || touche.altKey) return null;
+  if (touche.key === 'ArrowLeft') return { type: 'decaler', sens: -1 };
+  if (touche.key === 'ArrowRight') return { type: 'decaler', sens: 1 };
+  const lettre = touche.key.length === 1 ? touche.key.toUpperCase() : '';
+  if (lettre === 'T') return { type: 'aujourdhui' };
+  if (lettre === 'C') return { type: 'creer' };
+  const vue = VUES.find((v) => v.raccourci === lettre && vuesProposees.includes(v.cle));
+  return vue ? { type: 'vue', vue: vue.cle } : null;
+}
+
+// Ce qui ne déclenche rien : une touche tapée dans un champ de saisie, un
+// menu ouvert, un panneau (chat, menu du compte) ou quand une fenêtre
+// modale est ouverte ; une flèche sur un groupe de choix ou une case (elle
+// y a déjà un sens). Une vue cliquée ou une case cochée gardent le focus :
+// les lettres y restent actives.
+export function toucheIgnoree(cible: EventTarget | null, touche = ''): boolean {
+  const el = cible instanceof Element ? cible : null;
+  if (el?.closest('textarea, select, [contenteditable]:not([contenteditable="false"])')) return true;
+  if (el?.closest('[role="dialog"], [role="menu"], [role="listbox"]')) return true;
+  const champ = el?.closest('input');
+  if (champ && !['checkbox', 'radio', 'button', 'submit', 'reset'].includes(champ.type)) return true;
+  if (touche.startsWith('Arrow') && el?.closest('[role="radiogroup"], input')) return true;
+  return !!document.querySelector('[aria-modal="true"]');
+}

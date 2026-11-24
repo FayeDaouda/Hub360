@@ -81,6 +81,20 @@ export const FICHES_AIDE: Record<string, FicheAide> = {
       ecriture: 'Créer les cellules et réaffecter les collaborateurs.',
     },
   },
+  agenda: {
+    titre: 'Agenda',
+    resume:
+      'Vos rendez-vous et réunions, avec les échéances de vos tâches et les congés validés. Vues Jour, Semaine, Mois, Année et Planning ; sur téléphone, le mois et la journée choisie par défaut, les autres vues dans le menu. Un rendez-vous cliqué ouvre sa fiche (répondre ; modifier ou annuler ceux que vous organisez).',
+    actions: {
+      ecriture:
+        'Créer des rendez-vous : un créneau vide cliqué (ou touché sur téléphone) en propose un, le bouton « Créer » aussi.',
+    },
+    astuces: [
+      'Clavier (ordinateur) : J Jour, S Semaine, M Mois, A Année, P Planning ; T aujourd’hui ; ← et → période précédente ou suivante ; C nouveau rendez-vous (si vous pouvez en créer).',
+      'Souris : tracez un créneau dans la grille pour créer un rendez-vous ; glissez un des vôtres pour le déplacer, son bord bas pour l’allonger.',
+      'Téléphone : balayez le mois pour changer de mois, la journée pour changer de jour.',
+    ],
+  },
   'mon-espace': {
     titre: 'Mon espace',
     resume:
