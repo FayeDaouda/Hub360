@@ -4,11 +4,22 @@ import { CalendarPlus, Repeat, Video } from 'lucide-react';
 import { formatTime, formatWeekdayDayMonth, formatWeekdayShort } from '@hub/domain';
 import type { ElementAgenda } from '@/lib/agenda';
 import { rectDe as rect, type Rect } from '@/lib/agenda-placement';
-import { elementsDuJour, sousTitre } from './vue-mois-jour';
+import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
+import { elementsDuJour } from './vue-mois-jour';
 import { estDeclinee, InitialesCalque, styleCalque, titreAffiche, TONS } from './grille-horaire';
 
 const MOIS = new Intl.DateTimeFormat('fr-FR', { month: 'short', timeZone: 'UTC' });
 const date = (j: string) => new Date(`${j}T12:00:00Z`);
+
+// Ce qui s'affiche sous le titre d'une ligne du Planning : le lieu, sinon les invités,
+// sinon le détail (échéance, absence) ; une demande d'absence, son type.
+function sousTitre(e: ElementAgenda): string | null {
+  if (e.calque) return `Agenda de ${e.calque.nom}`;
+  if (e.demande) return `${LIBELLE_TYPE_ABSENCE[e.demande.type]} · ${e.demande.jours} j · à décider`;
+  if (e.lieu) return e.lieu;
+  if (e.invites.length) return `Avec ${e.invites.join(', ')}`;
+  return e.detail;
+}
 
 // Planning épuré (U4, 23/11/2026, façon Google Agenda) : les 30 jours à
 // partir de `du`, les jours chargés seulement ; une ligne par élément — la

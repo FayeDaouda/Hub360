@@ -173,7 +173,7 @@ export default function AgendaPage(props: Props) {
   }, [slug, du, au]);
 
   useEffect(charger, [charger]);
-  // Téléphone : « Mois et jour » (le mois, la journée en liste dessous) ;
+  // Téléphone : « Mois et jour » (le mois, la journée sur la grille des heures dessous) ;
   // revenu sur un grand écran, la semaine (les vues du téléphone n'y sont pas
   // proposées). Un choix fait par la personne est respecté (une rotation de
   // l'écran ne le défait pas). Lu après le premier rendu : le rendu serveur
@@ -306,10 +306,19 @@ export default function AgendaPage(props: Props) {
     };
   }, [miniOuvert]);
   // Téléphone : glisser vers la gauche avance, vers la droite recule.
-  const toucher = useRef<{ x: number; y: number } | null>(null);
+  // « Mois et jour » : sur la journée, un balayage change de jour (comme la
+  // vue Jour) ; sur le mois, de mois.
+  const toucher = useRef<{ x: number; y: number; surJournee: boolean } | null>(null);
   const balayage = {
     onTouchStart: (ev: TouchEvent) => {
-      toucher.current = ev.touches.length === 1 ? { x: ev.touches[0].clientX, y: ev.touches[0].clientY } : null;
+      toucher.current =
+        ev.touches.length === 1
+          ? {
+              x: ev.touches[0].clientX,
+              y: ev.touches[0].clientY,
+              surJournee: !!(ev.target as Element).closest?.('.agenda-moisjour-liste'),
+            }
+          : null;
     },
     onTouchCancel: () => {
       toucher.current = null;
@@ -321,7 +330,9 @@ export default function AgendaPage(props: Props) {
       if (!t || !etroit || ev.touches.length > 0) return;
       const dx = ev.changedTouches[0].clientX - t.x;
       const dy = ev.changedTouches[0].clientY - t.y;
-      if (Math.abs(dx) >= BALAYAGE_PX && Math.abs(dx) > 1.5 * Math.abs(dy)) decaler(dx < 0 ? 1 : -1);
+      if (Math.abs(dx) < BALAYAGE_PX || Math.abs(dx) <= 1.5 * Math.abs(dy)) return;
+      if (vue === 'moisjour' && t.surJournee) setAncre((a) => addDays(a, dx < 0 ? 1 : -1));
+      else decaler(dx < 0 ? 1 : -1);
     },
   };
   // Création : depuis le bouton (aujourd'hui s'il est affiché) ou un créneau.
@@ -608,10 +619,22 @@ export default function AgendaPage(props: Props) {
                 jour={ancre}
                 aujourdhui={aujourdhui}
                 elements={elements}
-                peutCreer={peutCreer}
                 onJour={setAncre}
-                onOuvrir={ouvrirFiche}
-                onCreer={(j) => creer(j)}
+                journee={
+                  // La journée choisie sur la grille des heures (23/11/2026).
+                  <GrilleHoraire
+                    key={ancre}
+                    jours={[ancre]}
+                    aujourdhui={aujourdhui}
+                    elements={elements}
+                    peutCreer={peutCreer}
+                    brouillon={rapide?.creneau ?? null}
+                    onCreneau={creer}
+                    onOuvrir={ouvrirFiche}
+                    onDeplacer={deplacerRendezVous}
+                    sousLeMois
+                  />
+                }
               />
             ) : vue === 'planning' ? (
               <VuePlanning
