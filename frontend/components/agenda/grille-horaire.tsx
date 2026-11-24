@@ -135,6 +135,7 @@ export function GrilleHoraire({
   onOuvrir,
   onJour,
   onDeplacer,
+  sousLeMois = false,
 }: {
   jours: string[];
   aujourdhui: string;
@@ -148,6 +149,11 @@ export function GrilleHoraire({
   onOuvrir: (e: ElementAgenda, ancre?: Rect) => void;
   onJour?: (jour: string) => void;
   onDeplacer?: (e: ElementAgenda, debut: string, fin: string) => void;
+  // Sous le mois du téléphone (« Mois et jour », 23/11/2026) : sans en-tête
+  // (le titre du jour est au-dessus) ; la grille a la hauteur de l'écran sous
+  // la barre du haut et ce titre — la page défile, le mois sort par le haut,
+  // la journée remplit l'écran (comme Google Agenda).
+  sousLeMois?: boolean;
 }) {
   const corps = useRef<HTMLDivElement>(null);
   const colonnes = useRef<(HTMLDivElement | null)[]>([]);
@@ -180,7 +186,7 @@ export function GrilleHoraire({
   const avecAujourdhui = jours.includes(aujourdhui);
 
   // La grille occupe la hauteur de l'écran, jusqu'à la navigation du bas sur
-  // téléphone : jamais de vide dessous, jamais de double défilement.
+  // téléphone : jamais de vide dessous ; sous le mois, voir `sousLeMois`.
   useLayoutEffect(() => {
     const el = corps.current;
     if (!el) return;
@@ -188,7 +194,13 @@ export function GrilleHoraire({
       const bas = basUtilisable(el);
       const largeurColonne = colonnes.current[0]?.getBoundingClientRect().width ?? 0;
       setSerre(largeurColonne > 0 && largeurColonne < COLONNE_ETROITE_PX);
-      const hauteur = `${Math.max(320, Math.round(bas - (el.getBoundingClientRect().top + window.scrollY)))}px`;
+      const haut = el.getBoundingClientRect().top;
+      const dispo = sousLeMois
+        ? bas -
+          (document.querySelector('.admin-topbar')?.getBoundingClientRect().height ?? 0) -
+          (haut - (el.closest('section')?.getBoundingClientRect().top ?? haut))
+        : bas - (haut + window.scrollY);
+      const hauteur = `${Math.max(sousLeMois ? 240 : 320, Math.round(dispo))}px`;
       if (el.style.height !== hauteur) el.style.height = hauteur;
       // La colonne de gauche (ordinateur) s'arrête au même endroit et défile seule.
       const cote = el.closest('.agenda-disposition')?.querySelector<HTMLElement>(':scope > .agenda-cote');
@@ -221,7 +233,7 @@ export function GrilleHoraire({
         ?.querySelector<HTMLElement>(':scope > .agenda-cote')
         ?.style.removeProperty('max-height');
     };
-  }, []);
+  }, [sousLeMois]);
 
   // Premier défilement de la période : une fois ses rendez-vous connus.
   const cleJours = jours.join(',');
@@ -404,7 +416,7 @@ export function GrilleHoraire({
 
   return (
     <div className="agenda-grille" style={{ ['--jours' as string]: jours.length }}>
-      <div className="agenda-grille-tete">
+      <div className="agenda-grille-tete" hidden={sousLeMois}>
         <span aria-hidden />
         {jours.map((j) => (
           <button

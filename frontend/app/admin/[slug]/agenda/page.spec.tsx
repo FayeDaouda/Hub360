@@ -138,17 +138,20 @@ describe('Page Agenda', () => {
         removeEventListener: vi.fn(),
       }));
       await monter();
-      // La grille du mois entier ; la journée choisie (aujourd'hui) en liste.
+      // La grille du mois entier ; la journée choisie (aujourd'hui) dessous,
+      // sur la grille des heures (23/11/2026) : ses rendez-vous à leur place.
       await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-10-26', '2026-12-06'));
-      const liste = await screen.findByRole('region', { name: /Jeudi 12 novembre/ });
-      expect(within(liste).getByText('Point chantier')).toBeInTheDocument();
-      expect(within(liste).getByText('Plateau')).toBeInTheDocument();
+      const journee = await screen.findByRole('region', { name: /Jeudi 12 novembre/ });
+      expect(journee.querySelector('.agenda-grille-corps')).not.toBeNull();
+      expect(within(journee).getByRole('button', { name: /Point chantier/ })).toBeInTheDocument();
       // Le 12 est choisi et porte un point ; toucher le 13 le choisit.
       const mois = screen.getByRole('group', { name: 'Choisir un jour' });
       const douze = within(mois).getByRole('button', { name: /jeudi 12 novembre · 1 élément/ });
       expect(douze).toHaveAttribute('aria-pressed', 'true');
       await userEvent.click(within(mois).getByRole('button', { name: /^vendredi 13 novembre$/ }));
-      expect(await screen.findByText('Rien de prévu ce jour-là.')).toBeInTheDocument();
+      const vendredi = await screen.findByRole('region', { name: /Vendredi 13 novembre/ });
+      expect(vendredi.querySelector('.agenda-grille-corps')).not.toBeNull();
+      expect(within(vendredi).queryByRole('button', { name: /Point chantier/ })).not.toBeInTheDocument();
       // Le mois en titre (sans menu déroulant), pas de flèches ; Créer flotte au pouce.
       expect(screen.getByRole('heading', { name: 'Novembre 2026' })).toBeInTheDocument();
       expect(document.querySelector('.agenda-barre .agenda-fleches')).toBeNull();
@@ -244,6 +247,47 @@ describe('Page Agenda', () => {
       fireEvent.touchStart(zone, { touches: [{ clientX: 200, clientY: 100 }] });
       fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 120, clientY: 400 }] });
       expect(api.getAgenda.mock.calls.length).toBe(appels);
+    });
+  });
+
+  describe('« Mois et jour » sur téléphone (grille des heures, 23/11/2026)', () => {
+    beforeEach(() => {
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: q === '(max-width: 640px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+    });
+
+    it('toucher une heure vide ouvre le formulaire complet, au jour et à l’heure touchés', async () => {
+      await monter();
+      const journee = await screen.findByRole('region', { name: /Jeudi 12 novembre/ });
+      fireEvent.click(journee.querySelector('.agenda-grille-colonne')!, { clientY: 14.75 * 48 });
+      expect(await screen.findByRole('heading', { name: /Nouveau rendez-vous/ })).toBeInTheDocument();
+      expect(screen.getByLabelText('Date')).toHaveValue(J);
+      expect(screen.getByLabelText('Début')).toHaveValue('14:30');
+      expect(screen.getByLabelText('Fin')).toHaveValue('15:30');
+    });
+
+    it('balayer la journée change de jour ; balayer le mois change de mois', async () => {
+      await monter();
+      const journee = await screen.findByRole('region', { name: /Jeudi 12 novembre/ });
+      const grille = journee.querySelector('.agenda-grille-corps')!;
+      fireEvent.touchStart(grille, { touches: [{ clientX: 300, clientY: 400 }] });
+      fireEvent.touchEnd(grille, { changedTouches: [{ clientX: 120, clientY: 410 }] });
+      const vendredi = await screen.findByRole('region', { name: /Vendredi 13 novembre/ });
+      // Même mois : rien à relire.
+      expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-10-26', '2026-12-06');
+      // La grille du nouveau jour (elle est recréée à chaque jour).
+      const grille13 = vendredi.querySelector('.agenda-grille-corps')!;
+      fireEvent.touchStart(grille13, { touches: [{ clientX: 120, clientY: 400 }] });
+      fireEvent.touchEnd(grille13, { changedTouches: [{ clientX: 300, clientY: 410 }] });
+      expect(await screen.findByRole('region', { name: /Jeudi 12 novembre/ })).toBeInTheDocument();
+      // Sur le mois : le mois suivant.
+      const mois = screen.getByRole('group', { name: 'Choisir un jour' });
+      fireEvent.touchStart(mois, { touches: [{ clientX: 300, clientY: 200 }] });
+      fireEvent.touchEnd(mois, { changedTouches: [{ clientX: 120, clientY: 210 }] });
+      await waitFor(() => expect(api.getAgenda).toHaveBeenLastCalledWith('gc', '2026-11-30', '2027-01-10'));
     });
   });
 

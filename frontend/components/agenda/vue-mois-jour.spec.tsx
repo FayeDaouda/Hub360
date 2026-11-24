@@ -46,9 +46,8 @@ describe('VueMoisJour', () => {
     expect(elementsDuJour(ELEMENTS, J).map((e) => e.id)).toEqual(['Plans RDC', 'Revue', 'Déjeuner']);
   });
 
-  it('un point par élément sous le jour ; la journée choisie en liste (heures, titre, lieu ou invités)', async () => {
+  it('un point par élément sous le jour ; la journée choisie dessous, titrée', async () => {
     const onJour = vi.fn();
-    const onOuvrir = vi.fn();
     render(
       <VueMoisJour
         du="2026-10-26"
@@ -56,46 +55,20 @@ describe('VueMoisJour', () => {
         jour={J}
         aujourdhui={J}
         elements={ELEMENTS}
-        peutCreer
         onJour={onJour}
-        onOuvrir={onOuvrir}
-        onCreer={vi.fn()}
+        journee={<div data-testid="grille-du-jour" />}
       />,
     );
     const jour = screen.getByRole('button', { name: /mercredi 18 novembre · 3 éléments/ });
     expect(jour).toHaveAttribute('aria-pressed', 'true');
     expect(jour).toHaveAttribute('aria-current', 'date');
     expect(jour.querySelectorAll('.agenda-moisjour-points > span')).toHaveLength(3);
-    const liste = screen.getByRole('region', { name: /Mercredi 18 novembre/ });
-    const lignes = within(liste).getAllByRole('button');
-    expect(lignes.map((l) => l.textContent)).toEqual([
-      'JournéePlans RDCAvant-projet',
-      '09:0010:00RevueAvec Awa Diop',
-      '13:0014:30DéjeunerLe Lagon',
-    ]);
-    await userEvent.click(lignes[2]);
-    expect(onOuvrir).toHaveBeenCalledWith(ELEMENTS[0], expect.any(Object));
+    // La journée (23/11/2026) : la grille des heures fournie par la page,
+    // sous le titre du jour.
+    const journee = screen.getByRole('region', { name: /Mercredi 18 novembre/ });
+    expect(within(journee).getByText('Aujourd’hui')).toBeInTheDocument();
+    expect(within(journee).getByTestId('grille-du-jour')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /^jeudi 19 novembre$/ }));
     expect(onJour).toHaveBeenCalledWith('2026-11-19');
-  });
-
-  it('jour vide : le dire, et proposer de créer (si on peut)', async () => {
-    const onCreer = vi.fn();
-    render(
-      <VueMoisJour
-        du="2026-10-26"
-        mois="2026-11"
-        jour="2026-11-19"
-        aujourdhui={J}
-        elements={ELEMENTS}
-        peutCreer
-        onJour={vi.fn()}
-        onOuvrir={vi.fn()}
-        onCreer={onCreer}
-      />,
-    );
-    expect(screen.getByText('Rien de prévu ce jour-là.')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Créer un rendez-vous/ }));
-    expect(onCreer).toHaveBeenCalledWith('2026-11-19');
   });
 });

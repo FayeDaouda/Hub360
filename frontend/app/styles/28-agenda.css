@@ -1663,8 +1663,8 @@
 }
 
 /* Téléphone, « Mois et jour » (18/11/2026, maquette du user) : le mois en
-   grille, un point par élément sous chaque jour ; la journée choisie en
-   liste : heure, barre de couleur, titre et lieu. */
+   grille, un point par élément sous chaque jour ; la journée choisie sur
+   la grille des heures (23/11/2026). */
 .agenda-moisjour {
   display: grid;
   gap: var(--e-16);
@@ -1785,102 +1785,17 @@
 :root[data-theme='dark'] .agenda-moisjour-badge {
   color: color-mix(in oklch, var(--action) 50%, white);
 }
-.agenda-moisjour-liste ul {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* La journée sur la grille des heures (23/11/2026) : sans en-tête (le titre
+   du jour est au-dessus), alignée sur la carte du mois ; au bout de ses
+   heures, le défilement passe à la page (le mois revient). */
+.agenda-grille-tete[hidden] {
+  display: none;
 }
-.agenda-moisjour-liste li + li {
-  border-top: 1px solid var(--border);
+.agenda-moisjour-liste .agenda-grille {
+  margin-inline: calc(-1 * var(--e-4));
 }
-.agenda-moisjour-ligne {
-  display: grid;
-  grid-template-columns: 52px 3px minmax(0, 1fr);
-  align-items: stretch;
-  gap: var(--e-12);
-  width: 100%;
-  min-height: 60px;
-  padding: var(--e-12) var(--e-4);
-  border: none;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background-color 140ms ease;
-}
-.agenda-moisjour-ligne:active {
-  background: var(--surface-2);
-}
-.agenda-moisjour-ligne:focus-visible {
-  outline: 2px solid var(--action);
-  outline-offset: -2px;
-  border-radius: var(--r-10);
-}
-.agenda-moisjour-heures {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  font-variant-numeric: tabular-nums;
-}
-.agenda-moisjour-heures strong {
-  font-size: var(--t-14);
-  font-weight: 600;
-}
-.agenda-moisjour-heures span {
-  color: var(--text-subtle);
-  font-size: var(--t-12);
-}
-.agenda-moisjour-barre {
-  border-radius: 999px;
-  background: var(--ton);
-}
-.agenda-moisjour-texte {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  min-width: 0;
-}
-.agenda-moisjour-texte strong {
-  display: flex;
-  align-items: center;
-  gap: var(--e-4);
-  min-width: 0;
-  overflow: hidden;
-  font-size: var(--t-16);
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.agenda-moisjour-texte strong svg {
-  flex-shrink: 0;
-  color: var(--text-muted);
-}
-.agenda-moisjour-texte > span {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: var(--t-13);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.agenda-moisjour-ligne.is-decline {
-  opacity: 0.55;
-}
-.agenda-moisjour-ligne.is-decline strong {
-  text-decoration: line-through;
-}
-.agenda-moisjour-vide {
-  display: grid;
-  justify-items: center;
-  gap: var(--e-8);
-  padding: var(--e-24) var(--e-16);
-  color: var(--text-muted);
-  text-align: center;
-}
-.agenda-moisjour-vide p {
-  margin: 0;
+.agenda-moisjour-liste .agenda-grille-corps {
+  overscroll-behavior-y: auto;
 }
 /* Téléphone : le formulaire complet en plein écran, ses boutons toujours
    visibles en bas. */

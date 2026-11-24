@@ -69,6 +69,23 @@ describe('GrilleHoraire', () => {
     expect(onOuvrir).toHaveBeenLastCalledWith(ELEMENTS[1], expect.any(Object));
   });
 
+  it('sous le mois du téléphone : sans en-tête de jour, la journée et ses rendez-vous restent', () => {
+    const { container } = render(
+      <GrilleHoraire
+        jours={[J]}
+        aujourdhui="2026-11-20"
+        elements={ELEMENTS}
+        peutCreer
+        onCreneau={vi.fn()}
+        onOuvrir={vi.fn()}
+        sousLeMois
+      />,
+    );
+    expect(container.querySelector('.agenda-grille-tete')).toHaveAttribute('hidden');
+    expect(container.querySelector('.agenda-grille-corps')).not.toBeNull();
+    expect(container.querySelectorAll('.agenda-bloc').length).toBeGreaterThan(0);
+  });
+
   it('un créneau vide cliqué propose la demi-heure, pour une heure', () => {
     const { onCreneau, container } = monter();
     fireEvent.click(container.querySelector('.agenda-grille-colonne')!, { clientY: 14.75 * 48 });
